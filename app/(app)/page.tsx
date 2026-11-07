@@ -11,11 +11,12 @@ import { AutoRefresh } from "./claims/auto-refresh";
 import { InboxPoller } from "./claims/inbox-poller";
 import { ActivityFeed, type FeedClaim } from "./dashboard/activity-feed";
 import { DashboardHero } from "./dashboard/hero";
+import { IbanReminder } from "./dashboard/iban-reminder";
 
 export default async function DashboardPage() {
   const user = await getUser();
   const supabase = await createClient();
-  const { data: profile } = await supabase.from("profiles").select("first_name").eq("id", user!.id).maybeSingle();
+  const { data: profile } = await supabase.from("profiles").select("first_name, iban").eq("id", user!.id).maybeSingle();
   if (!profile) redirect("/onboarding");
 
   const { data } = await supabase
@@ -46,6 +47,12 @@ export default async function DashboardPage() {
   return (
     <div className="mx-auto flex w-full max-w-[720px] flex-col gap-8">
       <DashboardHero firstName={profile.first_name} received={received} pending={pending} openCount={open.length} needsCount={needsYou.length} />
+
+      {!profile.iban && (
+        <FadeIn delay={0.05}>
+          <IbanReminder />
+        </FadeIn>
+      )}
 
       {needsYou.length > 0 && (
         <FadeIn delay={0.1}>

@@ -59,6 +59,7 @@ const instruction = buildInstruction({
   agentHints: null,
   dryRun: true, // ALWAYS dry run in the spike
   customer: {
+    civility: null,
     firstName: "Camille",
     lastName: "Test",
     addressLine1: "1 rue de la Paix",

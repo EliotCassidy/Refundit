@@ -199,6 +199,7 @@ export async function submitClaim(claim: ClaimRow): Promise<SubmitResult> {
       agentHints: ctx.contact.agentHints,
       dryRun,
       customer: {
+        civility: (ctx.profile.civility as "madame" | "monsieur" | "autre" | null) ?? null,
         firstName: ctx.profile.first_name,
         lastName: ctx.profile.last_name,
         addressLine1: ctx.profile.address_line1,

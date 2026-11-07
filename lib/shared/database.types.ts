@@ -514,6 +514,7 @@ export type Database = {
           address_line1: string
           address_line2: string | null
           city: string
+          civility: string | null
           country: string
           created_at: string
           first_name: string
@@ -532,6 +533,7 @@ export type Database = {
           address_line1: string
           address_line2?: string | null
           city: string
+          civility?: string | null
           country?: string
           created_at?: string
           first_name: string
@@ -550,6 +552,7 @@ export type Database = {
           address_line1?: string
           address_line2?: string | null
           city?: string
+          civility?: string | null
           country?: string
           created_at?: string
           first_name?: string

@@ -1,9 +1,10 @@
-// OWNER: Dev 2. One claim: progress, live agent (with Stop), refund, conversation with the brand.
+// OWNER: Dev 2. One claim: compact header + progress, compact agent (Stop), refund, conversation.
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Money, StripeBadge } from "@/components/ui/brand";
 import { displayLabel } from "@/components/ui/format";
+import { FadeIn } from "@/components/ui/motion";
 import { STATUS_LABEL, StatusBadge } from "@/components/ui/status";
 import { createClient } from "@/lib/shared/supabase/server";
 import { ISSUE_LABELS_FR } from "@/lib/shared/types";
@@ -15,6 +16,7 @@ import { MissingInfoForm } from "./missing-info-form";
 
 const fmt = (iso: string) =>
   new Date(iso).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" });
+const euros = (cents: number) => (cents / 100).toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
 
 export default async function ClaimPage({ params }: PageProps<"/claims/[id]">) {
   const { id } = await params;
@@ -42,33 +44,33 @@ export default async function ClaimPage({ params }: PageProps<"/claims/[id]">) {
   const answered = (emails ?? []).length > 0 || ["accepted", "refused"].includes(claim.status);
   const done = claim.status === "accepted";
   const steps = [
-    { label: "Envoyée", on: sent, sub: claim.submitted_at ? fmt(claim.submitted_at) : live ? "L'agent remplit le formulaire" : null },
-    { label: `Réponse de ${brand}`, on: answered, sub: answered ? (claim.status === "refused" ? "Refus" : "Reçue") : sent ? "En attente" : null },
-    { label: claim.refund_cents != null ? "Remboursée" : "Acceptée", on: done, sub: claim.refund_cents != null ? "Virement reçu" : null },
+    { label: "Envoyée", on: sent },
+    { label: "Réponse", on: answered },
+    { label: claim.refund_cents != null ? "Remboursée" : "Acceptée", on: done },
   ];
 
-  // Conversation: our complaint, brand emails, our replies.
+  // Conversation: our complaint, system events, brand emails, our replies.
   const messages: Message[] = [];
   if (claim.complaint_text && sent) {
+    messages.push({
+      key: "sent",
+      at: claim.submitted_at ?? claim.created_at,
+      from: "system",
+      title: claim.submission_channel === "email" ? "Envoyée par e-mail" : "Envoyée via le formulaire de la marque",
+      body: "",
+      tag: null,
+    });
     messages.push({
       key: "complaint",
       at: claim.submitted_at ?? claim.created_at,
       from: "me",
-      title: claim.submission_channel === "email" ? `E-mail envoyé à ${brand}` : `Formulaire de contact de ${brand}`,
+      title: "Ta réclamation",
       body: claim.complaint_text,
-      tag: claim.dry_run ? "Test : non envoyé" : null,
+      tag: claim.dry_run ? "Test : non envoyée" : claim.confirmation_number ? `Dossier ${claim.confirmation_number}` : null,
     });
   }
   for (const m of emails ?? []) {
-    messages.push({
-      key: m.id,
-      at: m.received_at,
-      from: "brand",
-      title: m.subject ?? `Réponse de ${brand}`,
-      body: m.body_text ?? "",
-      sender: m.from_address,
-      tag: m.classification_reason,
-    });
+    messages.push({ key: m.id, at: m.received_at, from: "brand", title: m.subject ?? `Réponse de ${brand}`, body: m.body_text ?? "", sender: m.from_address, tag: m.classification_reason });
   }
   const answers = Object.entries((claim.user_answers ?? {}) as Record<string, string>);
   for (const e of events ?? []) {
@@ -77,79 +79,93 @@ export default async function ClaimPage({ params }: PageProps<"/claims/[id]">) {
       messages.push({ key: e.id, at: e.created_at, from: "me", title: "Ta réponse par e-mail", body: answers.map(([k, v]) => `${k} : ${v}`).join("\n"), tag: null });
     } else if (e.from_status === "waiting_input" && e.to_status === "submitting" && answers.length) {
       messages.push({ key: e.id, at: e.created_at, from: "me", title: "Infos transmises par l'agent", body: answers.map(([k, v]) => `${k} : ${v}`).join("\n"), tag: null });
+    } else if (e.to_status === "cancelled") {
+      messages.push({ key: e.id, at: e.created_at, from: "system", title: "Réclamation arrêtée", body: "", tag: null });
+    } else if (e.to_status === "accepted") {
+      messages.push({
+        key: e.id,
+        at: e.created_at,
+        from: "system",
+        title: claim.refund_cents != null ? `Remboursement reçu : ${euros(claim.refund_cents)}` : "Demande acceptée",
+        body: "",
+        tag: null,
+        tone: "success",
+      });
     }
   }
   messages.sort((a, b) => a.at.localeCompare(b.at));
 
   return (
-    <div className="flex flex-col gap-5 md:gap-6">
+    <div className="mx-auto flex w-full max-w-[680px] flex-col gap-4">
       <Link href="/" className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-muted hover:text-ink">
         <ArrowLeft className="size-4" aria-hidden /> Tableau de bord
       </Link>
 
       {/* Header */}
-      <header className="flex flex-col gap-5 rounded-[20px] border border-line bg-raised p-5 md:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="eyebrow">{[brand, claim.receipts?.store_name].filter(Boolean).join(" · ")}</p>
-            <h1 className="mt-1.5 text-[24px] font-bold tracking-tight md:text-[28px]">{product}</h1>
-            <p className="mt-1 text-sm text-muted">{ISSUE_LABELS_FR[claim.issue_type]}</p>
+      <FadeIn>
+        <header className="flex flex-col gap-4 rounded-[20px] border border-line bg-raised/90 p-5 backdrop-blur">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[13px] text-muted">{[brand, ISSUE_LABELS_FR[claim.issue_type]].join(" · ")}</p>
+              <h1 className="mt-1 text-[22px] font-bold leading-tight tracking-tight md:text-[26px]">{product}</h1>
+            </div>
+            <div className="flex shrink-0 flex-col items-end gap-1.5">
+              <Money cents={claim.refund_cents ?? stake} className={`text-[20px] ${claim.refund_cents != null ? "text-brand-strong" : ""}`} />
+              <StatusBadge status={claim.status} refunded={claim.refund_cents != null} dryRun={claim.dry_run} />
+            </div>
           </div>
-          <div className="flex flex-col items-end gap-2">
-            <StatusBadge status={claim.status} refunded={claim.refund_cents != null} dryRun={claim.dry_run} />
-            <Money cents={claim.refund_cents ?? stake} className={`text-[22px] ${claim.refund_cents != null ? "text-brand-strong" : ""}`} />
-          </div>
-        </div>
-
-        <ol className="grid grid-cols-3 gap-2">
-          {steps.map((s, i) => (
-            <li key={s.label} className="flex flex-col gap-1.5">
-              <span className={`h-1 rounded-full ${s.on ? (i === 2 ? "bg-brand" : "bg-ink") : "bg-line"}`} />
-              <span className={`text-xs font-semibold md:text-sm ${s.on ? "" : "text-muted"}`}>{s.label}</span>
-              {s.sub && <span className="text-[11px] text-muted md:text-xs">{s.sub}</span>}
-            </li>
-          ))}
-        </ol>
-
-        {claim.confirmation_number && (
-          <p className="text-sm text-muted">N° de dossier <span className="mono text-ink">{claim.confirmation_number}</span></p>
-        )}
-        {claim.failure_reason && ["needs_manual", "agent_failed"].includes(claim.status) && (
-          <p className="rounded-[14px] bg-warning-soft p-3 text-sm text-on-warning-soft">{claim.failure_reason}</p>
-        )}
-      </header>
+          <ol className="grid grid-cols-3 gap-2">
+            {steps.map((s, i) => (
+              <li key={s.label} className="flex flex-col gap-1.5">
+                <span className="h-1 overflow-hidden rounded-full bg-line">
+                  <span className={`block h-full rounded-full transition-all duration-700 ${s.on ? "w-full" : "w-0"} ${i === 2 ? "bg-brand" : "bg-ink"}`} />
+                </span>
+                <span className={`text-xs font-medium ${s.on ? "text-ink" : "text-muted"}`}>{s.label}</span>
+              </li>
+            ))}
+          </ol>
+          {claim.failure_reason && ["needs_manual", "agent_failed"].includes(claim.status) && (
+            <p className="rounded-[12px] bg-warning-soft px-3 py-2 text-sm text-on-warning-soft">{claim.failure_reason}</p>
+          )}
+        </header>
+      </FadeIn>
 
       {/* Refund */}
       {claim.refund_cents != null && (
-        <section className="flex flex-wrap items-center justify-between gap-4 rounded-[20px] border border-brand/30 bg-brand-soft p-5 md:p-6">
-          <div className="flex flex-col gap-1.5">
-            <span className="eyebrow text-on-brand-soft">Remboursement reçu</span>
-            <Money cents={claim.refund_cents} className="text-[36px] leading-none text-brand-strong" />
-            {claim.stripe_payment_id && <span className="mono text-xs text-on-brand-soft/70">{claim.stripe_payment_id}</span>}
-          </div>
-          <StripeBadge className="rounded-full bg-raised px-3 py-1.5" />
-        </section>
+        <FadeIn delay={0.05}>
+          <section className="flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-brand/30 bg-brand-soft px-5 py-4">
+            <div>
+              <p className="text-[13px] font-medium text-on-brand-soft">Remboursement reçu</p>
+              <Money cents={claim.refund_cents} className="text-[28px] leading-tight text-brand-strong" />
+            </div>
+            <StripeBadge className="rounded-full bg-raised px-3 py-1.5" />
+          </section>
+        </FadeIn>
       )}
 
       {/* What the user must do */}
       {claim.status === "waiting_input" && claim.missing_fields.length > 0 && (
-        <MissingInfoForm claimId={claim.id} fields={claim.missing_fields} answers={(claim.user_answers ?? {}) as Record<string, string>} />
+        <FadeIn delay={0.05}>
+          <MissingInfoForm claimId={claim.id} fields={claim.missing_fields} answers={(claim.user_answers ?? {}) as Record<string, string>} />
+        </FadeIn>
       )}
 
-      {/* Agent */}
-      {hasAgent ? (
-        <AgentView claimId={claim.id} live={live} actions={<ClaimActions claimId={claim.id} status={claim.status} />} />
-      ) : (
-        <ClaimActions claimId={claim.id} status={claim.status} />
-      )}
+      {/* Agent (compact) */}
+      <FadeIn delay={0.08}>
+        {hasAgent ? (
+          <AgentView claimId={claim.id} live={live} actions={live ? <ClaimActions claimId={claim.id} status={claim.status} /> : undefined} />
+        ) : null}
+      </FadeIn>
+      {(!hasAgent || !live) && <ClaimActions claimId={claim.id} status={claim.status} />}
 
       {/* Conversation */}
-      <Conversation messages={messages} brand={brand} waiting={sent && !answered} />
+      <FadeIn delay={0.12}>
+        <Conversation messages={messages} brand={brand} waiting={sent && !answered && !["cancelled", "refused"].includes(claim.status)} />
+      </FadeIn>
 
-      {/* Raw history */}
-      <details className="rounded-[16px] border border-line bg-raised px-4 py-3 text-sm">
-        <summary className="cursor-pointer font-medium text-muted">Historique détaillé</summary>
-        <ol className="mt-3 flex flex-col gap-2 border-l border-line pl-4">
+      <details className="rounded-[16px] px-1 text-sm">
+        <summary className="cursor-pointer text-[13px] font-medium text-muted hover:text-ink">Historique détaillé</summary>
+        <ol className="mt-3 flex flex-col gap-1.5 border-l border-line pl-4 text-[13px]">
           <li><span className="text-muted">{fmt(claim.created_at)}</span> · Demande créée</li>
           {(events ?? [])
             .filter((e) => e.type === "status_change" && e.to_status)

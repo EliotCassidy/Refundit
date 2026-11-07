@@ -333,6 +333,11 @@ Reads (receipt, items, profile) go directly through the Supabase client with RLS
 
 `/submit` and `/cancel` accept either the user's session (the owner of the claim) or the header `x-internal-key: $INTERNAL_API_KEY` for server-to-server calls from `/api/claims`.
 
+### Profile additions (onboarding, Dev 2)
+- `profiles.civility` text check in (`madame`, `monsieur`, `autre`), nullable (migration `20261107235000`). Passed to the agent: it uses it for civility fields instead of guessing.
+- `POST /api/profile` also accepts optional `civility` and `iban` (normalized, mod-97 checked by `lib/shared/iban.ts`); they are only written when sent, so the profile page is unaffected.
+- `POST /api/profile/iban` `{ iban }` → `200 { ok: true }` · `400 invalid_iban`: sets the IBAN only (dashboard reminder).
+
 ### Billing (Dev 2) — "Refundit Illimité", €9.99/month, Stripe test mode
 Free plan: **1 receipt scan per calendar month** (Europe/Paris); subscribed (`active`/`trialing`): unlimited.
 
