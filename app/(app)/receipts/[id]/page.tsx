@@ -10,8 +10,6 @@ import { knownCandidates } from "@/lib/receipts/products";
 import { resolveBrand } from "@/lib/brands";
 import { PageHeader } from "@/components/ui/list";
 import { FadeIn } from "@/components/ui/motion";
-import { StoreBanner } from "@/components/ui/store-logo";
-import { findStore } from "@/lib/stores";
 import { ProductBoard, type BoardItem } from "./product-board";
 
 export default async function ReceiptPage({ params }: PageProps<"/receipts/[id]">) {
@@ -73,14 +71,7 @@ export default async function ReceiptPage({ params }: PageProps<"/receipts/[id]"
   return (
     <div className="mx-auto flex w-full max-w-[600px] flex-col gap-6">
       <FadeIn>
-        <PageHeader
-          title="Quel produit a un problème ?"
-          subtitle={[receipt.store_name ? receipt.store_name.charAt(0) + receipt.store_name.slice(1).toLowerCase() : null, frDate(receipt.purchased_at), `${boardItems.length} article${boardItems.length > 1 ? "s" : ""}`].filter(Boolean).join(" · ")}
-        >
-          <div className="mb-5 flex min-h-16 items-center justify-center">
-            <StoreBanner store={findStore(chain, receipt.store_name)} fallbackName={chain ?? receipt.store_name} />
-          </div>
-        </PageHeader>
+        <PageHeader title="Quel produit a un problème&nbsp;?" subtitle="Vérifie les produits trouvés, puis touche « Oui » sur celui qui pose problème." />
       </FadeIn>
 
       {x?.needs_review && (

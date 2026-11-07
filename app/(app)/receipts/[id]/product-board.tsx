@@ -14,6 +14,8 @@ import { AnimatePresence, motion } from "motion/react";
 import { Check, CircleCheck, CircleHelp, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { group } from "@/components/ui/list";
+import { StoreBanner } from "@/components/ui/store-logo";
+import { findStore } from "@/lib/stores";
 
 export type BoardItem = {
   id: string;
@@ -195,8 +197,17 @@ export function ProductBoard({ receiptId, items, ticket }: { receiptId: string; 
 
   return (
     <div className="flex flex-col gap-6">
-      <section className="flex flex-col gap-2">
-        <h2 className="px-5 text-[13px] font-medium text-muted">Articles du ticket</h2>
+      <div className="receipt-paper rounded-[6px] px-4 md:px-6">
+        {ticket && (
+          <header className="mb-4 flex flex-col items-center gap-1 text-center">
+            <div className="mb-2 flex min-h-11 items-center justify-center">
+              <StoreBanner store={findStore(ticket.chain, ticket.store)} fallbackName={ticket.chain ?? ticket.store} />
+            </div>
+            <p className="mono text-base font-semibold uppercase tracking-[0.18em]">{ticket.store}</p>
+            <p className="mono text-xs text-muted">{ticket.date} · {items.length} article{items.length > 1 ? "s" : ""}</p>
+            <div className="mt-3 w-full border-t-2 border-dashed border-line" />
+          </header>
+        )}
         <ul className="flex flex-col gap-3">
           {items.map((it) => (
             <ProductCard
@@ -209,14 +220,18 @@ export function ProductBoard({ receiptId, items, ticket }: { receiptId: string; 
             />
           ))}
         </ul>
-      </section>
-
-      {ticket?.totalCents != null && (
-        <div className={`${group} flex min-h-[52px] items-center justify-between px-5 py-3`}>
-          <span className="text-[15px] text-muted">Total du ticket</span>
-          <span className="money text-[15px] font-semibold">{euros(ticket.totalCents)}</span>
-        </div>
-      )}
+        {ticket && (
+          <footer className="mt-5 flex flex-col gap-3">
+            <div className="border-t-2 border-dashed border-line" />
+            {ticket.totalCents != null && (
+              <p className="mono flex items-center justify-between text-base font-semibold">
+                <span>TOTAL</span><span>{euros(ticket.totalCents)}</span>
+              </p>
+            )}
+            <p className="mono text-center text-[11px] uppercase tracking-[0.2em] text-muted">Merci de votre visite</p>
+          </footer>
+        )}
+      </div>
 
       {claimIds.length > 0 && (
         <button
@@ -286,13 +301,15 @@ function ProductCard({ it, s, patch, identify, confirm }: {
   return (
     <motion.li
       layout="position"
-      className={`overflow-hidden rounded-[24px] bg-white/85 shadow-[0_1px_2px_rgba(17,23,20,0.04),0_12px_32px_-18px_rgba(17,23,20,0.18)] ring-1 backdrop-blur-xl transition-shadow ${
-        hasIssue ? "ring-2 ring-brand/70" : sure ? "ring-brand/30" : "ring-black/[0.06]"
+      className={`rounded-[18px] transition-shadow ${
+        sure
+          ? "bg-[linear-gradient(135deg,#22C55E,#BBF7D0_45%,#4ADE80)] p-[1.5px] shadow-[0_6px_18px_rgba(34,197,94,0.14)]"
+          : "border-2 border-dashed border-line-strong/45"
       }`}
     >
-     <div className={active ? "bg-white" : ""}>
-      <div className="flex items-center gap-3.5 px-4 py-3.5">
-        <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-[14px] bg-black/[0.03]">
+     <div className={`overflow-hidden rounded-[16.5px] ${active ? "bg-white" : "bg-raised"}`}>
+      <div className="flex items-center gap-3 p-3">
+        <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-[16px] bg-black/[0.03]">
           {info.image
             // eslint-disable-next-line @next/next/no-img-element -- images Open Food Facts / Open Beauty Facts, domaine externe
             ? <img src={info.image} alt="" className="size-full object-contain p-1" onError={(e) => (e.currentTarget.style.display = "none")} />
@@ -330,7 +347,7 @@ function ProductCard({ it, s, patch, identify, confirm }: {
         </div>
       </div>
 
-      <div className="flex flex-col gap-3.5 border-t border-black/[0.05] px-4 py-3.5">
+      <div className="flex flex-col gap-3 border-t border-dashed border-line p-3">
         <div className="flex items-center gap-2">
           <p className="flex-1 text-[14px] text-muted">Ce produit a-t-il un problème&nbsp;?</p>
           <div className="inline-flex rounded-full bg-black/[0.05] p-0.5">
