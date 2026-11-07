@@ -22,6 +22,7 @@ const db = createClient<Database>(url, serviceKey, { auth: { persistSession: fal
 const BRANDS: TablesInsert<"brands">[] = [
   { name: "Pringles", manufacturer: "Kellanova", aliases: ["pringles", "pringl"], source: "seed" },
   { name: "Evian", manufacturer: "Danone", aliases: ["evian"], source: "seed" },
+  { name: "Coca-Cola", manufacturer: "The Coca-Cola Company", aliases: ["coca-cola", "coca cola", "coca"], source: "seed" },
   // TODO(dev1): add the other demo brands after the spike, with verified contact_url + agent_hints.
 ];
 
@@ -48,24 +49,32 @@ async function main() {
   });
   if (profileError) throw profileError;
 
-  // 4. One parsed demo receipt (only if the user has none)
-  const { count } = await db.from("receipts").select("id", { count: "exact", head: true }).eq("user_id", user.id);
-  if (!count) {
-    const { data: receipt, error } = await db.from("receipts").insert({
+  // 4. One parsed demo receipt (created once), then each demo item is added if missing
+  let { data: receipt } = await db.from("receipts").select("id").eq("user_id", user.id)
+    .order("created_at").limit(1).maybeSingle();
+  if (!receipt) {
+    const { data, error } = await db.from("receipts").insert({
       user_id: user.id, image_path: `${user.id}/demo-receipt.jpg`, // no real file: seed data only
       status: "parsed", store_name: "Carrefour Market", purchased_at: new Date().toISOString(), total_cents: 612,
     }).select("id").single();
     if (error) throw error;
+    receipt = data;
+  }
 
-    const { error: itemsError } = await db.from("line_items").insert([
-      { receipt_id: receipt.id, user_id: user.id, position: 1, raw_label: "PRINGLES ORIG 175G",
-        product_name: "Pringles Original 175g", brand_id: brandId("Pringles"), brand_name_guess: "Pringles",
-        quantity: 1, unit_price_cents: 289, total_price_cents: 289 },
-      { receipt_id: receipt.id, user_id: user.id, position: 2, raw_label: "EVIAN 6X1.5L",
-        product_name: "Evian 6 x 1,5 L", brand_id: brandId("Evian"), brand_name_guess: "Evian",
-        quantity: 1, unit_price_cents: 323, total_price_cents: 323 },
-    ]);
-    if (itemsError) throw itemsError;
+  const DEMO_ITEMS: Omit<TablesInsert<"line_items">, "receipt_id" | "user_id">[] = [
+    { position: 1, raw_label: "PRINGLES ORIG 175G", product_name: "Pringles Original 175g",
+      brand_id: brandId("Pringles"), brand_name_guess: "Pringles", quantity: 1, unit_price_cents: 289, total_price_cents: 289 },
+    { position: 2, raw_label: "EVIAN 6X1.5L", product_name: "Evian 6 x 1,5 L",
+      brand_id: brandId("Evian"), brand_name_guess: "Evian", quantity: 1, unit_price_cents: 323, total_price_cents: 323 },
+    { position: 3, raw_label: "COCA COLA 1.75L", product_name: "Coca-Cola Original 1,75 L",
+      brand_id: brandId("Coca-Cola"), brand_name_guess: "Coca-Cola", quantity: 1, unit_price_cents: 245, total_price_cents: 245 },
+  ];
+  const { data: existing } = await db.from("line_items").select("raw_label").eq("receipt_id", receipt.id);
+  const missing = DEMO_ITEMS.filter((i) => !existing?.some((e) => e.raw_label === i.raw_label));
+  if (missing.length) {
+    const { error } = await db.from("line_items")
+      .insert(missing.map((i) => ({ ...i, receipt_id: receipt.id, user_id: user.id })));
+    if (error) throw error;
   }
 
   console.log(`Seed OK: ${BRANDS.length} brands, demo user ${demoEmail}`);

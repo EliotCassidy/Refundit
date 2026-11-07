@@ -21,7 +21,7 @@ Priorities:
 ## Phase 0: Kickoff (both, ~1h)
 - [ ] Read all docs together. Write `supabase/migrations/<ts>_0001_init.sql` from API_CONTRACTS §2 (incl. RLS, storage bucket).
 - [ ] Create the Supabase project, Vercel project and `.env.example`. Share secrets out of band.
-- [ ] Agree on the demo receipt: a real receipt containing Pringles, Evian and 2–3 other brands.
+- [ ] Agree on the demo receipt: a real receipt containing Pringles, Coca-Cola and 2–3 other brands.
 
 ## Phase 1: Scaffold + spikes (parallel, until ~H+3)
 **Dev 1 (P0)**
@@ -87,7 +87,7 @@ Priorities:
 ## Demo script (~2 min)
 1. Problem (15s): "Your Pringles were crushed. Would you go find Kellanova's contact form? Nobody does."
 2. Snap the receipt on a phone → items appear, brands recognized.
-3. Tick Pringles → "Produit écrasé", Evian → "Sans gaz" → Submit.
+3. Tick Pringles → "Produit écrasé", Coca-Cola → "Boisson sans gaz" → Submit.
 4. **Agent View live:** the agent opens the brand site, finds the form, fills it, attaches the receipt, submits. (Core of the demo; the user can stop it at any time.)
 5. Dashboard: the claim goes to `submitted` with a confirmation number. Show the older claim with the brand reply → `accepted`.
 6. Close: one inbox for every brand, every claim tracked, only genuine issues.

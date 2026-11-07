@@ -2,7 +2,7 @@
 
 ## 1. Product
 
-**Problem.** When a supermarket product is defective (crushed Pringles, flat Evian, expired, missing quantity), almost nobody complains. Finding the brand's contact form and filling it in is tedious.
+**Problem.** When a supermarket product is defective (crushed Pringles, flat Coca-Cola, expired, missing quantity), almost nobody complains. Finding the brand's contact form and filling it in is tedious.
 
 **Solution.** The user snaps the receipt, picks the products that had a problem and why, and Refundit's computer-use agent files each complaint on the brand's own contact form. Brand replies land in a per-claim inbox on the platform, and every claim's status is tracked in one dashboard.
 
@@ -13,7 +13,7 @@
 **Demo story.**
 1. The user uploads a receipt.
 2. The app lists the products.
-3. The user picks Pringles ("damaged") and Evian ("flat").
+3. The user picks Pringles ("damaged") and Coca-Cola ("flat").
 4. The user taps Submit.
 5. The user watches the agent fill the Kellanova form live (Agent View).
 6. The claim moves to `submitted`.
@@ -187,7 +187,7 @@ Reply classification:
 ## 7. Brand registry and lookup
 
 The `brands` table is the "cache" of known contact forms.
-- **Seed:** 4–5 brands verified by hand during the spike, with `verified=true`. Candidates: Pringles/Kellanova, Evian/Danone, plus 2–3 others from the demo receipt. Fill in real URLs only after checking them.
+- **Seed:** 4–5 brands verified by hand during the spike, with `verified=true`. Candidates: Pringles/Kellanova, Coca-Cola, plus 2–3 others from the demo receipt. Fill in real URLs only after checking them.
 - **Matching:** `resolveBrand(label)` does a case-insensitive match on `name` and `aliases`. The LLM's `brand_guess` from parsing is the main signal.
 - **Unknown brand:** `getBrandContact` queries Linkup for the brand's French customer-service contact page. It saves a `brands` row with `source='linkup'`, `verified=false` and the found `contact_url`. *Linkup request and response shapes must be checked against their docs before implementing.*
 
