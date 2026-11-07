@@ -219,4 +219,4 @@ Keep `.env.example` in the repo. Real values live in Vercel and `.env.local`, wh
 | Agent slow or flaky on stage | Pre-recorded Agent View replay of a successful run, plus one claim already in `accepted`. |
 | Brands don't reply during the weekend | Submit real, genuine claims on Saturday morning. If nothing arrives, show a clearly labeled simulated reply. |
 | Resend managed-domain inbound limits on the free plan | Check at H+1. Fallback: Postmark inbound. |
-| Webhooks unreachable locally | `/sync` polling fallback. Test webhooks on the Vercel preview. |
+| Webhooks unreachable locally | `/sync` polling fallback. Test webhooks on the deployed Vercel URL. |

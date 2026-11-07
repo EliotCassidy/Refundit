@@ -1,6 +1,6 @@
 # API contracts
 
-This is the source of truth for everything both devs depend on. Change it only through a PR that updates this file **and** the code, and tell the other dev.
+This is the source of truth for everything both devs depend on. Change it only in a commit that updates this file **and** the code, and tell the other dev.
 
 ## 1. Enums
 

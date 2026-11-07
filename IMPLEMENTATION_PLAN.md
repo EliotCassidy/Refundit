@@ -61,7 +61,7 @@ Priorities:
 - [ ] P0 Real `/submit`: build the instruction, attach the receipt file, `answerSchema`, store the session id + agent view URL.
 - [ ] P0 `/sync` polling + outcome mapping (ARCHITECTURE §5.3).
 - [ ] P0 Claims list + claim detail page (status, complaint text, Agent View link/iframe, Cancel).
-- [ ] P1 `/api/webhooks/h` with signature check + idempotency (test it on the Vercel preview).
+- [ ] P1 `/api/webhooks/h` with signature check + idempotency (test it on the deployed Vercel URL).
 
 ## Phase 3: Integration (Saturday evening). **Milestone: the full path on the deployed URL**
 - [ ] Real receipt → items → select 2 → submit → agent runs (dry run) on demo brands → `submitted`.

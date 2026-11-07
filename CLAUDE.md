@@ -15,7 +15,7 @@ Next.js (App Router) + TypeScript (strict) · Supabase (Postgres, Auth, Storage)
 
 ## Non-negotiable rules
 1. **Honest claims only.** The complaint text may only contain facts the user provided (product, issue, description, receipt data). Never invent defects, quantities, dates or details. The agent prompt must forbid making up any field.
-2. **Contracts first.** Changing the DB schema, `lib/shared/types.ts` or an endpoint shape means updating `API_CONTRACTS.md` in the same PR, plus a heads-up to the other dev.
+2. **Contracts first.** Changing the DB schema, `lib/shared/types.ts` or an endpoint shape means updating `API_CONTRACTS.md` in the same commit, plus a heads-up to the other dev.
 3. **Ownership.** Stay inside your folders (see TEAM.md). Shared files (`lib/shared/**`, `supabase/migrations/**`, `package.json`) get small, single-purpose commits.
 4. **Only Dev 2's code changes `claims.status` after `draft`.** Use `lib/claims/transition.ts`; never update the status directly.
 5. **`AGENT_DRY_RUN=true` by default in dev.** The agent stops before the final submit. Only set it to false for verified demo runs. Don't spam real brands.
@@ -32,9 +32,18 @@ Next.js (App Router) + TypeScript (strict) · Supabase (Postgres, Auth, Storage)
 
 ## Commands
 - `npm run dev`: local app
-- `npm run lint && npm run typecheck`: run before every PR
+- `npm run lint && npm run typecheck`: run before every push
 - `npx supabase db push`: apply migrations to the hackathon project
 - `npm run seed`: seed brands + demo data
+- `npm run db:types`: regenerate `lib/shared/database.types.ts` after a migration
+
+## Next.js 16 notes
+- This Next version differs from older training data. Read `node_modules/next/dist/docs/` before using a Next API (see AGENTS.md).
+- Middleware is called **proxy** (`proxy.ts`). `params` and `searchParams` are Promises: use the global `PageProps<"/route">`, `LayoutProps` and `RouteContext<"/route">` helpers.
+- `cacheComponents` is **off** on purpose (cookie-based auth everywhere).
 
 ## Git
-Branches are `dev1/<topic>` and `dev2/<topic>`. Make small PRs into `main` and merge several times a day. Rebase on `main` before opening a PR. Never force-push `main`.
+Both devs work **directly on `main`**, each in their own folders (TEAM.md):
+- `git pull --rebase` before starting and before every push. Commit and push small and often (at least hourly).
+- Run `npm run lint && npm run typecheck` before pushing. Never push a broken build; Vercel deploys `main`.
+- Commit messages are prefixed `[dev1]`, `[dev2]` or `[shared]`. Never force-push.

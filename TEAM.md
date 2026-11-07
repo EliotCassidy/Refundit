@@ -21,7 +21,7 @@ app/(auth)/**            app/(app)/onboarding/**   app/(app)/profile/**
 app/(app)/page.tsx       app/(app)/receipts/**
 app/api/receipts/**      app/api/claims/route.ts
 lib/receipts/**          lib/brands/**              supabase/seed/**
-components/ui/**         app/layout.tsx, app/(app)/layout.tsx
+components/ui/**         app/layout.tsx, app/(app)/layout.tsx, proxy.ts
 ```
 
 ## Dev 2: Agent, claim lifecycle, email & tracking
@@ -47,9 +47,9 @@ lib/claims/**                        lib/email/**
 lib/shared/**  (types.ts, database.types.ts, supabase clients, llm.ts)
 supabase/migrations/**   package.json   .env.example   API_CONTRACTS.md
 ```
-- Make **small, single-purpose commits** to shared files and merge them quickly. Don't sit on a branch that edits them.
+- Make **small, single-purpose commits** to shared files and push them right away. Don't keep shared-file edits uncommitted.
 - `lib/shared/llm.ts` is created by Dev 1. Dev 2 may *add* functions, but must not change existing signatures without a heads-up.
-- Adding a dependency: commit `package.json` + lockfile alone, merge to `main`, and tell the other dev to `npm i`.
+- Adding a dependency: commit `package.json` + lockfile alone, push to `main`, and tell the other dev to `npm i`.
 
 ## Interfaces between you
 1. **DB schema + enums** (API_CONTRACTS §1–2), written together at kickoff in `0001_init`.
@@ -62,12 +62,13 @@ Until each side is real, unblock yourself with stubs:
 - Dev 1 uses `AGENT_MOCK=true`.
 - Dev 2 uses `npm run seed`, which inserts a fake profile, receipt, line items and brands, plus a hard-coded `getBrandContact` stub that Dev 1 replaces.
 
-## Git workflow
-- `main` must always deploy (Vercel builds every push; each PR gets a preview URL).
-- Branches: `dev1/<topic>`, `dev2/<topic>`. Each lives a few hours at most.
-- Before a PR: `git fetch && git rebase origin/main`, `npm run lint && npm run typecheck`.
-- PR title: `[dev1] receipt upload page`. Self-merge is fine. Tag the other dev only if the PR touches shared files.
-- Conflict on a shared file → whoever merges second resolves it, and asks if unsure.
+## Git workflow (everyone on `main`)
+- No feature branches. Folder ownership is what prevents conflicts.
+- Loop: `git pull --rebase` → work → `npm run lint && npm run typecheck` → commit → `git pull --rebase` → `git push`.
+- Push small commits often (at least hourly) so the other dev never rebases over a big diff.
+- Commit messages: `[dev1] receipt upload page`, `[dev2] H webhook`, `[shared] add claim_events index`.
+- `main` must always build: Vercel deploys every push.
+- Conflict on a shared file → whoever pulls second resolves it, and asks if unsure. Never force-push.
 
 ## Claude Code usage
 - Each dev runs their own sessions, scoped to their folders. Start each session with: "I am Dev N, read CLAUDE.md and TEAM.md."
