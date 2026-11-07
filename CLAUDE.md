@@ -10,6 +10,12 @@ Hackathon project: 2 devs, 1 weekend. **Working end-to-end demo > completeness.*
 - [TEAM.md](TEAM.md): who owns which files. **Don't edit files owned by the other dev.**
 - [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md): priorities and milestones.
 
+## Current state (keep short; update it when it changes)
+- **Receipt → product (Dev 1, done):** `POST /api/receipts` parses the photo with the H model (~5–20 s). `POST /api/receipts/:id/identify` handles one item per call (~1–8 s, one short LLM call, no Linkup): Open Food Facts / Open Beauty Facts candidates ranked against the receipt label, format and Open Prices. `POST /api/receipts/:id/confirm` takes an `ean` that must be one of the proposed candidates, or `null` ("je ne trouve pas mon produit" → `not_found`). Confirmations feed the shared `product_matches` cache.
+- **Coming (Dev 1):** upload / receipt / selection pages. Once the selection page ships, `POST /api/claims` returns `400 product_not_confirmed` for any item whose `confirmed_product` is null. Code or tests that create claims from seed data must call `/confirm` first (or set `confirmed_product` to `{"status":"not_found"}`).
+- **Missing info (Dev 2, done):** DLC/DDM, batch number, "do you still have the product?" are asked after submission through `waiting_input` (`claims.missing_fields` / `user_answers`, `POST /api/claims/:id/answers`). The selection page does not ask for them.
+- **Demo brands (Dev 2 spike):** Coca-Cola and Lu work through the web form; Evian goes through the email fallback; Bonne Maman goes through the missing-info flow; Pringles is not automatable (`needs_manual`).
+
 ## Stack
 Next.js (App Router) + TypeScript (strict) · Supabase (Postgres, Auth, Storage) · Vercel · H Company Agents API (`hai-agents` TS SDK) · Resend Inbound · Linkup (unknown-brand lookup) · one LLM provider behind `lib/shared/llm.ts`: the H Models API (OpenAI-compatible, `LLM_URL` / `LLM_MODEL` / `LLM_API_KEY`, default `holo4-35b-a3b`). Change the model in the env, never in code. Thinking is turned off with `chat_template_kwargs.enable_thinking=false` (`holo4-35b-a3b` ignores `reasoning_effort`).
 
