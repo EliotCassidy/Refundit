@@ -6,7 +6,7 @@ import type { ProductCandidates } from "@/lib/shared/types";
 import { labelSimilarity, normalize } from "../text";
 import { expandLabel } from "./expand";
 import { findConfirmedMatches } from "./matches";
-import { offDocument, quantityVariants, searchObf, searchOff, type Hit } from "./off";
+import { offDocument, quantityVariants, searchObf, searchOff, withImage, type Hit } from "./off";
 import { linkupEnabled, webProducts } from "./linkup";
 import { parseSizes } from "./ean";
 import { referencePrice, samePriceAtChain } from "./prices";
@@ -43,15 +43,17 @@ export async function identifyProduct(input: IdentifyInput, debug?: { pool?: str
 
   // Raccourci « déjà connu » : réponse immédiate avec la photo, sans LLM ni Open Food Facts ni Open Prices.
   if (confirmed.length && !input.full && !input.userQuery) {
-    return {
-      llm_guess: null,
-      candidates: confirmed.slice(0, 3).map((m) => ({
+    const candidates = confirmed.slice(0, 3).map((m) => ({
         ...m.product,
         source: "confirmed_match" as const,
         score: 100,
         reference_price_cents: null,
         reasons: [`confirmé ${m.confirmations} fois par des clients pour ce libellé chez cette enseigne`],
-      })),
+      }));
+    candidates[0] = await withImage(candidates[0]); // la carte affiche la photo du 1er
+    return {
+      llm_guess: null,
+      candidates,
       uncertain: false,
       uncertain_reasons: [],
       confident: true,
@@ -150,5 +152,7 @@ export async function identifyProduct(input: IdentifyInput, debug?: { pool?: str
     if (extra.length) ranked = rank([...shortlist, ...extra], rankInput);
   }
 
+  // La carte affiche la photo du 1er : si la recherche ne l'a pas donnée, on la prend sur la fiche produit.
+  if (ranked.candidates[0]) ranked.candidates[0] = await withImage(ranked.candidates[0]);
   return { ...ranked, searched_at: new Date().toISOString() };
 }

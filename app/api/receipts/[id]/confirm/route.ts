@@ -11,6 +11,7 @@ import type { Json } from "@/lib/shared/database.types";
 import { ProductCandidatesSchema, type ConfirmedProduct, type Product } from "@/lib/shared/types";
 import type { ReceiptExtraction } from "@/lib/receipts/parse";
 import { recordConfirmation } from "@/lib/receipts/products/matches";
+import { withImage } from "@/lib/receipts/products/off";
 import { resolveBrand } from "@/lib/brands";
 
 const BodySchema = z.object({
@@ -89,14 +90,14 @@ export async function POST(request: Request, ctx: RouteContext<"/api/receipts/[i
   const candidate = proposed.success ? proposed.data.candidates.find((c) => c.ean === body.data.ean) : undefined;
   if (!candidate) return apiError(400, "ean_not_proposed", "Ce produit ne fait pas partie des propositions");
 
-  const product: Product = {
+  const product: Product = await withImage({
     ean: candidate.ean,
     brand: candidate.brand,
     name: candidate.name,
     quantity: candidate.quantity,
     image_url: candidate.image_url,
     source: candidate.source,
-  };
+  });
   const confirmedProduct: ConfirmedProduct = { status: "confirmed", ...product };
   const brand = await resolveBrand(`${product.brand ?? ""} ${product.name}`, product.brand);
   const displayName = product.quantity && !product.name.includes(product.quantity) ? `${product.name} ${product.quantity}` : product.name;

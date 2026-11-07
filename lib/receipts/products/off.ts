@@ -82,3 +82,23 @@ export async function obfProduct(ean: string): Promise<Hit | null> {
   );
   return d?.product ? toHit({ ...d.product, code: d.product.code ?? ean }, "obf") : null;
 }
+
+/**
+ * Photo d'un produit quand la recherche ne l'a pas renvoyée (l'index Search-a-licious ne donne pas toujours
+ * image_front_url) : fiche produit OFF/OBF v2 (vérifié le 2026-11-07 : image_front_url / image_url). 15 lectures/min,
+ * réponse en cache. null si pas de photo.
+ */
+export async function productImage(ean: string, source: string): Promise<string | null> {
+  const site = source === "obf" ? "world.openbeautyfacts.org" : "world.openfoodfacts.org";
+  const d = await getJson<{ product?: { image_front_url?: string; image_url?: string; image_front_small_url?: string } }>(
+    `https://${site}/api/v2/product/${encodeURIComponent(ean)}?fields=image_front_url,image_url,image_front_small_url`,
+  );
+  return d?.product?.image_front_url || d?.product?.image_url || d?.product?.image_front_small_url || null;
+}
+
+/** Complète la photo d'un produit qui n'en a pas (sans jamais faire échouer l'appelant). */
+export async function withImage<T extends { ean: string | null; image_url: string | null; source: string }>(p: T): Promise<T> {
+  if (p.image_url || !p.ean) return p;
+  const image_url = await productImage(p.ean, p.source).catch(() => null);
+  return image_url ? { ...p, image_url } : p;
+}
