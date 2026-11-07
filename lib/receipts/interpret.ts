@@ -229,7 +229,7 @@ function newItem(
   weight_kg: number | null,
 ): ExtractedItem {
   return {
-    position, raw_label: l.text, section: l.section ?? null, mark: l.mark ?? null,
+    position, raw_label: l.text.trim(), section: l.section ?? null, mark: l.mark ?? null, // espaces de bord seulement
     qty, qty_source, weight_kg, unit_price_cents: unit, price_cents: price,
     discount_cents: 0, discount_pct: null, discount_text: null, paid_cents: price,
   };
