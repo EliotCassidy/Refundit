@@ -23,11 +23,30 @@ function h() {
   return client;
 }
 
+/**
+ * Dry run applies to every REAL brand. Our own fictional demo brand (NotCoca, served by this app
+ * under /notcoca) is always submitted for real: nobody external receives anything.
+ */
+function isOwnDemoBrand(contactUrl: string | null | undefined): boolean {
+  if (!contactUrl) return false;
+  try {
+    const u = new URL(contactUrl);
+    const own = process.env.APP_URL ? new URL(process.env.APP_URL).host : null;
+    return u.pathname.startsWith("/notcoca") && (!own || u.host === own);
+  } catch {
+    return false;
+  }
+}
+
+function dryRunFor(contactUrl: string | null | undefined): boolean {
+  return flags.agentDryRun() && !isOwnDemoBrand(contactUrl);
+}
+
 /** The email given to brands: the claim's Gmail plus address (never the user's real email). */
-export function inboundAddress(alias: string): string {
+export function inboundAddress(alias: string, dryRun = flags.agentDryRun()): string {
   const address = plusAddress(alias);
   if (address) return address;
-  if (flags.agentDryRun()) return `${alias}@inbound.invalid`; // dry run never sends anything
+  if (dryRun) return `${alias}@inbound.invalid`; // dry run never sends anything
   throw new Error("GMAIL_USER is required for real (non dry-run) submissions");
 }
 
@@ -144,7 +163,7 @@ export type SubmitResult = { status: ClaimRow["status"]; agentViewUrl: string | 
 /** Full submission flow. Caller must have checked canTransition(claim.status, "submitting"). */
 export async function submitClaim(claim: ClaimRow): Promise<SubmitResult> {
   const ctx = await buildContext(claim);
-  const dryRun = flags.agentDryRun();
+  const dryRun = dryRunFor(ctx.contact?.contactUrl);
 
   // Lock the claim first (compare-and-set), so a double click can't start two agents.
   await transitionClaim(claim.id, "submitting", {
