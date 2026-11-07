@@ -59,15 +59,18 @@ export async function getBrandContact(input: { brandId: string } | { brandName: 
   const name = brand?.name ?? ("brandName" in input ? input.brandName.trim() : "");
   if (!name) return { brandId: brand?.id ?? "", name, contactUrl: null, contactEmail: null, agentHints: null, requiresReceiptUpload: false, verified: false };
 
-  let found: { contactUrl: string | null; contactEmail: string | null; sources: string[] } | null = null;
+  if (!process.env.LINKUP_API_KEY) {
+    // No lookup possible: don't mark as checked, so it runs once Linkup is configured.
+    return brand ? toContact(brand) : { brandId: "", name, contactUrl: null, contactEmail: null, agentHints: null, requiresReceiptUpload: false, verified: false };
+  }
+  let found: { contactUrl: string | null; contactEmail: string | null; sources: string[] };
   try {
     found = await discoverBrandContact(name);
   } catch (err) {
+    // Paid call: never retried automatically (CLAUDE.md rule 9). The brand is marked as checked
+    // anyway; clear brands.last_checked_at by hand to look it up again.
     console.error("[linkup]", name, err);
-  }
-  if (!found || !process.env.LINKUP_API_KEY) {
-    // No lookup possible: don't mark as checked, so it is retried once Linkup works.
-    return brand ? toContact(brand) : { brandId: "", name, contactUrl: null, contactEmail: null, agentHints: null, requiresReceiptUpload: false, verified: false };
+    found = { contactUrl: null, contactEmail: null, sources: [] };
   }
 
   const fields = {

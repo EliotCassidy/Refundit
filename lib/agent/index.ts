@@ -9,7 +9,7 @@ import { transitionClaim } from "@/lib/claims/transition";
 import { emailSendingConfigured, sendComplaintEmail } from "@/lib/email/send";
 import { env, flags } from "@/lib/shared/env";
 import { createAdminClient } from "@/lib/shared/supabase/admin";
-import { AgentAnswerSchema, type BrandContact, type ClaimRow } from "@/lib/shared/types";
+import { AgentAnswerSchema, ConfirmedProductSchema, type BrandContact, type ClaimRow } from "@/lib/shared/types";
 import { buildComplaintText } from "./complaint";
 import { buildInstruction } from "./instruction";
 import { decideOutcome } from "./outcome";
@@ -50,7 +50,16 @@ async function buildContext(claim: ClaimRow, contactOverride?: BrandContact) {
   if (e1 || e2 || e3) throw e1 ?? e2 ?? e3;
   if (!profile) throw new Error("User has no profile (onboarding not completed)");
 
-  const brandName = item.brand_name_guess;
+  // CLAUDE.md rule 8: product identity comes ONLY from confirmed_product.
+  const confirmed = ConfirmedProductSchema.safeParse(item.confirmed_product);
+  const cp = confirmed.success && confirmed.data.status === "confirmed" ? confirmed.data : null;
+  const product = cp
+    ? { identified: true, name: cp.quantity && !cp.name.includes(cp.quantity) ? `${cp.name} ${cp.quantity}` : cp.name, brand: cp.brand, ean: cp.ean }
+    : { identified: false, name: item.raw_label, brand: null, ean: null };
+
+  // Which brand to CONTACT: registry match (claim.brand_id) or the confirmed brand. This never
+  // appears in the complaint text when the product is not identified.
+  const brandName = cp?.brand ?? null;
   const contact =
     contactOverride ??
     (claim.brand_id
@@ -61,11 +70,12 @@ async function buildContext(claim: ClaimRow, contactOverride?: BrandContact) {
 
   const alias = claim.inbound_alias ?? `claim-${randomBytes(4).toString("hex")}`;
   const file = await loadReceiptFile(receipt.image_path);
-  const displayBrand = contact?.name || brandName;
+  const displayBrand = product.identified ? product.brand || contact?.name || null : null;
   const complaintText = buildComplaintText({
     firstName: profile.first_name,
     lastName: profile.last_name,
-    productName: item.product_name,
+    productName: product.name,
+    productIdentified: product.identified,
     brandName: displayBrand,
     storeName: receipt.store_name,
     purchasedAt: receipt.purchased_at,
@@ -74,7 +84,7 @@ async function buildContext(claim: ClaimRow, contactOverride?: BrandContact) {
     issueDescription: claim.issue_description,
     hasReceiptAttachment: Boolean(file),
   });
-  return { item, receipt, profile, contact, alias, file, displayBrand, complaintText };
+  return { item, receipt, profile, contact, alias, file, product, displayBrand, complaintText };
 }
 type ClaimContext = Awaited<ReturnType<typeof buildContext>>;
 
@@ -104,7 +114,7 @@ async function submitByEmail(claim: ClaimRow, ctx: ClaimContext, extra: Record<s
       fromName: `${ctx.profile.first_name} ${ctx.profile.last_name}`,
       alias: ctx.alias,
       replyTo: inboundAddress(ctx.alias),
-      subject: `Réclamation produit : ${ctx.item.product_name}`,
+      subject: ctx.product.identified ? `Réclamation produit : ${ctx.product.name}` : "Réclamation produit",
       text: ctx.complaintText,
       attachment: ctx.file ? { filename: ctx.file.name, base64: ctx.file.source, contentType: ctx.file.mediaType } : null,
     });
@@ -171,9 +181,10 @@ export async function submitClaim(claim: ClaimRow): Promise<SubmitResult> {
         email: inboundAddress(ctx.alias),
       },
       product: {
-        name: ctx.item.product_name,
+        identified: ctx.product.identified,
+        name: ctx.product.name,
         brand: ctx.displayBrand,
-        ean: ctx.item.ean,
+        ean: ctx.product.ean,
         purchasedAt: ctx.receipt.purchased_at,
         storeName: ctx.receipt.store_name,
         priceCents: ctx.item.total_price_cents,

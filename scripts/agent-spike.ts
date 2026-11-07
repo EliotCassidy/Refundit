@@ -44,6 +44,7 @@ const complaintText = buildComplaintText({
   firstName: "Camille",
   lastName: "Test",
   productName: values.product ?? (brand ? `${brand} (produit test)` : "Produit test"),
+  productIdentified: true,
   brandName: brand,
   storeName: "Carrefour Market",
   purchasedAt: new Date().toISOString(),
@@ -68,7 +69,7 @@ const instruction = buildInstruction({
     phone: "0600000000",
     email: "spike@inbound.invalid",
   },
-  product: { name: values.product ?? "Produit test", brand, ean: null, purchasedAt: new Date().toISOString(), storeName: "Carrefour Market", priceCents: 289 },
+  product: { identified: true, name: values.product ?? "Produit test", brand, ean: null, purchasedAt: new Date().toISOString(), storeName: "Carrefour Market", priceCents: 289 },
   complaintText,
   receiptFileName: receiptFile?.name ?? null,
 });

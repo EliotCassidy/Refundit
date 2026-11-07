@@ -16,7 +16,8 @@ export type InstructionInput = {
     email: string; // ALWAYS the claim's inbound address, never the user's real email
   };
   product: {
-    name: string;
+    identified: boolean; // false → only the raw receipt label is known (CLAUDE.md rule 8)
+    name: string; // confirmed name, or the raw receipt label
     brand: string | null;
     ean: string | null;
     purchasedAt: string | null;
@@ -57,7 +58,9 @@ Customer data:
 - Postal address: ${address}
 
 Product:
-- Product: ${i.product.name}${i.product.brand ? ` (brand: ${i.product.brand})` : ""}
+- Product: ${i.product.identified
+    ? `${i.product.name}${i.product.brand ? ` (brand: ${i.product.brand})` : ""}`
+    : `NOT IDENTIFIED. The receipt only says "${i.product.name}" (abbreviated label, quote it as printed). Do not state any product name, format or barcode beyond this label.`}
 - Bought on: ${i.product.purchasedAt ? i.product.purchasedAt.slice(0, 10) : "unknown"} at ${i.product.storeName ?? "unknown store"}
 - Price paid: ${price}
 - EAN / barcode: ${i.product.ean ?? "not provided"}

@@ -6,7 +6,8 @@ import type { IssueType } from "@/lib/shared/types";
 export type ComplaintFacts = {
   firstName: string;
   lastName: string;
-  productName: string;
+  productName: string; // confirmed product name, or the raw receipt label when not identified
+  productIdentified: boolean; // false → "produit non identifié", label quoted as printed, no brand (CLAUDE.md rule 8)
   brandName: string | null;
   storeName: string | null;
   purchasedAt: string | null; // ISO
@@ -33,9 +34,11 @@ const formatPrice = (cents: number) =>
   (cents / 100).toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
 
 export function buildComplaintText(f: ComplaintFacts): string {
-  const product = f.brandName && !f.productName.toLowerCase().includes(f.brandName.toLowerCase())
-    ? `« ${f.productName} » (${f.brandName})`
-    : `« ${f.productName} »`;
+  const product = !f.productIdentified
+    ? `figurant sur mon ticket de caisse sous le libellé « ${f.productName} »`
+    : f.brandName && !f.productName.toLowerCase().includes(f.brandName.toLowerCase())
+      ? `« ${f.productName} » (${f.brandName})`
+      : `« ${f.productName} »`;
 
   const purchase = [
     `J'ai acheté le produit ${product}`,

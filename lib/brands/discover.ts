@@ -85,10 +85,13 @@ function verify(r: z.infer<typeof ResponseSchema>): DiscoveredContact {
   return { contactUrl, contactEmail, sources: sourceUrls.slice(0, 10) };
 }
 
-/** Standard search first (1–3 s); deep search (≤30 s) only if nothing usable was found. */
+/**
+ * ONE paid Linkup call per brand, never retried automatically (CLAUDE.md rule 9).
+ * Depth from LINKUP_DEPTH: "standard" (default, ~2 s, $0.006) or "deep" (≤30 s, $0.055).
+ * Spike: Bonne Maman / Lu found with standard; Evian needed deep.
+ */
 export async function discoverBrandContact(brandName: string): Promise<DiscoveredContact> {
   if (!process.env.LINKUP_API_KEY) return { contactUrl: null, contactEmail: null, sources: [] };
-  const first = verify(await search(brandName, "standard"));
-  if (first.contactUrl || first.contactEmail) return first;
-  return verify(await search(brandName, "deep"));
+  const depth = process.env.LINKUP_DEPTH === "deep" ? "deep" : "standard";
+  return verify(await search(brandName, depth));
 }
