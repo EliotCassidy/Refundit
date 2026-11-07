@@ -12,6 +12,8 @@ import {
 import { euros } from "@/lib/receipts/format";
 import { CircleCheck, CircleHelp, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { StoreBanner } from "@/components/ui/store-logo";
+import { findStore } from "@/lib/stores";
 
 export type BoardItem = {
   id: string;
@@ -92,7 +94,7 @@ function cardInfo(it: BoardItem, s: ItemState) {
   return { name: it.raw_label, meta: null, image: null, note: null, noteTone: "" };
 }
 
-export type TicketHeader = { store: string; date: string; totalCents: number | null };
+export type TicketHeader = { store: string; chain?: string | null; date: string; totalCents: number | null };
 
 export function ProductBoard({ receiptId, items, ticket }: { receiptId: string; items: BoardItem[]; ticket?: TicketHeader }) {
   const router = useRouter();
@@ -196,6 +198,9 @@ export function ProductBoard({ receiptId, items, ticket }: { receiptId: string; 
       <div className="receipt-paper rounded-[6px] px-4 md:px-6">
         {ticket && (
           <header className="mb-4 flex flex-col items-center gap-1 text-center">
+            <div className="mb-2 flex min-h-11 items-center justify-center">
+              <StoreBanner store={findStore(ticket.chain, ticket.store)} fallbackName={ticket.chain ?? ticket.store} />
+            </div>
             <p className="mono text-base font-semibold uppercase tracking-[0.18em]">{ticket.store}</p>
             <p className="mono text-xs text-muted">{ticket.date} · {items.length} article{items.length > 1 ? "s" : ""}</p>
             <div className="mt-3 w-full border-t-2 border-dashed border-line" />

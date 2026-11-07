@@ -21,7 +21,7 @@ export default async function DashboardPage() {
 
   const { data } = await supabase
     .from("claims")
-    .select("id, status, issue_type, missing_fields, refund_cents, updated_at, line_items(product_name, raw_label, total_price_cents), brands(name)")
+    .select("id, status, issue_type, missing_fields, refund_cents, updated_at, receipt_id, line_items(product_name, raw_label, total_price_cents), brands(name), receipts(store_name, purchased_at, created_at, store:raw_parse->store)")
     .neq("status", "draft")
     .order("updated_at", { ascending: false });
 
@@ -35,6 +35,11 @@ export default async function DashboardPage() {
     product: displayLabel(c.line_items?.product_name || c.line_items?.raw_label || "Produit"),
     brand: c.brands?.name ?? null,
     updatedAt: c.updated_at,
+    receiptId: c.receipt_id,
+    storeName: c.receipts?.store_name ?? null,
+    storeChain: (c.receipts?.store as { chain?: string | null } | null)?.chain ?? null,
+    purchasedAt: c.receipts?.purchased_at ?? null,
+    scannedAt: c.receipts?.created_at ?? c.updated_at,
   }));
   const feed: FeedClaim[] = claims;
 

@@ -84,6 +84,7 @@ export default async function ReceiptPage({ params }: PageProps<"/receipts/[id]"
         items={boardItems}
         ticket={{
           store: receipt.store_name ?? "Ticket de caisse",
+          chain,
           date: [frDate(receipt.purchased_at), x?.time].filter(Boolean).join(" · ") || "Date non lue",
           totalCents: receipt.total_cents,
         }}
