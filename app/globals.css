@@ -181,3 +181,34 @@ body {
   0%, 100% { transform: translateY(0); opacity: 0.4; }
   50% { transform: translateY(150px); opacity: 1; }
 }
+
+/* Interaction basics. Tailwind v4 resets buttons to the default cursor: restore the pointer,
+   and give every button the same pressed feedback. */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+select,
+summary,
+label:has(> input[type="file"]) {
+  cursor: pointer;
+}
+button:disabled { cursor: not-allowed; }
+button { transition: transform 120ms ease, opacity 150ms ease, background-color 150ms ease, box-shadow 150ms ease; }
+button:active:not(:disabled) { transform: scale(0.97); }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 10px; }
+
+/* Skeleton shimmer */
+@keyframes shimmer { 100% { transform: translateX(100%); } }
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-sunken);
+  border-radius: 12px;
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+  animation: shimmer 1.4s infinite;
+}

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono, Pacifico, Plus_Jakarta_Sans } from "next/font/google";
+import { Toaster } from "@/components/ui/motion";
 import "./globals.css";
 
 // Refundit typography (Refundit-Palette-et-Typographie.md §7): Jakarta for the voice, JetBrains Mono for money.
@@ -17,16 +18,16 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#F8F7F2" },
-    { media: "(prefers-color-scheme: dark)", color: "#0F1412" },
-  ],
+  themeColor: "#F8F7F2", // light cream theme only
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="fr" className={`${jakarta.variable} ${jetbrains.variable} ${script.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        {children}
+        <Toaster />
+      </body>
     </html>
   );
 }

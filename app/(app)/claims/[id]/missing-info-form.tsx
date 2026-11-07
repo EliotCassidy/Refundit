@@ -3,7 +3,10 @@
 // Yes/no questions (label ending with "?") get two big buttons instead of a text field.
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Send } from "lucide-react";
+import { toast } from "sonner";
 import { Candy } from "@/components/ui/brand";
+import { Button } from "@/components/ui/button";
 
 const isYesNo = (label: string) => label.trim().endsWith("?");
 
@@ -26,6 +29,7 @@ export function MissingInfoForm({ claimId, fields, answers }: { claimId: string;
     const body = await res.json().catch(() => null);
     if (!res.ok) setError(body?.error?.message ?? "Erreur");
     else if (body?.remaining?.length) setError(`Il manque encore : ${body.remaining.join(", ")}`);
+    else toast.success("Merci ! L'agent repart avec tes réponses");
     setPending(false);
     router.refresh();
   }
@@ -71,9 +75,9 @@ export function MissingInfoForm({ claimId, fields, answers }: { claimId: string;
           </div>
         ))}
         {error && <p className="text-sm text-on-danger-soft">{error}</p>}
-        <button disabled={pending || !complete} className="rounded-[14px] bg-ink px-4 py-3.5 font-bold text-surface transition disabled:opacity-40">
-          {pending ? "Envoi…" : "Envoyer et relancer l'agent"}
-        </button>
+        <Button type="submit" variant="dark" size="lg" block loading={pending} disabled={!complete} icon={<Send className="size-4" />}>
+          Envoyer et relancer l&apos;agent
+        </Button>
       </form>
     </section>
   );

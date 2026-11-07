@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "motion/react";
+import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/shared/supabase/client";
+
+const input =
+  "h-12 w-full rounded-[12px] border border-line bg-surface px-4 text-[15px] text-ink outline-none transition placeholder:text-muted focus:border-ink focus:bg-raised";
 
 export function LoginForm({ next }: { next: string }) {
   const router = useRouter();
@@ -10,7 +15,9 @@ export function LoginForm({ next }: { next: string }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  async function onSubmit(formData: FormData) {
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
     setPending(true);
     setError(null);
     const supabase = createClient();
@@ -22,25 +29,41 @@ export function LoginForm({ next }: { next: string }) {
       mode === "signin"
         ? await supabase.auth.signInWithPassword(credentials)
         : await supabase.auth.signUp(credentials);
-    setPending(false);
-    if (error) return setError(error.message);
+    if (error) {
+      setPending(false);
+      return setError(error.message);
+    }
     router.replace(mode === "signup" ? "/onboarding" : next);
     router.refresh();
   }
 
   return (
-    <form action={onSubmit} className="mt-8 flex flex-col gap-3">
-      <input name="email" type="email" required placeholder="Email" autoComplete="email"
-        className="rounded-[14px] border border-line-strong/50 px-3 py-2" />
-      <input name="password" type="password" required minLength={6} placeholder="Mot de passe"
+    <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-3">
+      <input name="email" type="email" required placeholder="E-mail" autoComplete="email" className={input} />
+      <input
+        name="password"
+        type="password"
+        required
+        minLength={6}
+        placeholder="Mot de passe"
         autoComplete={mode === "signin" ? "current-password" : "new-password"}
-        className="rounded-[14px] border border-line-strong/50 px-3 py-2" />
-      {error && <p className="text-sm text-on-danger-soft">{error}</p>}
-      <button disabled={pending} className="rounded-[14px] bg-ink px-3 py-2 font-medium text-surface disabled:opacity-50">
+        className={input}
+      />
+      <AnimatePresence>
+        {error && (
+          <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="text-sm text-on-danger-soft">
+            {error}
+          </motion.p>
+        )}
+      </AnimatePresence>
+      <Button type="submit" variant="dark" size="lg" block loading={pending}>
         {mode === "signin" ? "Se connecter" : "Créer un compte"}
-      </button>
-      <button type="button" onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-        className="text-sm text-muted underline">
+      </Button>
+      <button
+        type="button"
+        onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
+        className="py-1 text-sm font-medium text-muted transition hover:text-ink"
+      >
         {mode === "signin" ? "Pas de compte ? Inscription" : "Déjà inscrit ? Connexion"}
       </button>
     </form>
