@@ -25,6 +25,7 @@ type ItemState = {
   candidates: ProductCandidates | null;
   searching: boolean;
   searchError: boolean;
+  searchMessage: string | null; // message d'erreur de la recherche (ex. code-barres inconnu)
   confirmed: ConfirmedProduct | null;
   confirming: boolean;
 };
@@ -41,7 +42,7 @@ export function SelectForm({ receiptId, items }: { receiptId: string; items: Sel
       items.map((it) => [it.id, {
         checked: false, issueType: null, description: "",
         candidates: parse<ProductCandidates>(ProductCandidatesSchema, it.product_candidates),
-        searching: false, searchError: false,
+        searching: false, searchError: false, searchMessage: null,
         confirmed: parse<ConfirmedProduct>(ConfirmedProductSchema, it.confirmed_product),
         confirming: false,
       }]),
@@ -53,13 +54,16 @@ export function SelectForm({ receiptId, items }: { receiptId: string; items: Sel
 
   const patch = (id: string, p: Partial<ItemState>) => setState((s) => ({ ...s, [id]: { ...s[id], ...p } }));
 
-  async function identify(id: string) {
-    patch(id, { searching: true, searchError: false });
+  // extra : secours quand le produit n'est pas proposé (code-barres saisi/scanné, ou nom tapé)
+  async function identify(id: string, extra: { ean?: string; query?: string } = {}) {
+    patch(id, { searching: true, searchError: false, searchMessage: null });
     const res = await fetch(`/api/receipts/${receiptId}/identify`, {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lineItemId: id }),
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lineItemId: id, ...extra }),
     }).catch(() => null);
     const body = await res?.json().catch(() => null);
-    if (!res?.ok || !body?.productCandidates) return patch(id, { searching: false, searchError: true });
+    if (!res?.ok || !body?.productCandidates) {
+      return patch(id, { searching: false, searchError: true, searchMessage: body?.error?.message ?? null });
+    }
     patch(id, { searching: false, candidates: body.productCandidates });
   }
 
@@ -142,6 +146,7 @@ export function SelectForm({ receiptId, items }: { receiptId: string; items: Sel
                     state={s}
                     onPick={(ean) => confirm(it.id, ean)}
                     onRetry={() => identify(it.id)}
+                    onSearch={(extra) => identify(it.id, extra)}
                     onChange={() => patch(it.id, { confirmed: null })}
                   />
                 </div>
@@ -171,9 +176,29 @@ export function SelectForm({ receiptId, items }: { receiptId: string; items: Sel
   );
 }
 
-function ProductPicker({ state: s, onPick, onRetry, onChange }: {
-  state: ItemState; onPick: (ean: string | null) => void; onRetry: () => void; onChange: () => void;
+type Detector = { detect(source: ImageBitmapSource): Promise<{ rawValue: string }[]> };
+type DetectorClass = new (options: { formats: string[] }) => Detector;
+// BarcodeDetector : Chrome Android oui, Safari iOS non → le bouton photo n'apparaît que s'il existe.
+const barcodeDetector = () => (typeof window === "undefined" ? undefined : (window as unknown as { BarcodeDetector?: DetectorClass }).BarcodeDetector);
+
+async function readBarcode(file: File): Promise<string | null> {
+  const BD = barcodeDetector();
+  if (!BD) return null;
+  const codes = await new BD({ formats: ["ean_13", "ean_8", "upc_a", "upc_e"] }).detect(await createImageBitmap(file));
+  return codes[0]?.rawValue ?? null;
+}
+
+function ProductPicker({ state: s, onPick, onRetry, onSearch, onChange }: {
+  state: ItemState; onPick: (ean: string | null) => void; onRetry: () => void;
+  onSearch: (extra: { ean?: string; query?: string }) => void; onChange: () => void;
 }) {
+  const [manual, setManual] = useState(false);
+  const [ean, setEan] = useState("");
+  const [query, setQuery] = useState("");
+  const [scanMessage, setScanMessage] = useState<string | null>(null);
+  // Testé seulement une fois le panneau ouvert (donc dans le navigateur) : pas d'écart avec le rendu serveur.
+  const canScan = manual && Boolean(barcodeDetector());
+
   if (s.confirmed) {
     return (
       <div className="flex items-center justify-between gap-2 rounded-lg border border-green-600/40 bg-green-500/10 p-2 text-sm">
@@ -186,19 +211,20 @@ function ProductPicker({ state: s, onPick, onRetry, onChange }: {
       </div>
     );
   }
-  if (s.searching) return <p className="text-sm text-neutral-500">Recherche du produit…</p>;
+  if (s.searching) return <p className="text-sm text-neutral-500">Recherche du produit… (quelques secondes)</p>;
 
   return (
     <div className="flex flex-col gap-2">
       <p className="text-sm font-medium">Quel est ce produit ?</p>
       {s.searchError && (
-        <p className="text-sm text-red-700">
-          Recherche impossible. <button type="button" onClick={onRetry} className="underline">Réessayer</button>
+        <p className="text-sm text-red-600">
+          {s.searchMessage ?? "Recherche impossible."} <button type="button" onClick={onRetry} className="underline">Réessayer</button>
         </p>
       )}
       {s.candidates?.uncertain && s.candidates.candidates.length > 0 && (
-        <p className="text-xs text-amber-800">À vérifier : {s.candidates.uncertain_reasons.join(", ")}</p>
+        <p className="text-xs text-amber-600">À vérifier : {s.candidates.uncertain_reasons.join(", ")}</p>
       )}
+      {s.candidates && !s.candidates.candidates.length && <p className="text-sm text-neutral-500">Aucun produit trouvé.</p>}
       {s.candidates?.candidates.map((c) => (
         <button key={c.ean} type="button" disabled={s.confirming} onClick={() => onPick(c.ean)}
           className="flex items-center gap-3 rounded-lg border border-neutral-500/30 p-2 text-left disabled:opacity-50">
@@ -212,7 +238,41 @@ function ProductPicker({ state: s, onPick, onRetry, onChange }: {
           </span>
         </button>
       ))}
-      <button type="button" disabled={s.confirming} onClick={() => onPick(null)} className="text-left text-sm text-neutral-600 underline">
+
+      {/* Secours : le produit n'est pas dans la liste */}
+      {!manual ? (
+        <button type="button" onClick={() => setManual(true)} className="text-left text-sm underline">
+          Ce n&apos;est aucun de ceux-là ?
+        </button>
+      ) : (
+        <div className="flex flex-col gap-2 rounded-lg border border-neutral-500/30 p-2">
+          <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (ean.trim()) onSearch({ ean: ean.trim() }); }}>
+            <input value={ean} onChange={(e) => setEan(e.target.value.replace(/\D/g, ""))} inputMode="numeric" maxLength={14}
+              placeholder="Code-barres (chiffres sous les barres)" className="min-w-0 flex-1 rounded-lg border border-neutral-500/40 bg-transparent px-2 py-1 text-sm" />
+            <button className="rounded-lg border border-neutral-500/40 px-3 text-sm">Chercher</button>
+          </form>
+          {canScan && (
+            <label className="cursor-pointer text-sm underline">
+              Prendre en photo le code-barres
+              <input type="file" accept="image/*" capture="environment" className="hidden" onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setScanMessage(null);
+                const code = await readBarcode(file).catch(() => null);
+                if (code) { setEan(code); onSearch({ ean: code }); } else setScanMessage("Code-barres illisible : tapez les chiffres.");
+              }} />
+            </label>
+          )}
+          {scanMessage && <p className="text-xs text-red-600">{scanMessage}</p>}
+          <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (query.trim().length >= 2) onSearch({ query: query.trim() }); }}>
+            <input value={query} onChange={(e) => setQuery(e.target.value)} maxLength={100}
+              placeholder="Nom du produit (ex. Bonne Maman madeleines)" className="min-w-0 flex-1 rounded-lg border border-neutral-500/40 bg-transparent px-2 py-1 text-sm" />
+            <button className="rounded-lg border border-neutral-500/40 px-3 text-sm">Chercher</button>
+          </form>
+        </div>
+      )}
+
+      <button type="button" disabled={s.confirming} onClick={() => onPick(null)} className="text-left text-sm text-neutral-500 underline">
         Je ne trouve pas mon produit
       </button>
     </div>

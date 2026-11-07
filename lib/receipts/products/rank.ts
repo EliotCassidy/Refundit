@@ -25,7 +25,7 @@ export type RankInput = {
 
 // Marques de distributeur : uniquement les plus sûres (la recherche « MDD » du brief).
 const PRIVATE_LABELS: [RegExp, string][] = [
-  [/CARREFOUR/, "Carrefour"], [/LECLERC/, "Marque Repère"], [/AUCHAN/, "Auchan"], [/MONOPRIX/, "Monoprix"],
+  [/CARREFOUR/, "Carrefour"], [/LECLERC/, "Marque Repère"], [/AUCHAN/, "Auchan"], [/MONOP/, "Monoprix"],
   [/FRANPRIX/, "Franprix"], [/CASINO/, "Casino"], [/BIOCOOP/, "Biocoop"], [/NATURALIA/, "Naturalia"],
   [/\bCORA\b/, "Cora"], [/(SUPER|HYPER) U\b|\bU EXPRESS\b|^U$/, "U"],
 ];
@@ -95,11 +95,12 @@ function score(c: Candidate, input: RankInput): Scored {
   const read = brandWrittenIn(c.brand, input.rawLabel);
   const guessed =
     !read &&
-    [input.guess?.brand, mdd].some((b) => b && c.brand && (normalize(c.brand).includes(normalize(b)) || labelSimilarity(b, c.brand) >= 0.8));
+    (c.source === "linkup" || // vu sur le web pour ce libellé chez l'enseigne (comme dans le prototype Python)
+      [input.guess?.brand, mdd].some((b) => b && c.brand && (normalize(c.brand).includes(normalize(b)) || labelSimilarity(b, c.brand) >= 0.8)));
   const brandPts = read ? 20 : guessed ? 15 : 0;
   if (read) reasons.push(`marque ${c.brand} lue sur le ticket`);
   else if (guessed) {
-    reasons.push(`marque ${c.brand} supposée (absente du ticket)`);
+    reasons.push(c.source === "linkup" ? `${c.brand ?? "produit"} trouvé sur le web pour ce libellé` : `marque ${c.brand} supposée (absente du ticket)`);
     flags.add("marque supposée");
   } else flags.add("marque différente ou inconnue");
 

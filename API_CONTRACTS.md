@@ -290,7 +290,7 @@ All endpoints use JSON unless noted. Errors return `{ "error": { "code": string,
 | Method | Path | Body | Response |
 |---|---|---|---|
 | POST | `/api/receipts` | multipart: `image` (jpeg/png/webp/heic **≤ 4.5 MB**: Vercel's body limit, the page downsizes the photo first) | `201 { receiptId, status: "parsed" \| "failed", items: LineItemRow[] }` (synchronous parse, `maxDuration=120`) · `413 image_too_large` |
-| POST | `/api/receipts/:id/identify` | `{ lineItemId }` (**one item per call**; the page calls them in parallel) | `200 { lineItemId, productCandidates: ProductCandidates }`, also saved in `line_items.product_candidates` (`maxDuration=60`) |
+| POST | `/api/receipts/:id/identify` | `{ lineItemId, ean?, query? }` (**one item per call**; the page calls them in parallel). Fallbacks when the product isn't proposed: `ean` = barcode typed or scanned by the user (exact OFF/OBF product), `query` = product name typed by the user | `200 { lineItemId, productCandidates: ProductCandidates }`, also saved in `line_items.product_candidates` (`maxDuration=60`) · `400 invalid_ean` · `404 ean_unknown` |
 | POST | `/api/receipts/:id/confirm` | `{ lineItemId, ean: string \| null }` (`null` = "je ne trouve pas mon produit") | `200 { lineItemId, confirmedProduct: ConfirmedProduct }`; updates `ean`, `product_name`, `brand_name_guess`, `brand_id` and `product_matches` |
 | POST | `/api/claims` | `{ receiptId, items: [{ lineItemId, issueType, issueDescription?, issuePhotoPath? }] }` | `201 { claimIds: string[] }`. Inserts `draft` claims, then calls submit for each. `400 product_not_confirmed` if an item has `confirmed_product = null` |
 

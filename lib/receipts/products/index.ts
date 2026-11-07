@@ -3,10 +3,11 @@
 // Requêtes et barème inspirés du prototype Python (~/Documents/hackaton/resolve.py), sans Linkup (payant).
 import "server-only";
 import type { ProductCandidates } from "@/lib/shared/types";
-import { normalize } from "../text";
+import { labelSimilarity, normalize } from "../text";
 import { expandLabel } from "./expand";
 import { findConfirmedMatches } from "./matches";
-import { quantityVariants, searchObf, searchOff, type Hit } from "./off";
+import { offDocument, quantityVariants, searchObf, searchOff, type Hit } from "./off";
+import { linkupEnabled, webProducts } from "./linkup";
 import { parseSizes } from "./ean";
 import { referencePrice, samePriceAtChain } from "./prices";
 import { labelWords, preScore, privateLabel, rank, wordHit, type Candidate } from "./rank";
@@ -18,8 +19,10 @@ export type IdentifyInput = {
   chain: string | null; // enseigne imprimée sur le ticket
   unitPriceCents: number | null; // prix unitaire payé, avant remise
   excludeProofId?: number; // éval : ignorer les prix Open Prices de ce ticket
+  userQuery?: string; // nom du produit tapé par l'utilisateur quand la première recherche n'a rien donné
 };
 
+const LINKUP_BELOW = 70; // secours Linkup si le meilleur score est sous ce seuil (ou aucun candidat)
 const PRICED = 20; // nombre de candidats dont on cherche le prix de référence (Open Prices, ~0,2 s chacun)
 const BEAUTY_SECTION_RE = /PARFUM|HYGIENE|BEAUTE|SOIN|DENTAIRE|COSMET/;
 
@@ -32,7 +35,8 @@ const eanKey = (ean: string) => ean.replace(/^0+/, "");
 /** debug (évals) : rempli avec les EAN trouvés par les recherches (pool) et ceux qui ont reçu un prix (shortlist). */
 export async function identifyProduct(input: IdentifyInput, debug?: { pool?: string[]; shortlist?: string[] }): Promise<ProductCandidates> {
   const [guess, confirmed] = await Promise.all([
-    expandLabel(input.rawLabel, input.chain, input.section, input.unitPriceCents),
+    // Avec un nom tapé par l'utilisateur, pas besoin de faire deviner le libellé au LLM.
+    input.userQuery ? Promise.resolve(null) : expandLabel(input.rawLabel, input.chain, input.section, input.unitPriceCents),
     findConfirmedMatches(input.chain, input.rawLabel).catch((err) => {
       console.error("[product_matches]", err);
       return [];
@@ -53,6 +57,7 @@ export async function identifyProduct(input: IdentifyInput, debug?: { pool?: str
     [labelWords(input.rawLabel).join(" "), null],
     [variant ?? "", null],
   );
+  if (input.userQuery) for (const b of [...brands, null]) pairs.unshift([input.userQuery, b]);
   const queries: [string, string | null][] = [];
   for (const [q, b] of pairs) {
     const text = clean(q);
@@ -89,7 +94,8 @@ export async function identifyProduct(input: IdentifyInput, debug?: { pool?: str
   }
 
   // Prix de référence pour les meilleurs candidats seulement (limite les appels Open Prices).
-  const rankInput = { rawLabel: input.rawLabel, guess, chain: input.chain, unitPriceCents: input.unitPriceCents };
+  // Le texte de l'utilisateur est la meilleure preuve quand il existe ; sinon le libellé du ticket.
+  const rankInput = { rawLabel: input.userQuery ?? input.rawLabel, guess, chain: input.chain, unitPriceCents: input.unitPriceCents };
   const shortlist = [...byEan.values()].sort((a, b) => preScore(b, rankInput) - preScore(a, rankInput)).slice(0, PRICED);
   if (debug) {
     debug.pool = [...byEan.keys()];
@@ -101,5 +107,29 @@ export async function identifyProduct(input: IdentifyInput, debug?: { pool?: str
     }),
   );
 
-  return { ...rank(shortlist, rankInput), searched_at: new Date().toISOString() };
+  let ranked = rank(shortlist, rankInput);
+
+  // Secours web (Linkup, payant) : seulement si Open Food Facts n'a rien trouvé de bon. Un appel, jamais relancé.
+  if (linkupEnabled() && (!ranked.candidates.length || ranked.candidates[0].score < LINKUP_BELOW)) {
+    const extra: Candidate[] = [];
+    for (const w of await webProducts(input.rawLabel, input.chain, input.unitPriceCents)) {
+      // EAN lu dans une source → sa fiche ; sinon on relance Open Food Facts avec le vrai nom trouvé sur le web
+      const hits = w.ean
+        ? [await offDocument(w.ean).catch(() => null)].filter((h): h is Hit => h !== null)
+        : (await searchOff(clean(w.name), w.brand).catch(() => [] as Hit[]))
+            .filter((h) => labelSimilarity(`${w.brand ?? ""} ${w.name}`, `${h.brand ?? ""} ${h.name}`) >= 0.5)
+            .slice(0, 3);
+      for (const h of hits) {
+        if (byEan.has(eanKey(h.ean))) continue;
+        const c: Candidate = { ...h, source: "linkup" };
+        byEan.set(eanKey(h.ean), c);
+        extra.push(c);
+      }
+    }
+    await Promise.all(extra.map(async (c) => (c.reference = await referencePrice(c.ean, input.chain, input.excludeProofId).catch(() => null))));
+    if (debug) debug.pool = [...byEan.keys()];
+    if (extra.length) ranked = rank([...shortlist, ...extra], rankInput);
+  }
+
+  return { ...ranked, searched_at: new Date().toISOString() };
 }

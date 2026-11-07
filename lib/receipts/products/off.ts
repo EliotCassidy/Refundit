@@ -64,3 +64,21 @@ export async function searchObf(text: string): Promise<Hit[]> {
   const res = await getJson<{ products?: OffDoc[] }>(url);
   return (res?.products ?? []).map((d) => toHit(d, "obf")).filter((h): h is Hit => h !== null);
 }
+
+/** Fiche Open Food Facts d'un EAN via Search-a-licious (/document : ~0,1 s, gratuit), ou null. */
+export async function offDocument(ean: string): Promise<Hit | null> {
+  const d = await getJson<{ code?: string; product_name?: string | Record<string, string>; brands?: string | string[]; quantity?: string | null }>(
+    `https://search.openfoodfacts.org/document/${encodeURIComponent(ean)}?index_id=off`,
+  );
+  if (!d) return null;
+  const name = typeof d.product_name === "string" ? d.product_name : (d.product_name?.fr ?? d.product_name?.main ?? "");
+  return toHit({ code: d.code, product_name: name, brands: d.brands, quantity: d.quantity }, "off");
+}
+
+/** Fiche Open Beauty Facts d'un EAN (API produit v2 ; même limite que la lecture OFF : 15/min), ou null. */
+export async function obfProduct(ean: string): Promise<Hit | null> {
+  const d = await getJson<{ product?: OffDoc }>(
+    `https://world.openbeautyfacts.org/api/v2/product/${encodeURIComponent(ean)}?${new URLSearchParams({ fields: FIELDS })}`,
+  );
+  return d?.product ? toHit({ ...d.product, code: d.product.code ?? ean }, "obf") : null;
+}
