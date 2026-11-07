@@ -68,13 +68,31 @@ export async function chat(messages: ChatMessage[], opts: ChatOptions = {}): Pro
   if (opts.jsonSchema) body.response_format = { type: "json_schema", json_schema: opts.jsonSchema };
 
   const t0 = Date.now();
-  const res = await getClient().chat.completions.create(body, { timeout: opts.timeoutMs ?? DEFAULT_TIMEOUT_MS });
+  const res = await withRateLimitRetry(() => getClient().chat.completions.create(body, { timeout: opts.timeoutMs ?? DEFAULT_TIMEOUT_MS }));
   const choice = res.choices[0];
   return {
     content: stripThinking(choice?.message?.content ?? ""),
     finishReason: choice?.finish_reason ?? null,
     ms: Date.now() - t0,
   };
+}
+
+/**
+ * Sur 429 (trop de requêtes : holo4-35b-a3b est limité à 30 requêtes/min sur notre compte, vu le 2026-11-07),
+ * on attend le délai indiqué par l'API (retry-after, 10 s max) et on réessaie, 2 fois au plus.
+ * Une requête refusée n'est pas facturée. Les autres erreurs ne sont pas réessayées.
+ */
+async function withRateLimitRetry<T>(call: () => Promise<T>): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await call();
+    } catch (err) {
+      if (!(err instanceof OpenAI.APIError) || err.status !== 429 || attempt >= 2) throw err;
+      const wait = Number(err.headers?.get("retry-after")) || 2;
+      if (wait > 10) throw err;
+      await new Promise((r) => setTimeout(r, wait * 1000 + Math.random() * 500));
+    }
+  }
 }
 
 /** Retire les balises <think>…</think> si un modèle les met quand même dans le texte. */
