@@ -2,6 +2,7 @@
 // OWNER: Dev 1. Photo du ticket → réduite dans le navigateur → POST /api/receipts → page du ticket.
 // Vercel refuse les envois > 4,5 Mo : on réduit la photo ici (le serveur la redresse et la réduit encore).
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 const PIXEL_BUDGET = 2000 * 1500; // un peu plus que le serveur (1600×1200) : il fait la réduction finale
@@ -29,10 +30,12 @@ export function UploadForm() {
   const [preview, setPreview] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scanLimit, setScanLimit] = useState(false);
 
   async function onFile(file: File | undefined) {
     if (!file) return;
     setError(null);
+    setScanLimit(false);
     setPreview(URL.createObjectURL(file));
     setPending(true);
     try {
@@ -42,7 +45,10 @@ export function UploadForm() {
       form.append("image", image, "ticket.jpg");
       const res = await fetch("/api/receipts", { method: "POST", body: form });
       const body = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(body?.error?.message ?? "Envoi impossible. Réessayez.");
+      if (!res.ok) {
+      setScanLimit(res.status === 402 || body?.error?.code === "scan_limit_reached");
+      throw new Error(body?.error?.message ?? "Envoi impossible. Réessayez.");
+    }
       if (body.status !== "parsed") throw new Error("Le ticket n'a pas pu être lu. Reprenez la photo bien à plat, sans reflet, en entier.");
       router.push(`/receipts/${body.receiptId}`);
     } catch (err) {
@@ -78,7 +84,17 @@ export function UploadForm() {
         </>
       )}
 
-      {error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      {error && (
+        <div className="rounded-xl bg-red-500/10 p-3 text-sm text-red-600">
+          {error}
+          {scanLimit && (
+            <>
+              <br />
+              <Link href="/billing" className="font-medium underline">Passez à Refundit Illimité</Link>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

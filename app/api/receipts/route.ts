@@ -1,6 +1,7 @@
 // OWNER: Dev 1. POST /api/receipts : upload + parse synchrone (API_CONTRACTS §5).
 // multipart `image` → JPEG normalisé dans Storage → parse (lib/receipts/parse.ts) → receipts + line_items.
 // Vercel refuse les corps > 4,5 Mo (413) : la page d'upload réduit la photo avant l'envoi.
+import { getScanQuota } from "@/lib/billing";
 import { apiError } from "@/lib/shared/http";
 import { createClient, getUser } from "@/lib/shared/supabase/server";
 import type { Json } from "@/lib/shared/database.types";
@@ -13,9 +14,25 @@ export const maxDuration = 120;
 
 const MAX_BYTES = 4.5 * 1024 * 1024;
 
+// Comptes épargnés par le quota (comptes de démo/test) : emails séparés par des virgules.
+// Ne jamais retirer le check lui-même : c'est la porte d'entrée du plan gratuit (lib/billing, Dev 2).
+export function isQuotaExempt(email: string | null | undefined): boolean {
+  const list = (process.env.SCAN_QUOTA_EXEMPT_EMAILS ?? "")
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+  return email != null && list.includes(email.toLowerCase());
+}
+
 export async function POST(request: Request) {
   const user = await getUser();
   if (!user) return apiError(401, "unauthenticated", "Connexion requise");
+
+  // Quota (API_CONTRACTS §5, billing) : 1 scan/mois, avant tout upload.
+  if (!isQuotaExempt(user.email)) {
+    const quota = await getScanQuota(user.id);
+    if (!quota.canScan) return apiError(402, "scan_limit_reached", "Scan gratuit du mois utilisé : passez à Refundit Illimité.");
+  }
 
   const form = await request.formData().catch(() => null);
   const file = form?.get("image");
