@@ -89,6 +89,7 @@ Priorities:
 - [ ] P1 Retry button for `agent_failed` / `needs_manual`.
 
 **Dev 1**
+- [ ] P0 Quota check in `/api/receipts` (`getScanQuota` → 402) + link to `/billing` from profile/nav (API_CONTRACTS › Billing)
 - [ ] P1 Home dashboard summary (counts per status), empty states, loading states, errors in French.
 - [ ] P2 Gladia voice input for the "other" issue.
 - [ ] P2 Inline correction of parsed items.

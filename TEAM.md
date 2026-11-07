@@ -37,6 +37,7 @@ tickets/**               (test receipts for the parser evals)
 - the H spikes
 - brand contact discovery: `getBrandContact` + Linkup (`lib/brands/discover.ts`)
 - email fallback and replies to brands (Gmail SMTP, `lib/email/send.ts`)
+- **Billing**: subscription Refundit Illimité (€9.99/month, 1 free scan/month), `lib/billing.ts` (Dev 1 calls `getScanQuota` in `/api/receipts`)
 - **NotCoca** demo brand site (`/notcoca`: public form + back-office) and Stripe Connect test payouts
 
 **Owns:**
@@ -46,6 +47,7 @@ app/api/webhooks/**  app/api/email/**  lib/agent/**                 scripts/agen
 lib/claims/**                        lib/email/**
 lib/brands/discover.ts               lib/brands/index.ts (getBrandContact)
 app/notcoca/**  app/api/notcoca/**  lib/notcoca/**  lib/stripe.ts  scripts/stripe-connect-demo.ts
+app/(app)/billing/**  app/api/billing/**  app/api/webhooks/stripe  lib/billing.ts
 ```
 
 ## Shared (coordinate before changing)

@@ -312,6 +312,25 @@ Reads (receipt, items, profile) go directly through the Supabase client with RLS
 
 `/submit` and `/cancel` accept either the user's session (the owner of the claim) or the header `x-internal-key: $INTERNAL_API_KEY` for server-to-server calls from `/api/claims`.
 
+### Billing (Dev 2) — "Refundit Illimité", €9.99/month, Stripe test mode
+Free plan: **1 receipt scan per calendar month** (Europe/Paris); subscribed (`active`/`trialing`): unlimited.
+
+| Method | Path | Body | Response |
+|---|---|---|---|
+| POST | `/api/billing/checkout` | none (user session) | `200 { url }` → redirect to Stripe Checkout |
+| GET | `/api/billing/return?session_id=…` | Stripe success URL | `303` → `/billing?status=success\|error` (activates the subscription without waiting for the webhook) |
+| POST | `/api/billing/cancel` | none | `200 { cancelAtPeriodEnd: true }` |
+| POST | `/api/webhooks/stripe` | Stripe event (signed, `STRIPE_WEBHOOK_SECRET`) | `200`; handles `customer.subscription.created/updated/deleted` |
+
+**Dev 1 — quota check in `POST /api/receipts`** (before uploading):
+```ts
+import { getScanQuota } from "@/lib/billing";
+const quota = await getScanQuota(user.id);
+if (!quota.canScan) return apiError(402, "scan_limit_reached", "Scan gratuit du mois utilisé : passez à Refundit Illimité.");
+```
+On `402`, the upload page links to `/billing`. Profile page / nav should link to `/billing` ("Mon abonnement").
+Columns: `profiles.stripe_customer_id`, `subscription_status`, `subscription_period_end` (migration `20261107220000`).
+
 ### NotCoca (fictional demo brand, Dev 2)
 | Method | Path | Body | Response |
 |---|---|---|---|
