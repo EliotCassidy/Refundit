@@ -1,5 +1,27 @@
-// OWNER: Dev 1. Onboarding form → profiles (first/last name, phone, postal address, optional IBAN).
-// Mention that this data is given to the agent to fill brand forms (ARCHITECTURE.md §8).
-export default function OnboardingPage() {
-  return <h1 className="text-xl font-semibold">Onboarding — TODO(dev1)</h1>;
+// OWNER: Dev 1. Onboarding : crée la ligne profiles de l'utilisateur, puis accueil.
+import { redirect } from "next/navigation";
+import { createClient, getUser } from "@/lib/shared/supabase/server";
+import { OnboardingForm } from "./onboarding-form";
+
+export default async function OnboardingPage() {
+  const user = await getUser();
+  if (!user) redirect("/login");
+  const supabase = await createClient();
+
+  const { data: profile } = await supabase.from("profiles").select("id").eq("id", user.id).maybeSingle();
+  if (profile) redirect("/");
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div>
+        <h1 className="text-xl font-semibold">Quelques informations</h1>
+        <p className="mt-1 text-sm text-neutral-500">Pour créer votre compte, il nous faut votre nom et votre adresse.</p>
+      </div>
+      <p className="rounded-xl bg-neutral-500/10 p-3 text-sm">
+        Ces informations servent à remplir les formulaires des marques. Les marques vous répondent sur une adresse email
+        dédiée, jamais la vôtre.
+      </p>
+      <OnboardingForm />
+    </div>
+  );
 }
