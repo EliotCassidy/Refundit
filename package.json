@@ -14,7 +14,8 @@
     "spike": "tsx scripts/agent-spike.ts",
     "eval:extract": "tsx --env-file=.env.local --conditions=react-server lib/receipts/eval/extract.ts",
     "test:receipts": "tsx lib/receipts/eval/cases.ts",
-    "stripe:demo-account": "tsx scripts/stripe-connect-demo.ts"
+    "stripe:demo-account": "tsx scripts/stripe-connect-demo.ts",
+    "eval:identify": "tsx --env-file=.env.local --conditions=react-server lib/receipts/eval/identify.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
