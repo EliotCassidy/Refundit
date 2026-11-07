@@ -36,9 +36,16 @@ function describeAction(req: { toolName?: string; args?: Record<string, unknown>
 }
 
 export async function getAgentSteps(sessionId: string): Promise<AgentStep[]> {
-  const page = (await h().sessions.listSessionEvents({ id: sessionId, size: 500 } as never)) as unknown as { items: RawEvent[] };
+  // H caps page size at 200: walk the pages (agent events only, no metrics).
+  const events: RawEvent[] = [];
+  for (let page = 1; page <= 10; page++) {
+    const res = (await h().sessions.listSessionEvents({ id: sessionId, size: 200, page, type: "AgentEvent" } as never)) as unknown as { items?: RawEvent[] };
+    const items = res.items ?? [];
+    events.push(...items);
+    if (items.length < 200) break;
+  }
   const steps: AgentStep[] = [];
-  for (const e of page.items ?? []) {
+  for (const e of events) {
     const d = e.data ?? {};
     const at = e.timestamp ?? "";
     if (d.kind === "observation_event") {
