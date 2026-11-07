@@ -111,7 +111,15 @@ export function ContactForm() {
       )}
 
       {step === 2 && (
-        <form action={submit} className="flex flex-col gap-4">
+        // onSubmit (not action): React 19 resets an action form after each submit, which would
+        // wipe every field when the server rejects the request.
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void submit(new FormData(e.currentTarget));
+          }}
+          className="flex flex-col gap-4"
+        >
           <Select name="civility" label="Civilité" options={CIVILITIES} />
           <div className="grid gap-4 sm:grid-cols-2">
             <Field name="last_name" label="Nom" />

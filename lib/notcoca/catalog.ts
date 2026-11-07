@@ -19,6 +19,8 @@ export const CIVILITIES = ["Madame", "Monsieur", "Autre"] as const;
 export const YES_NO = ["Oui", "Non"] as const;
 
 const optional = z.string().trim().max(200).optional().transform((v) => v || null);
+// Empty form fields arrive as "": treat them as absent (z.coerce.number("") would give 0).
+const blankToUndefined = (v: unknown) => (typeof v === "string" && v.trim() === "" ? undefined : v);
 
 export const NotCocaRequestSchema = z
   .object({
@@ -27,11 +29,11 @@ export const NotCocaRequestSchema = z
     drink: z.enum(DRINKS).optional(),
     packaging: z.enum(PACKAGINGS).optional(),
     format: z.enum(FORMATS).optional(),
-    quantity: z.coerce.number().int().min(1).max(99).optional(),
+    quantity: z.preprocess(blankToUndefined, z.coerce.number().int().min(1).max(99).optional()),
     best_before: optional,
     production_code: optional,
     store: optional,
-    purchase_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    purchase_date: z.preprocess(blankToUndefined, z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional()),
     message: z.string().trim().min(10).max(4000),
     civility: z.enum(CIVILITIES),
     last_name: z.string().trim().min(1).max(100),
