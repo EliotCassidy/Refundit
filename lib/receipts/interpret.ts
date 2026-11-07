@@ -256,11 +256,9 @@ export function interpret(t: Transcription): Interpretation {
   const tail_discounts: { text: string; amount_cents: number }[] = [];
 
   for (const l of lines.slice(stop)) {
-    if (COUNT_RE.test(l.n)) {
-      printed.n_items ??= parseCount(l.text, l.qty, l.amount);
-      continue;
-    }
-    if (l.cents == null) continue;
+    // "6 ARTICLE(S)  TOTAL A PAYER  12,65" : la même ligne donne le nombre d'articles ET un total.
+    if (COUNT_RE.test(l.n)) printed.n_items ??= parseCount(l.text, l.qty, l.amount);
+    if (l.cents == null || (COUNT_RE.test(l.n) && !TOTAL_RE.test(l.n))) continue;
     if (DISCOUNT_TOTAL_RE.test(l.n)) printed.discounts_cents ??= Math.abs(l.cents);
     else if (GROSS_RE.test(l.n)) printed.gross_cents ??= l.cents;
     else if (PAID_STRONG_RE.test(l.n) && !NOT_PAID_RE.test(l.n)) paidStrong ??= l.cents;
