@@ -69,7 +69,7 @@ export default async function ReceiptPage({ params }: PageProps<"/receipts/[id]"
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-5">
       <header className="text-center">
-        <h1 className="text-[28px] font-bold tracking-tight md:text-[32px]">Quel produit a un problème ?</h1>
+        <h1 className="text-[26px] font-semibold tracking-tight">Quel produit a un problème ?</h1>
         <p className="mt-1.5 text-[15px] text-muted">Vérifie les produits trouvés, puis touche « Oui » sur celui qui pose problème.</p>
       </header>
 

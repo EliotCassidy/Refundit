@@ -10,15 +10,15 @@ type Size = "sm" | "md" | "lg";
 const VARIANT: Record<Variant, string> = {
   primary: "bg-brand text-on-brand hover:brightness-[0.96] shadow-[0_1px_2px_rgba(21,128,61,0.25)]",
   dark: "bg-ink text-surface hover:bg-ink/90",
-  secondary: "border border-line bg-raised text-ink hover:border-line-strong/60 hover:bg-sunken/40",
+  secondary: "bg-white/80 text-ink ring-1 ring-black/[0.06] hover:bg-white",
   ghost: "text-muted hover:bg-sunken hover:text-ink",
   danger: "bg-danger text-white hover:brightness-95",
-  "danger-soft": "border border-line bg-raised text-on-danger-soft hover:bg-danger-soft",
+  "danger-soft": "bg-white/80 text-on-danger-soft ring-1 ring-black/[0.06] hover:bg-danger-soft",
 };
 const SIZE: Record<Size, string> = {
-  sm: "h-9 px-3.5 text-sm rounded-[10px] gap-1.5",
-  md: "h-11 px-4 text-[15px] rounded-[12px] gap-2",
-  lg: "h-[52px] px-5 text-base rounded-[14px] gap-2",
+  sm: "h-9 px-3.5 text-sm rounded-full gap-1.5",
+  md: "h-11 px-4 text-[15px] rounded-full gap-2",
+  lg: "h-[52px] px-5 text-[15px] rounded-full gap-2",
 };
 
 export type ButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onAnimationStart" | "onDrag" | "onDragStart" | "onDragEnd"> & {

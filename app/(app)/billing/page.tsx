@@ -1,16 +1,14 @@
-// OWNER: Dev 2. Subscription page: usage this month, plan comparison (Gratuit / Illimité), FAQ.
-import { Check, Infinity as InfinityIcon, Sparkles } from "lucide-react";
-import { glass } from "@/components/ui/aurora";
+// OWNER: Dev 2. Subscription page in the app's grouped-list style: usage ring header, the two offers as rows,
+// upgrade button or cancel row, FAQ.
+import { Check, Infinity as InfinityIcon, ScanLine } from "lucide-react";
 import { StripeBadge } from "@/components/ui/brand";
+import { PageHeader, Section } from "@/components/ui/list";
 import { FadeIn } from "@/components/ui/motion";
-import { FREE_SCANS_PER_MONTH, getScanQuota, PLAN } from "@/lib/billing";
+import { FREE_SCANS_PER_MONTH, getScanQuota } from "@/lib/billing";
 import { createAdminClient } from "@/lib/shared/supabase/admin";
 import { getUser } from "@/lib/shared/supabase/server";
-import { BillingButtons } from "./billing-buttons";
-import { Faq, GlowBorder, Price, UsageRing } from "./billing-visuals";
-
-const FREE_FEATURES = [`${FREE_SCANS_PER_MONTH} scan de ticket par mois`, "Réclamations envoyées par l'agent", "Suivi des réponses des marques"];
-const PRO_FEATURES = ["Scans de tickets illimités", "Réclamations envoyées par l'agent", "Suivi des réponses des marques", "Sans engagement, résiliable à tout moment"];
+import { CancelRow, UpgradeButton } from "./billing-buttons";
+import { Faq, UsageRing } from "./billing-visuals";
 
 const FAQ = [
   { q: "Puis-je résilier quand je veux ?", a: "Oui. La résiliation prend effet à la fin du mois en cours : tu gardes les scans illimités jusque-là, sans frais." },
@@ -21,6 +19,22 @@ const FAQ = [
 function nextReset() {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth() + 1, 1).toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
+}
+
+function Offer({ icon, name, detail, price, current }: { icon: React.ReactNode; name: string; detail: string; price: string; current: boolean }) {
+  return (
+    <div className="flex min-h-[64px] items-center gap-3.5 px-5 py-3">
+      <span className={`grid size-9 shrink-0 place-items-center rounded-full ${current ? "bg-ink text-surface" : "bg-sunken text-ink"}`}>{icon}</span>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-2 text-[15px] font-medium">
+          {name}
+          {current && <span className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-medium text-on-brand-soft"><Check className="size-3" strokeWidth={2.5} aria-hidden />Ton offre</span>}
+        </span>
+        <span className="block text-[13px] text-muted">{detail}</span>
+      </span>
+      <span className="money shrink-0 text-[15px]">{price}</span>
+    </div>
+  );
 }
 
 export default async function BillingPage({ searchParams }: PageProps<"/billing">) {
@@ -38,96 +52,77 @@ export default async function BillingPage({ searchParams }: PageProps<"/billing"
   const end = profile?.subscription_period_end
     ? new Date(profile.subscription_period_end).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
     : null;
+  const endShort = profile?.subscription_period_end
+    ? new Date(profile.subscription_period_end).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })
+    : null;
   const atLimit = !unlimited && !exempt && !quota.canScan;
+  const scans = `${quota.used} ticket${quota.used > 1 ? "s" : ""} scanné${quota.used > 1 ? "s" : ""} ce mois-ci`;
 
   return (
-    <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8">
-      <header className="text-center">
-        <h1 className="text-[28px] font-bold tracking-tight md:text-[32px]">Abonnement</h1>
-        <p className="mt-1.5 text-[15px] text-muted">Scanne autant de tickets que tu veux, on s&apos;occupe du reste.</p>
-      </header>
-
-      {status === "success" && (
-        <FadeIn><p className="rounded-[14px] border border-brand/30 bg-brand-soft px-4 py-3 text-center text-sm font-medium text-on-brand-soft">Bienvenue dans Refundit Illimité !</p></FadeIn>
-      )}
-      {status === "error" && (
-        <FadeIn><p className="rounded-[14px] bg-danger-soft px-4 py-3 text-center text-sm text-on-danger-soft">Le paiement n&apos;a pas pu être vérifié.</p></FadeIn>
-      )}
-
-      {/* Usage */}
+    <div className="mx-auto flex w-full max-w-[600px] flex-col gap-7">
       <FadeIn>
-        <section className={`${glass} flex items-center gap-5 p-5 md:p-6`}>
-          <UsageRing used={quota.used} limit={FREE_SCANS_PER_MONTH} unlimited={unlimited || exempt} />
-          <div className="min-w-0">
-            <p className="text-[13px] font-medium text-muted">Ce mois-ci</p>
-            <p className="text-lg font-semibold">
-              {unlimited
-                ? `${quota.used} ticket${quota.used > 1 ? "s" : ""} scanné${quota.used > 1 ? "s" : ""}`
-                : exempt
-                  ? "Compte de test : scans illimités"
-                  : atLimit
-                    ? "Limite gratuite atteinte"
-                    : `${quota.remaining} scan gratuit restant`}
-            </p>
-            <p className="text-sm text-muted">
-              {unlimited
-                ? end ? `Prochaine échéance le ${end}` : "Scans illimités"
-                : `Ton scan gratuit revient le ${nextReset()}.`}
-            </p>
+        <PageHeader
+          title={unlimited ? "Refundit Illimité" : "Offre gratuite"}
+          subtitle={
+            unlimited
+              ? <>{scans}{end && <><br />Prochaine échéance le {end}</>}</>
+              : exempt
+                ? <>Compte de test : scans illimités<br />{scans}</>
+                : atLimit
+                  ? <>Limite gratuite atteinte<br />Ton scan gratuit revient le {nextReset()}</>
+                  : <>{quota.remaining} scan gratuit restant ce mois-ci</>
+          }
+        >
+          <div className="mb-4">
+            <UsageRing used={quota.used} limit={FREE_SCANS_PER_MONTH} unlimited={unlimited || exempt} />
           </div>
-        </section>
+        </PageHeader>
       </FadeIn>
 
-      {/* Plans */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <FadeIn delay={0.05}>
-          <section className={`${glass} flex h-full flex-col gap-5 p-6`}>
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Gratuit</h2>
-              {!unlimited && <span className="rounded-full bg-ink px-2.5 py-1 text-[11px] font-semibold text-surface">Ton offre</span>}
+      {status === "success" && (
+        <FadeIn><p className="rounded-[18px] bg-brand-soft px-5 py-3.5 text-center text-[14px] font-medium text-on-brand-soft">Bienvenue dans Refundit Illimité !</p></FadeIn>
+      )}
+      {status === "error" && (
+        <FadeIn><p className="rounded-[18px] bg-danger-soft px-5 py-3.5 text-center text-[14px] text-on-danger-soft">Le paiement n&apos;a pas pu être vérifié.</p></FadeIn>
+      )}
+
+      <FadeIn delay={0.05} className="flex flex-col gap-4">
+        <Section title="Offres">
+          <Offer icon={<ScanLine className="size-[18px]" aria-hidden />} name="Gratuit" detail={`${FREE_SCANS_PER_MONTH} scan de ticket par mois`} price="0 €" current={!unlimited} />
+          <Offer icon={<InfinityIcon className="size-[18px]" aria-hidden />} name="Illimité" detail="Scans illimités · sans engagement" price="9,99 €" current={unlimited} />
+        </Section>
+        {!unlimited && (
+          <div className="flex flex-col items-center gap-3">
+            <UpgradeButton />
+            <StripeBadge />
+            <p className="text-center text-xs text-muted">Mode test : carte 4242 4242 4242 4242, date future, n&apos;importe quel code.</p>
+          </div>
+        )}
+      </FadeIn>
+
+      <FadeIn delay={0.1}>
+        <Section title="Toutes les offres incluent">
+          {["Réclamations envoyées par l'agent", "Suivi des réponses des marques", "Remboursements versés via Stripe"].map((f) => (
+            <div key={f} className="flex min-h-[48px] items-center gap-3 px-5 py-2.5 text-[15px]">
+              <Check className="size-4 shrink-0 text-brand-strong" strokeWidth={2.5} aria-hidden />
+              {f}
             </div>
-            <p><span className="money text-[40px] leading-none">0 €</span><span className="text-sm text-muted"> / mois</span></p>
-            <ul className="flex flex-1 flex-col gap-2.5 text-sm">
-              {FREE_FEATURES.map((f) => (
-                <li key={f} className="flex items-center gap-2.5"><Check className="size-4 text-muted" aria-hidden /> {f}</li>
-              ))}
-            </ul>
-          </section>
+          ))}
+        </Section>
+      </FadeIn>
+
+      {unlimited && (
+        <FadeIn delay={0.12}>
+          <Section title="Gérer" footer={<StripeBadge />}>
+            <CancelRow until={endShort} />
+          </Section>
         </FadeIn>
+      )}
 
-        <FadeIn delay={0.1}>
-          <GlowBorder>
-            <section className="flex h-full flex-col gap-5 p-6">
-              <div className="flex items-center justify-between">
-                <h2 className="flex items-center gap-2 text-lg font-semibold"><InfinityIcon className="size-5 text-brand-strong" aria-hidden /> Illimité</h2>
-                <span className="inline-flex items-center gap-1 rounded-full bg-brand px-2.5 py-1 text-[11px] font-semibold text-on-brand">
-                  {unlimited ? <><Check className="size-3" aria-hidden /> Ton offre</> : <><Sparkles className="size-3" aria-hidden /> Recommandé</>}
-                </span>
-              </div>
-              <p className="flex items-baseline gap-1"><Price cents={PLAN.amountCents} /><span className="text-sm text-muted">/ mois</span></p>
-              <ul className="flex flex-1 flex-col gap-2.5 text-sm">
-                {PRO_FEATURES.map((f) => (
-                  <li key={f} className="flex items-center gap-2.5">
-                    <span className="grid size-5 place-items-center rounded-full bg-brand-soft text-brand-strong"><Check className="size-3" strokeWidth={3} aria-hidden /></span>
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <BillingButtons subscribed={unlimited} />
-              <StripeBadge className="justify-center" />
-            </section>
-          </GlowBorder>
-        </FadeIn>
-      </div>
-
-      {!unlimited && <p className="-mt-4 text-center text-xs text-muted">Mode test Stripe : carte 4242 4242 4242 4242, date future, n&apos;importe quel code.</p>}
-
-      {/* FAQ */}
       <FadeIn delay={0.15}>
-        <section className="flex flex-col gap-3">
-          <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-muted">Questions fréquentes</h2>
+        <Section title="Questions fréquentes">
           <Faq items={FAQ} />
-        </section>
+        </Section>
       </FadeIn>
     </div>
   );

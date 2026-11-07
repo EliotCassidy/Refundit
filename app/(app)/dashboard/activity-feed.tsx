@@ -129,7 +129,7 @@ export function ActivityFeed({ claims }: { claims: FeedClaim[] }) {
   return (
     <section id="activite" className="flex scroll-mt-20 flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">Mes achats</h2>
+        <h2 className="px-1 text-[17px] font-semibold tracking-tight">Mes achats</h2>
         <SortMenu
           value={sort}
           onChange={setSort}
@@ -244,11 +244,11 @@ function FolderCard({ folder: f, index, open, onToggle }: { folder: Folder; inde
           ))}
       </AnimatePresence>
 
-      <div className="relative overflow-hidden rounded-[22px] border border-white/80 bg-white/70 shadow-[0_14px_36px_-16px_rgba(17,23,20,0.16)] backdrop-blur-xl backdrop-saturate-150">
+      <div className="relative overflow-hidden rounded-[24px] bg-white/80 shadow-[0_1px_2px_rgba(17,23,20,0.04),0_12px_32px_-18px_rgba(17,23,20,0.18)] ring-1 ring-black/[0.05] backdrop-blur-xl">
         <button type="button" onClick={onToggle} aria-expanded={open} className="flex w-full items-center gap-3.5 px-4 py-4 text-left transition-colors hover:bg-white/50">
           <StoreIcon store={f.store} fallbackName={f.title} size={48} />
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[16px] font-semibold">
+            <span className="block truncate text-[16px] font-medium">
               {f.title}
               {f.branch && <span className="font-normal text-muted"> · {f.branch}</span>}
             </span>
@@ -301,7 +301,7 @@ function FolderCard({ folder: f, index, open, onToggle }: { folder: Folder; inde
                         className="group flex items-center gap-3 rounded-[12px] bg-white px-3.5 py-3 shadow-[0_1px_2px_rgba(17,23,20,0.06)] transition hover:shadow-[0_6px_16px_-8px_rgba(17,23,20,0.25)] active:scale-[0.99]"
                       >
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[15px] font-semibold">{c.product}</span>
+                          <span className="block truncate text-[15px] font-medium">{c.product}</span>
                           <span className="mt-1 flex items-center gap-1.5 text-[12px]">
                             <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium ${PILL[group]}`}>
                               <span className={`size-1.5 rounded-full ${DOT[group]} ${c.status === "submitting" ? "animate-pulse" : ""}`} />

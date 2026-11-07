@@ -78,12 +78,12 @@ export function UploadForm() {
           </motion.div>
         ) : (
           <motion.div key="actions" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex w-full max-w-sm flex-col gap-2.5">
-            <label className="inline-flex h-[52px] items-center justify-center gap-2 rounded-[14px] bg-ink px-5 font-semibold text-surface transition hover:bg-ink/90 active:scale-[0.98]">
+            <label className="inline-flex h-[52px] cursor-pointer items-center justify-center gap-2 rounded-full bg-ink px-5 text-[15px] font-semibold text-surface transition hover:bg-ink/90 active:scale-[0.98]">
               <Camera className="size-5" aria-hidden />
               Prendre une photo
               <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
             </label>
-            <label className="inline-flex h-[52px] items-center justify-center gap-2 rounded-[14px] border border-line bg-raised px-5 font-semibold text-ink transition hover:bg-sunken/50 active:scale-[0.98]">
+            <label className="inline-flex h-[52px] cursor-pointer items-center justify-center gap-2 rounded-full bg-white/80 px-5 text-[15px] font-semibold text-ink ring-1 ring-black/[0.06] transition hover:bg-white active:scale-[0.98]">
               <ImagePlus className="size-5 text-muted" aria-hidden />
               Choisir une photo
               <input type="file" accept="image/*" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
@@ -94,7 +94,7 @@ export function UploadForm() {
       </AnimatePresence>
 
       {error && (
-        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm rounded-[14px] bg-danger-soft p-3 text-center text-sm text-on-danger-soft">
+        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm rounded-[18px] bg-danger-soft px-5 py-3.5 text-center text-sm text-on-danger-soft">
           {error}
           {scanLimit && (
             <>

@@ -4,10 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { Button } from "@/components/ui/button";
+import { group } from "@/components/ui/list";
 import { createClient } from "@/lib/shared/supabase/client";
 
-const input =
-  "h-12 w-full rounded-[12px] border border-line bg-surface px-4 text-[15px] text-ink outline-none transition placeholder:text-muted focus:border-ink focus:bg-raised";
+const input = "h-[52px] w-full bg-transparent px-5 text-[15px] text-ink outline-none transition placeholder:text-muted focus:bg-black/[0.015]";
 
 export function LoginForm({ next }: { next: string }) {
   const router = useRouter();
@@ -38,7 +38,8 @@ export function LoginForm({ next }: { next: string }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-3">
+    <form onSubmit={onSubmit} className="flex flex-col gap-4">
+      <div className={`${group} divide-y divide-black/[0.05]`}>
       <input name="email" type="email" required placeholder="E-mail" autoComplete="email" className={input} />
       <input
         name="password"
@@ -49,9 +50,10 @@ export function LoginForm({ next }: { next: string }) {
         autoComplete={mode === "signin" ? "current-password" : "new-password"}
         className={input}
       />
+      </div>
       <AnimatePresence>
         {error && (
-          <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="text-sm text-on-danger-soft">
+          <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="px-5 text-sm text-on-danger-soft">
             {error}
           </motion.p>
         )}

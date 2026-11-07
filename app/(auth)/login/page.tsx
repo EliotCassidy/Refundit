@@ -1,5 +1,5 @@
 // OWNER: Dev 1 (styled by Dev 2's design pass). Email/password auth.
-import { Aurora, glass } from "@/components/ui/aurora";
+import { Aurora } from "@/components/ui/aurora";
 import { Logo } from "@/components/ui/brand";
 import { LoginForm } from "./login-form";
 
@@ -12,13 +12,11 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         <div className="mb-8 flex flex-col items-center gap-5 text-center">
           <Logo />
           <div>
-            <h1 className="text-[30px] font-bold leading-tight tracking-tight md:text-[34px]">Récupère ton argent.</h1>
+            <h1 className="text-[30px] font-semibold leading-tight tracking-tight md:text-[34px]">Récupère ton argent.</h1>
             <p className="mt-2 text-[15px] text-muted">Un produit défectueux ? Scanne ton ticket, notre agent écrit à la marque pour toi.</p>
           </div>
         </div>
-        <section className={`${glass} p-6 md:p-7`}>
-          <LoginForm next={typeof next === "string" && next.startsWith("/") ? next : "/"} />
-        </section>
+        <LoginForm next={typeof next === "string" && next.startsWith("/") ? next : "/"} />
       </div>
     </main>
   );

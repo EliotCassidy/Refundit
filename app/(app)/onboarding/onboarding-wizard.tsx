@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowLeft, ArrowRight, Check, Landmark, Mail, ScanLine, ShieldCheck, Sparkles, Zap } from "lucide-react";
-import { glass } from "@/components/ui/aurora";
+import { group } from "@/components/ui/list";
 import { Logo } from "@/components/ui/brand";
 import { Button } from "@/components/ui/button";
 import { formatIban, isValidIban } from "@/lib/shared/iban";
@@ -29,7 +29,7 @@ type Step = (typeof STEPS)[number];
 const ease = [0.22, 1, 0.36, 1] as const;
 
 const input =
-  "h-[52px] w-full rounded-[14px] border border-black/[0.06] bg-white/80 px-4 text-base text-ink outline-none transition placeholder:text-muted/70 focus:border-ink focus:bg-white focus:shadow-[0_0_0_4px_rgba(17,23,20,0.06)]";
+  "h-[52px] w-full rounded-[14px] bg-black/[0.04] px-4 text-base text-ink outline-none ring-1 ring-transparent transition placeholder:text-muted/60 focus:bg-white focus:ring-ink/30";
 
 function Label({ children, hint }: { children: React.ReactNode; hint?: string }) {
   return (
@@ -108,7 +108,7 @@ export function OnboardingWizard() {
 
   return (
     <div className="mx-auto flex min-h-[calc(100dvh-9rem)] w-full max-w-[460px] flex-col justify-center py-2">
-      <motion.div layout transition={{ duration: 0.35, ease }} className={`${glass} flex flex-col p-6 sm:p-8`}>
+      <motion.div layout transition={{ duration: 0.35, ease }} className={`${group} flex flex-col p-6 sm:p-8`}>
       {/* Progress + back */}
       {step !== "welcome" && step !== "done" && (
         <div className="mb-7 flex items-center gap-3">
@@ -277,7 +277,7 @@ export function OnboardingWizard() {
 function Screen({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col">
-      <h1 className="text-[26px] font-bold leading-tight tracking-tight">{title}</h1>
+      <h1 className="text-[26px] font-semibold leading-tight tracking-tight">{title}</h1>
       <p className="mb-7 mt-2 text-[15px] text-muted">{subtitle}</p>
       {children}
     </div>
@@ -338,7 +338,7 @@ function Welcome({ onStart }: { onStart: () => void }) {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1, duration: 0.5, ease }}
-        className="mt-6 text-[34px] font-bold leading-[1.05] tracking-tight sm:text-[40px]"
+        className="mt-6 text-[34px] font-semibold leading-[1.05] tracking-tight sm:text-[40px]"
       >
         On récupère{" "}
         <span className="bg-gradient-to-r from-[#15803D] via-[#22C55E] to-[#65A30D] bg-clip-text text-transparent">ton argent.</span>
@@ -412,13 +412,13 @@ function Done({ firstName, ibanSaved, onHome }: { firstName: string; ibanSaved: 
         </motion.span>
       </div>
       <div>
-        <h1 className="text-[30px] font-bold tracking-tight">Tout est prêt{firstName.trim() ? `, ${firstName.trim()}` : ""} !</h1>
+        <h1 className="text-[30px] font-semibold tracking-tight">Tout est prêt{firstName.trim() ? `, ${firstName.trim()}` : ""} !</h1>
         <p className="mt-2 text-[15px] text-muted">
           {ibanSaved ? "Tes remboursements arriveront directement sur ton compte." : "Pense à ajouter ton IBAN avant ton premier remboursement."}
         </p>
       </div>
       <div className="flex w-full flex-col gap-2">
-        <Link href="/receipts/new" className="inline-flex h-[52px] items-center justify-center gap-2 rounded-[14px] bg-brand px-5 font-semibold text-on-brand transition active:scale-[0.98]">
+        <Link href="/receipts/new" className="inline-flex h-[52px] items-center justify-center gap-2 rounded-full bg-ink px-5 font-semibold text-surface transition active:scale-[0.98]">
           <Sparkles className="size-4" aria-hidden /> Scanner mon premier ticket
         </Link>
         <Button type="button" variant="ghost" size="md" block onClick={onHome}>Aller au tableau de bord</Button>

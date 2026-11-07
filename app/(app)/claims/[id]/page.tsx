@@ -1,10 +1,10 @@
 // OWNER: Dev 2. One claim, laid out like a bank transaction detail: centered header with the one amount
 // that matters, a 3-step progress, grouped detail rows, the agent as a single row, then the follow-up timeline.
-import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { displayLabel } from "@/components/ui/format";
+import { group, Row, Section } from "@/components/ui/list";
 import { AnimatedMoney, FadeIn } from "@/components/ui/motion";
 import { StatusBadge } from "@/components/ui/status";
 import { StoreIcon } from "@/components/ui/store-logo";
@@ -22,26 +22,6 @@ const day = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: "n
 const longDay = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Paris" });
 const euros = (cents: number) => (cents / 100).toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
-
-const group = "overflow-hidden rounded-[24px] bg-white/80 shadow-[0_1px_2px_rgba(17,23,20,0.04),0_12px_32px_-18px_rgba(17,23,20,0.18)] ring-1 ring-black/[0.05] backdrop-blur-xl";
-
-function Row({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-4 px-5 py-3.5">
-      <span className="text-[14px] text-muted">{label}</span>
-      <span className="min-w-0 truncate text-right text-[14px] font-medium">{children}</span>
-    </div>
-  );
-}
-
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="flex flex-col gap-2">
-      <h2 className="px-5 text-[13px] font-medium text-muted">{title}</h2>
-      <div className={group}>{children}</div>
-    </section>
-  );
-}
 
 export default async function ClaimPage({ params }: PageProps<"/claims/[id]">) {
   const { id } = await params;
@@ -171,7 +151,7 @@ export default async function ClaimPage({ params }: PageProps<"/claims/[id]">) {
 
       <FadeIn delay={0.1}>
         <Section title="Détails">
-          <div className="divide-y divide-black/[0.05]">
+          <>
             {storeLabel && (
               <Row label="Magasin">
                 <span className="inline-flex items-center gap-2">
@@ -189,9 +169,9 @@ export default async function ClaimPage({ params }: PageProps<"/claims/[id]">) {
                 <span className="ml-1.5 font-normal text-muted">via Stripe</span>
               </Row>
             )}
-          </div>
+          </>
           {hasAgent && (
-            <div className="border-t border-black/[0.05]">
+            <div>
               <AgentView claimId={claim.id} live={live} actions={live ? <ClaimActions claimId={claim.id} status={claim.status} /> : undefined} />
             </div>
           )}

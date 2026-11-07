@@ -1,13 +1,14 @@
 "use client";
-// Profile settings, banking-app style. Saves through POST /api/profile (Dev 1's API) with the
+// Profile settings in the app's grouped-list style (components/ui/list). Saves through POST /api/profile (Dev 1's API) with the
 // optional civility + IBAN. A save bar slides up as soon as something changed.
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { Check, ChevronRight, CreditCard, Landmark, LogOut, Pencil, Sparkles } from "lucide-react";
+import { Check, CreditCard, Landmark, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { ButtonRow, InputRow, NavRow, PageHeader, Section } from "@/components/ui/list";
 import { formatIban, isValidIban } from "@/lib/shared/iban";
 import { createClient } from "@/lib/shared/supabase/client";
 
@@ -28,30 +29,6 @@ const CIVILITIES = [
   { value: "monsieur", label: "Monsieur" },
   { value: "autre", label: "Non précisé" },
 ] as const;
-
-const input =
-  "h-11 w-full rounded-[12px] border border-transparent bg-sunken/70 px-3.5 text-[15px] text-ink outline-none transition placeholder:text-muted/70 focus:border-ink focus:bg-raised";
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="flex flex-col gap-2">
-      <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-muted">{title}</h2>
-      <div className="rounded-[20px] border border-line bg-raised/90 p-4 backdrop-blur">{children}</div>
-    </section>
-  );
-}
-
-function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="flex items-baseline justify-between text-[13px] font-medium text-muted">
-        {label}
-        {hint && <span className="text-xs font-normal">{hint}</span>}
-      </span>
-      {children}
-    </label>
-  );
-}
 
 export function ProfileForm({ values, email, maskedIban, unlimited }: { values: ProfileValues; email: string; maskedIban: string | null; unlimited: boolean }) {
   const router = useRouter();
@@ -108,38 +85,39 @@ export function ProfileForm({ values, email, maskedIban, unlimited }: { values: 
   const initial = (v.first_name || email).charAt(0).toUpperCase();
 
   return (
-    <div className="mx-auto flex w-full max-w-[620px] flex-col gap-6 pb-24">
-      {/* Identity card */}
-      <motion.section
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-[24px] border border-line bg-raised/90 px-5 py-6 text-center backdrop-blur"
-      >
-        <div className="pointer-events-none absolute inset-x-0 -top-20 mx-auto h-40 w-2/3 rounded-full bg-brand/15 blur-3xl" aria-hidden />
-        <span className="relative mx-auto grid size-20 place-items-center rounded-full bg-ink text-3xl font-bold text-surface shadow-[0_10px_30px_rgba(17,23,20,0.18)]">{initial}</span>
-        <h1 className="relative mt-3 text-[22px] font-bold tracking-tight">{[saved.first_name, saved.last_name].filter(Boolean).join(" ")}</h1>
-        <p className="relative text-sm text-muted">{email}</p>
-        <Link
-          href="/billing"
-          className={`relative mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${unlimited ? "bg-brand-soft text-on-brand-soft" : "bg-sunken text-ink"}`}
+    <div className="mx-auto flex w-full max-w-[600px] flex-col gap-7 pb-24">
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+        <PageHeader
+          title={[saved.first_name, saved.last_name].filter(Boolean).join(" ")}
+          subtitle={
+            <span className="flex flex-col items-center gap-3">
+              {email}
+              <Link
+                href="/billing"
+                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition hover:opacity-80 ${unlimited ? "bg-brand-soft text-on-brand-soft" : "bg-black/[0.05] text-ink"}`}
+              >
+                {unlimited && <Check className="size-3.5" strokeWidth={2.5} aria-hidden />}
+                {unlimited ? "Refundit Illimité" : "Offre gratuite"}
+              </Link>
+            </span>
+          }
         >
-          {unlimited ? <Check className="size-3.5" aria-hidden /> : <Sparkles className="size-3.5" aria-hidden />}
-          {unlimited ? "Refundit Illimité" : "Offre gratuite · passer à Illimité"}
-        </Link>
-      </motion.section>
+          <span className="mb-4 grid size-16 place-items-center rounded-full bg-ink text-2xl font-bold text-surface">{initial}</span>
+        </PageHeader>
+      </motion.div>
 
       <form
         onSubmit={(e) => {
           e.preventDefault();
           if (canSave) void save();
         }}
-        className="flex flex-col gap-6"
+        className="flex flex-col gap-7"
       >
-        <Section title="Identité">
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[13px] font-medium text-muted">Civilité</span>
-              <div className="grid grid-cols-3 gap-1 rounded-[12px] bg-sunken/70 p-1" role="radiogroup" aria-label="Civilité">
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+          <Section title="Identité">
+            <div className="flex flex-col gap-2.5 px-5 py-3.5">
+              <span className="text-[15px] text-muted">Civilité</span>
+              <div className="grid grid-cols-3 gap-0.5 rounded-full bg-black/[0.05] p-0.5" role="radiogroup" aria-label="Civilité">
                 {CIVILITIES.map((c) => (
                   <button
                     key={c.value}
@@ -147,90 +125,76 @@ export function ProfileForm({ values, email, maskedIban, unlimited }: { values: 
                     role="radio"
                     aria-checked={v.civility === c.value}
                     onClick={() => set({ civility: c.value })}
-                    className="relative rounded-[9px] py-2 text-sm font-semibold"
+                    className="relative rounded-full px-2 py-1.5 text-[14px] font-medium"
                   >
                     {v.civility === c.value && (
-                      <motion.span layoutId="civility-pill" className="absolute inset-0 rounded-[9px] bg-raised shadow-[0_1px_3px_rgba(17,23,20,0.12)]" transition={{ type: "spring", stiffness: 420, damping: 34 }} />
+                      <motion.span layoutId="civility-pill" className="absolute inset-0 rounded-full bg-white shadow-[0_1px_3px_rgba(17,23,20,0.14)]" transition={{ type: "spring", stiffness: 420, damping: 34 }} />
                     )}
                     <span className={`relative ${v.civility === c.value ? "text-ink" : "text-muted"}`}>{c.label}</span>
                   </button>
                 ))}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Prénom"><input className={input} autoComplete="given-name" value={v.first_name} onChange={(e) => set({ first_name: e.target.value })} /></Field>
-              <Field label="Nom"><input className={input} autoComplete="family-name" value={v.last_name} onChange={(e) => set({ last_name: e.target.value })} /></Field>
-            </div>
-          </div>
-        </Section>
+            <InputRow label="Prénom" autoComplete="given-name" value={v.first_name} onChange={(e) => set({ first_name: e.target.value })} />
+            <InputRow label="Nom" autoComplete="family-name" value={v.last_name} onChange={(e) => set({ last_name: e.target.value })} />
+          </Section>
+        </motion.div>
 
-        <Section title="Coordonnées">
-          <div className="flex flex-col gap-4">
-            <Field label="Téléphone"><input className={input} type="tel" autoComplete="tel" value={v.phone} onChange={(e) => set({ phone: e.target.value })} /></Field>
-            <Field label="Adresse"><input className={input} autoComplete="address-line1" value={v.address_line1} onChange={(e) => set({ address_line1: e.target.value })} /></Field>
-            <Field label="Complément" hint="facultatif"><input className={input} autoComplete="address-line2" value={v.address_line2} onChange={(e) => set({ address_line2: e.target.value })} /></Field>
-            <div className="grid grid-cols-[110px_1fr] gap-3">
-              <Field label="Code postal"><input className={input} inputMode="numeric" autoComplete="postal-code" value={v.postal_code} onChange={(e) => set({ postal_code: e.target.value })} /></Field>
-              <Field label="Ville"><input className={input} autoComplete="address-level2" value={v.city} onChange={(e) => set({ city: e.target.value })} /></Field>
-            </div>
-            <p className="text-xs text-muted">Ces informations servent uniquement à remplir les formulaires des marques. Elles te répondent sur une adresse dédiée, jamais la tienne.</p>
-          </div>
-        </Section>
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <Section title="Coordonnées" footer="Ces informations servent uniquement à remplir les formulaires des marques. Elles te répondent sur une adresse dédiée, jamais la tienne.">
+            <InputRow label="Téléphone" type="tel" autoComplete="tel" value={v.phone} onChange={(e) => set({ phone: e.target.value })} />
+            <InputRow label="Adresse" autoComplete="address-line1" value={v.address_line1} onChange={(e) => set({ address_line1: e.target.value })} />
+            <InputRow label="Complément" hint="Facultatif" autoComplete="address-line2" value={v.address_line2} onChange={(e) => set({ address_line2: e.target.value })} />
+            <InputRow label="Code postal" inputMode="numeric" autoComplete="postal-code" value={v.postal_code} onChange={(e) => set({ postal_code: e.target.value })} />
+            <InputRow label="Ville" autoComplete="address-level2" value={v.city} onChange={(e) => set({ city: e.target.value })} />
+          </Section>
+        </motion.div>
 
-        <Section title="Remboursements">
-          <AnimatePresence mode="wait" initial={false}>
-            {!ibanEditing ? (
-              <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-3">
-                <span className={`grid size-10 shrink-0 place-items-center rounded-full ${maskedIban ? "bg-brand-soft text-brand-strong" : "bg-info-soft text-info"}`}>
-                  <Landmark className="size-5" aria-hidden />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[15px] font-semibold">IBAN</p>
-                  <p className={`truncate text-[13px] ${maskedIban ? "mono text-muted" : "text-muted"}`}>{maskedIban ?? "Ajoute-le pour recevoir tes remboursements"}</p>
-                </div>
-                <Button type="button" size="sm" variant="secondary" icon={<Pencil className="size-3.5" />} onClick={() => setIbanEditing(true)}>
-                  {maskedIban ? "Modifier" : "Ajouter"}
-                </Button>
-              </motion.div>
-            ) : (
-              <motion.div key="edit" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex flex-col gap-1.5">
-                <span className="text-[13px] font-medium text-muted">Nouvel IBAN</span>
-                <div className="relative">
-                  <input
-                    autoFocus
-                    value={formatIban(iban)}
-                    onChange={(e) => setIban(e.target.value.replace(/[^A-Za-z0-9]/g, "").slice(0, 34))}
-                    placeholder="FR76 3000 6000 0112 3456 7890 189"
-                    spellCheck={false}
-                    className={`${input} mono pr-10 uppercase ${ibanOk ? "border-brand" : ibanBad ? "border-danger/60" : ""}`}
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+          <Section title="Remboursements" footer={ibanEditing ? undefined : "Les marques te remboursent sur ce compte. Seuls les 4 derniers chiffres sont affichés."}>
+            <AnimatePresence mode="wait" initial={false}>
+              {!ibanEditing ? (
+                <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                  <ButtonRow
+                    icon={<Landmark className="size-[18px]" aria-hidden />}
+                    label="IBAN"
+                    description={<span className={maskedIban ? "mono" : ""}>{maskedIban ?? "Ajoute-le pour recevoir tes remboursements"}</span>}
+                    value={maskedIban ? "Modifier" : "Ajouter"}
+                    onClick={() => setIbanEditing(true)}
                   />
-                  {ibanOk && <Check className="absolute right-3 top-1/2 size-4 -translate-y-1/2 text-brand-strong" strokeWidth={3} aria-hidden />}
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className={`text-xs ${ibanBad ? "text-on-danger-soft" : "text-muted"}`}>
-                    {ibanBad ? "Cet IBAN ne semble pas valide." : ibanOk ? "IBAN valide" : "Paiements sécurisés par Stripe"}
-                  </span>
-                  <button type="button" onClick={() => { setIbanEditing(false); setIban(""); }} className="text-xs font-semibold text-muted hover:text-ink">Annuler</button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </Section>
+                </motion.div>
+              ) : (
+                <motion.div key="edit" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex flex-col gap-2 px-5 py-4">
+                  <span className="text-[13px] text-muted">Nouvel IBAN</span>
+                  <div className="relative">
+                    <input
+                      autoFocus
+                      value={formatIban(iban)}
+                      onChange={(e) => setIban(e.target.value.replace(/[^A-Za-z0-9]/g, "").slice(0, 34))}
+                      placeholder="FR76 3000 6000 0112 3456 7890 189"
+                      spellCheck={false}
+                      className={`mono h-11 w-full rounded-[12px] bg-black/[0.04] px-3.5 pr-10 text-[15px] uppercase outline-none ring-1 transition placeholder:text-muted/60 focus:bg-white ${ibanOk ? "ring-brand" : ibanBad ? "ring-danger/60" : "ring-transparent focus:ring-ink/30"}`}
+                    />
+                    {ibanOk && <Check className="absolute right-3 top-1/2 size-4 -translate-y-1/2 text-brand-strong" strokeWidth={3} aria-hidden />}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-xs ${ibanBad ? "text-on-danger-soft" : "text-muted"}`}>
+                      {ibanBad ? "Cet IBAN ne semble pas valide." : ibanOk ? "IBAN valide" : "Paiements sécurisés par Stripe"}
+                    </span>
+                    <button type="button" onClick={() => { setIbanEditing(false); setIban(""); }} className="text-xs font-semibold text-muted hover:text-ink">Annuler</button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </Section>
+        </motion.div>
 
-        <Section title="Compte">
-          <div className="-m-2 flex flex-col">
-            <Link href="/billing" className="flex items-center gap-3 rounded-[12px] px-2 py-2.5 transition hover:bg-sunken/60">
-              <span className="grid size-9 place-items-center rounded-full bg-sunken"><CreditCard className="size-[18px]" aria-hidden /></span>
-              <span className="flex-1 text-[15px] font-medium">Abonnement</span>
-              <span className="text-sm text-muted">{unlimited ? "Illimité" : "Gratuit"}</span>
-              <ChevronRight className="size-4 text-muted" aria-hidden />
-            </Link>
-            <button type="button" onClick={signOut} disabled={signingOut} className="flex items-center gap-3 rounded-[12px] px-2 py-2.5 text-left transition hover:bg-danger-soft">
-              <span className="grid size-9 place-items-center rounded-full bg-danger-soft text-on-danger-soft"><LogOut className="size-[18px]" aria-hidden /></span>
-              <span className="flex-1 text-[15px] font-medium text-on-danger-soft">{signingOut ? "Déconnexion…" : "Se déconnecter"}</span>
-            </button>
-          </div>
-        </Section>
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <Section title="Compte">
+            <NavRow href="/billing" icon={<CreditCard className="size-[18px]" aria-hidden />} label="Abonnement" value={unlimited ? "Illimité" : "Gratuit"} />
+            <ButtonRow onClick={signOut} disabled={signingOut} tone="danger" chevron={false} icon={<LogOut className="size-[18px]" aria-hidden />} label={signingOut ? "Déconnexion…" : "Se déconnecter"} />
+          </Section>
+        </motion.div>
 
         {/* Save bar */}
         <AnimatePresence>
