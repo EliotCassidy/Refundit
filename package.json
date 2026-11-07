@@ -11,7 +11,9 @@
     "seed": "tsx supabase/seed/seed.ts",
     "db:types": "supabase gen types typescript --remote > lib/shared/database.types.ts.tmp && mv lib/shared/database.types.ts.tmp lib/shared/database.types.ts",
     "db:push": "supabase db push --remote",
-    "spike": "tsx scripts/agent-spike.ts"
+    "spike": "tsx scripts/agent-spike.ts",
+    "eval:extract": "tsx --env-file=.env.local --conditions=react-server lib/receipts/eval/extract.ts",
+    "test:receipts": "tsx lib/receipts/eval/cases.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

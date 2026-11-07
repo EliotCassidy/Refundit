@@ -48,3 +48,6 @@ next-env.d.ts
 # test receipts: personal ones stay local (personal data), Open Prices ones are committed
 /tickets/*
 !/tickets/openprices/
+
+# local caches (eval transcripts, HTTP responses)
+/.cache/
