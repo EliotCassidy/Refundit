@@ -51,6 +51,7 @@ export function AgentView({ claimId, live, actions }: { claimId: string; live: b
   return (
     <div>
       <button
+        id="demo-agent"
         type="button"
         onClick={() => last && setOpen(true)}
         disabled={!last}

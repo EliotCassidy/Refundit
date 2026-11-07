@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from "react";
 
 export type DemoStep = "intro" | "scan" | "receipt" | "claim-list" | "agent" | "admin" | "final" | "final-claim" | "done";
-export type DemoState = { step: DemoStep; session?: string; baseline?: number; claimId?: string; seen?: string[] };
+export type DemoState = { step: DemoStep; baseline?: number; claimId?: string; seen?: string[] };
 
 const KEY = "refundit-demo";
 const EVENT = "refundit-demo";
@@ -55,11 +55,7 @@ export function useDemoRaw(): string | null {
   return useSyncExternalStore(subscribe, read, () => null);
 }
 
-/** Leaves the demo: frees the one-jury lock (server) and clears the local tour state. */
+/** Leaves the demo (the throwaway jury account is deleted 30 min after its creation). */
 export async function leaveDemo() {
-  const session = getDemo()?.session;
   setDemo(null);
-  if (session) {
-    await fetch("/api/demo/stop", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session }) }).catch(() => undefined);
-  }
 }

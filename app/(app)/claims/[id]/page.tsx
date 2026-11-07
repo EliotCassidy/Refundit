@@ -171,7 +171,7 @@ export default async function ClaimPage({ params }: PageProps<"/claims/[id]">) {
             )}
           </>
           {hasAgent && (
-            <div id="demo-agent">
+            <div>
               <AgentView claimId={claim.id} live={live} actions={live ? <ClaimActions claimId={claim.id} status={claim.status} /> : undefined} />
             </div>
           )}

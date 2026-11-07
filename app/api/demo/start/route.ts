@@ -1,30 +1,19 @@
-// OWNER: Dev 2. POST /api/demo/start { session } — jury demo login: takes the one-jury lock, then resets the
-// demo account to its snapshot. 409 demo_busy when another jury is already on it.
-import { z } from "zod";
-import { isDemoEmail } from "@/lib/demo/config";
-import { acquireDemoLock } from "@/lib/demo/lock";
-import { loadSnapshot, resetDemoAccount } from "@/lib/demo/reset";
+// OWNER: Dev 2. POST /api/demo/start — jury demo: creates a fresh throwaway account with a copy of the saved demo
+// state and returns its credentials (the login page signs in with them). Expired jury accounts (> 30 min) are
+// deleted first. Public on purpose (runs before sign-in), capped to a few live accounts.
+import { createJuryAccount } from "@/lib/demo/accounts";
 import { apiError } from "@/lib/shared/http";
 import { createAdminClient } from "@/lib/shared/supabase/admin";
-import { getUser } from "@/lib/shared/supabase/server";
 
 export const maxDuration = 60;
-const Body = z.object({ session: z.string().min(8).max(100), force: z.boolean().optional() });
 
-export async function POST(request: Request) {
-  const user = await getUser();
-  if (!user || !isDemoEmail(user.email)) return apiError(403, "not_demo", "Réservé au compte de démonstration.");
-  const parsed = Body.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) return apiError(400, "invalid_session", "Session de démo invalide.");
-  const db = createAdminClient();
-  if (!(await acquireDemoLock(db, parsed.data.session, parsed.data.force))) {
-    return apiError(409, "demo_busy", "Mince, un autre jury est déjà connecté, ressaye dans quelques minutes.");
-  }
+export async function POST() {
   try {
-    const removed = await resetDemoAccount(db, await loadSnapshot(db));
-    return Response.json({ ok: true, removed });
+    const account = await createJuryAccount(createAdminClient());
+    if (account === "busy") return apiError(429, "demo_busy", "Beaucoup de démos en cours : réessaye dans quelques minutes.");
+    return Response.json(account);
   } catch (e) {
     console.error("[demo start]", e);
-    return apiError(500, "reset_failed", "Impossible de préparer la démo.");
+    return apiError(500, "demo_failed", "Mince, la démo n'a pas pu démarrer. Réessaye dans un instant.");
   }
 }

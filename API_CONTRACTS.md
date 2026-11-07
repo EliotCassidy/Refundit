@@ -342,14 +342,11 @@ Reads (receipt, items, profile) go directly through the Supabase client with RLS
 - `POST /api/profile` also accepts optional `civility` and `iban` (normalized, mod-97 checked by `lib/shared/iban.ts`); they are only written when sent, so the profile page is unaffected.
 - `POST /api/profile/iban` `{ iban }` → `200 { ok: true }` · `400 invalid_iban`: sets the IBAN only (dashboard reminder).
 
-### Jury demo mode (Dev 2) — demo account only (`refundit@demo.fr`, lib/demo/config.ts)
+### Jury demo mode (Dev 2) — one throwaway account per jury (lib/demo)
 | Method | Path | Body | Response |
 |---|---|---|---|
-| POST | `/api/demo/reset` | none (demo session) | `200 { ok, removed: { claims, receipts } }` — restores the saved snapshot (private Storage `receipts/_demo/snapshot.json`) (deletes what the demo run created, incl. its NotCoca requests) · `403 not_demo` |
-| POST | `/api/demo/start` | `{ session, force? }` (demo session; `force` = "Forcer la déconnexion de l'autre jury") | `200 { ok, removed }` takes the one-jury lock (private Storage `receipts/_demo/lock.json`, 2 min without heartbeat = free) then resets the account · `409 demo_busy` ("Mince, un autre jury est déjà connecté…") |
-| POST | `/api/demo/heartbeat` | `{ session }` | `200 { ok }` renews the lock (every 30 s from the demo tab) · `409 demo_busy` |
-| POST | `/api/demo/stop` | `{ session }` | `200 { ok }` frees the lock (Quitter / fin de démo) |
-| GET | `/api/demo/notcoca-admin` | none (demo session) | `303` → `/notcoca/admin` with the back-office cookie set |
+| POST | `/api/demo/start` | none (public, before sign-in) | `200 { email, password }` a new `jury-xxxxxxxx@demo.example.com` account holding a copy of the template's saved state; jury accounts older than 30 min are deleted first · `429 demo_busy` (25 live) · `500 demo_failed` |
+| GET | `/api/demo/notcoca-admin` | none (demo or jury session) | `303` → `/notcoca/admin` with the back-office cookie set |
 
 ### Payouts (Dev 2) — refunds to the user's bank, Stripe TEST mode
 | Method | Path | Body | Response |

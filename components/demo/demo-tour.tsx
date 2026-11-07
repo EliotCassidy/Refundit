@@ -11,7 +11,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { driver, type Config, type DriveStep, type Driver } from "driver.js";
 import { ChevronLeft, ChevronRight, Hand, Lightbulb, PartyPopper, RotateCcw, Sparkles, Timer, X } from "lucide-react";
-import { toast } from "sonner";
+import { createClient } from "@/lib/shared/supabase/client";
 import { getDemo, leaveDemo, patchDemo, setDemo, useDemoRaw, type DemoState } from "./demo-state";
 
 const BASE: Config = {
@@ -353,23 +353,6 @@ export function DemoTour() {
     return () => clearInterval(t);
   }, [forceAgent]);
 
-  // One jury at a time: renew the demo lock while this tab is open.
-  const session = state?.session;
-  useEffect(() => {
-    if (!session) return;
-    const beat = async () => {
-      const res = await fetch("/api/demo/heartbeat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session }) }).catch(() => null);
-      if (res?.status === 409) {
-        // Another jury forced the takeover: stop this tour (never touches their lock).
-        setDemo(null);
-        toast.info("Un autre jury a repris la démo", { description: "Ta visite guidée s'arrête ici." });
-      }
-    };
-    void beat();
-    const t = setInterval(beat, 30_000);
-    return () => clearInterval(t);
-  }, [session]);
-
   // Final step: fetch the brand's email and refresh until the balance goes up.
   useEffect(() => {
     if (step !== "final" || pathname !== "/") return;
@@ -484,9 +467,10 @@ function SecondRunNote() {
 function EndCard() {
   const router = useRouter();
   async function restart() {
-    await fetch("/api/demo/reset", { method: "POST" }).catch(() => undefined);
-    setDemo({ step: "intro", session: getDemo()?.session });
-    router.push("/");
+    // A new jury = a new throwaway account: back to the login page, which starts the demo again.
+    setDemo(null);
+    await createClient().auth.signOut({ scope: "local" });
+    router.replace("/login?demo=1");
     router.refresh();
   }
   return (
