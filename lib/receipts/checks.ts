@@ -23,6 +23,7 @@ export function runChecks(r: Interpretation): CheckResult {
     discounts_cents: discounts,
     paid_cents: gross - discounts,
     n_items: sum(r.items.map((i) => i.qty)),
+    n_lines: r.items.length,
   };
 
   if (!r.items.length) errors.push("Aucun article lu : recopie toutes les lignes d'articles avec leur montant.");
@@ -42,20 +43,24 @@ export function runChecks(r: Interpretation): CheckResult {
     `Total − remises = ${eur(c)}, mais le ticket indique ${eur(p)} payés : une ligne ou un montant est faux.`);
   compare("n_items", (p, c) =>
     `La somme des quantités (${c}) ne correspond pas au nombre d'articles imprimé (${p}) : une ligne ou une quantité est mal recopiée.`);
+  compare("n_lines", (p, c) =>
+    `${c} lignes d'articles lues, mais le ticket en annonce ${p} : une ligne d'article manque ou est en trop.`);
 
   for (const it of r.items) {
     if (it.discount_cents > it.price_cents) {
       errors.push(`La remise de ${eur(it.discount_cents)} sur « ${it.raw_label} » dépasse son prix (${eur(it.price_cents)}) : elle est rattachée au mauvais article.`);
     }
     if (it.discount_pct != null && it.discount_cents > 0) {
+      // "-34 %" porte sur la ligne ; "2e à -40 %" porte sur une seule unité.
+      const bases = it.qty > 1 ? [it.price_cents, Math.round(it.price_cents / it.qty)] : [it.price_cents];
       const expected = Math.round((it.price_cents * it.discount_pct) / 100);
-      if (Math.abs(expected - it.discount_cents) > 1) {
+      if (!bases.some((b) => Math.abs(Math.round((b * it.discount_pct!) / 100) - it.discount_cents) <= 1)) {
         errors.push(`« ${it.discount_text} » : ${it.discount_pct} % de ${eur(it.price_cents)} (« ${it.raw_label} ») font ${eur(expected)}, pas ${eur(it.discount_cents)} : la remise est sous le mauvais article ou mal recopiée.`);
       }
     }
   }
 
   // Relecture si : une erreur reste, le net payé est absent, ou aucun check arithmétique n'a pu tourner.
-  const needs_review = errors.length > 0 || r.printed.paid_cents == null || skipped.length === 4;
+  const needs_review = errors.length > 0 || r.printed.paid_cents == null || skipped.length === Object.keys(r.printed).length;
   return { errors, skipped, needs_review, computed };
 }

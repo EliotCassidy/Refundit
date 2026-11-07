@@ -1,5 +1,6 @@
 // Interprétation du ticket. Le modèle RECOPIE (TranscriptionSchema), ce fichier INTERPRÈTE :
 // rien ici ne dépend du modèle utilisé. Fonctions pures, testables sans réseau.
+// Aucune règle par enseigne : les cas ambigus sont tranchés par l'arithmétique du ticket.
 import { z } from "zod";
 import { labelSimilarity, normalize } from "./text";
 
@@ -33,9 +34,10 @@ export type ExtractedItem = {
   section: string | null;
   mark: string | null;
   qty: number; // 1 si non imprimée, 1 pour un article pesé
+  qty_source: "default" | "column" | "detail"; // d'où vient la quantité
   weight_kg: number | null;
   unit_price_cents: number | null;
-  price_cents: number; // montant imprimé, avant remise
+  price_cents: number; // montant de la ligne, avant remise
   discount_cents: number; // remise rattachée, positive
   discount_pct: number | null;
   discount_text: string | null;
@@ -46,7 +48,8 @@ export type Totals = {
   gross_cents: number | null; // total avant remises
   discounts_cents: number | null; // total des remises (positif)
   paid_cents: number | null; // net payé
-  n_items: number | null; // nombre d'articles
+  n_items: number | null; // nombre d'articles (unités)
+  n_lines: number | null; // nombre de lignes d'articles
 };
 
 /** Lignes négatives après le premier total : récap des remises déjà comptées, ou vraies remises ? */
@@ -64,22 +67,27 @@ export type Interpretation = {
   tail_mode: TailMode;
   printed: Totals; // totaux imprimés sur le ticket (null = absent)
   paid_source: "total" | "payments" | null;
+  notes: string[]; // décisions prises par l'arithmétique (pour la relecture)
 };
 
 // ---------------------------------------------------------------------------
 // Nombres
 // ---------------------------------------------------------------------------
-/** "1,99" → 199 · "-0,50" / "0,50-" / "(0,50)" → -50 · "12" → 1200 · illisible → null. */
+/**
+ * "1,99" → 199 · "-0,50" / "0,50-" / "(0,50)" → -50 · "4,17 € 1" (code TVA derrière) → 417
+ * · "12" → 1200 · illisible → null.
+ */
 export function parseCents(v: string | number | null | undefined): number | null {
   if (v == null) return null;
   if (typeof v === "number") return Number.isFinite(v) ? Math.round(v * 100) : null;
-  let s = v.replace(/[\s€]|EUR/gi, "").replace(/[−–]/g, "-");
-  const negative = /^-|^\(|-$/.test(s);
-  s = s.replace(/[-+()]/g, "");
-  const m = s.match(/^(\d+)(?:[.,](\d{1,2}))?$/);
-  if (!m) return null;
-  const cents = parseInt(m[1], 10) * 100 + (m[2] ? parseInt(m[2].padEnd(2, "0"), 10) : 0);
-  return negative ? -cents : cents;
+  const s = v.replace(/[−–]/g, "-").replace(/€|EUR/gi, " ");
+  const m = s.match(/(\(|-)?\s*(\d+)[.,](\d{1,2})(?!\d)\s*(-|\))?/);
+  if (m) {
+    const cents = parseInt(m[2], 10) * 100 + parseInt(m[3].padEnd(2, "0"), 10);
+    return m[1] || m[4] ? -cents : cents;
+  }
+  const n = s.match(/^\s*(-)?\s*(\d+)\s*(-)?\s*$/); // entier seul
+  return n ? (n[1] || n[3] ? -1 : 1) * parseInt(n[2], 10) * 100 : null;
 }
 
 function parseNumber(v: string | number | null | undefined): number | null {
@@ -141,18 +149,36 @@ export function toPurchasedAt(date: string | null, time: string | null): string 
 // Reconnaissance des lignes (sur le texte normalisé : majuscules, sans accents)
 // ---------------------------------------------------------------------------
 const TOTAL_RE = /\bTOTA(L|UX)\b|\bA PAYER\b|\bMONTANT DU\b/;
-const COUNT_RE = /\b(NB|NBR|NOMBRE)\b.*\bART|\bARTICLES?\s*\d+$|^\d+\s*ARTICLES?\b/;
+const COUNT_RE = /\b(NB|NBR|NOMBRE)\b.*\bART|\bARTICLES?\s*\d+$|\b\d+\s*ARTICLES?\b/;
+const COUNT_STRIP_RE = /\b(NB|NBR|NOMBRE)\b( DE)?( LIGNES?)?( D)? ART\w*( \d+)?|\b\d+\s*ARTICLES?( S)?\b|\bARTICLES?\s*\d+\b/g;
 const PAID_STRONG_RE = /\bA PAYER\b|\bMONTANT DU\b/;
 const PAID_WEAK_RE = /^TOTAL( TTC| EUR| EUROS)?$/;
-const GROSS_RE = /\bSOUS TOTAL\b|^S TOTAL\b|\bTOTAL (AVANT|BRUT)\b/;
+const GROSS_RE = /\bSOUS TOTAL\b|^S TOTAL\b|\bTOTAL (AVANT|BRUT)\b|\bTOTAL HORS (PROMO\w*|REMISES?)\b/;
 const DISCOUNT_TOTAL_RE = /\bTOTAL (DES )?(REMISES?|ECONOMIES?|REDUCTIONS?)\b|\bVOS ECONOMIES\b|\bECONOMIES? REALISEES?\b/;
+const TVA_RE = /\bTOTAL TVA\b|^TVA$/;
 const NOT_PAID_RE = /\bTVA\b|\bHT\b|REMISE|ECONOMI|AVANTAGE|FIDELI|POINTS?\b|CAGNOTTE/;
 const PAYMENT_RE = /\bCB\b|\bCARTE\b|VISA|MASTERCARD|MAESTRO|AMEX|SANS CONTACT|ESPECES|CHEQUE|TITRE RESTAURANT|TICKET RESTAU|\bTR\b/;
 const CHANGE_RE = /\bRENDU\b|\bMONNAIE\b/;
 const DISCOUNT_WORD_RE = /^(REMISE|REM|REDUC\w*|BON|COUPON|AVANTAGE|PROMO)\b/;
 
+// Lignes de détail sous un article (sur le texte brut)
 const DETAIL_RE = /^\s*(\d+)\s*[x×*]\s*(\d+[.,]\d{2})\s*(?:€|eur)?\s*$/i; // "2 x 1,99"
 const WEIGHT_RE = /^\s*(\d+[.,]\d+)\s*kg\s*[x×*@]\s*(\d+[.,]\d{2})\s*(?:€|eur)?\s*\/\s*kg/i; // "0,456 kg x 12,90 €/kg"
+const QTY_ONLY_RE = /^\s*(\d+(?:[.,]\d+)?)\s*(kg)?\s*[x×*]\s*$/i; // "1 x" ou "0,302 kg x", le montant = prix unitaire
+
+/** Ligne de détail → quantité ou poids, prix unitaire, et montant de ligne s'il est imprimé. */
+function parseDetail(text: string, amount: number | null) {
+  let m = text.match(DETAIL_RE);
+  if (m) return { qty: parseInt(m[1], 10), weight_kg: null, unit: parseCents(m[2]), total: amount };
+  m = text.match(WEIGHT_RE);
+  if (m) return { qty: 1, weight_kg: parseNumber(m[1]), unit: parseCents(m[2]), total: amount };
+  m = text.match(QTY_ONLY_RE);
+  if (m && amount != null && amount > 0) {
+    const n = parseNumber(m[1])!;
+    return m[2] ? { qty: 1, weight_kg: n, unit: amount, total: null } : { qty: n, weight_kg: null, unit: amount, total: null };
+  }
+  return null;
+}
 
 function parseCount(text: string, qty: unknown, amount: unknown): number | null {
   const m = normalize(text).match(/(\d+)\s*ART|ART\w*\D*?(\d+)/);
@@ -193,11 +219,28 @@ function addDiscount(item: ExtractedItem, text: string, cents: number) {
 
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 
+function newItem(
+  position: number,
+  l: { text: string; section?: string | null; mark?: string | null },
+  price: number,
+  qty: number,
+  qty_source: ExtractedItem["qty_source"],
+  unit: number | null,
+  weight_kg: number | null,
+): ExtractedItem {
+  return {
+    position, raw_label: l.text, section: l.section ?? null, mark: l.mark ?? null,
+    qty, qty_source, weight_kg, unit_price_cents: unit, price_cents: price,
+    discount_cents: 0, discount_pct: null, discount_text: null, paid_cents: price,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Interprétation complète
 // ---------------------------------------------------------------------------
 export function interpret(t: Transcription): Interpretation {
   const lines = t.lines.map((l) => ({ ...l, n: normalize(l.text), cents: parseCents(l.amount) }));
+  const notes: string[] = [];
 
   // Les articles s'arrêtent à la première ligne de total (ou de nombre d'articles).
   let stop = lines.findIndex((l) => TOTAL_RE.test(l.n) || COUNT_RE.test(l.n));
@@ -209,22 +252,18 @@ export function interpret(t: Transcription): Interpretation {
 
   for (const l of lines.slice(0, stop)) {
     const last = items.at(-1);
-    const detail = l.text.match(DETAIL_RE);
-    const weight = l.text.match(WEIGHT_RE);
 
-    // Ligne de détail "2 x 1,99" ou "0,456 kg x 12,90 €/kg"
-    if (detail || weight) {
-      const qty = detail ? parseInt(detail[1], 10) : 1;
-      const weight_kg = weight ? parseNumber(weight[1]) : null;
-      const unit = parseCents((detail ?? weight)![2]);
-      if (pendingLabel && l.cents != null && l.cents >= 0) {
-        items.push(newItem(items.length, pendingLabel, l.cents, qty, unit, weight_kg));
-        pendingLabel = null;
-      } else if (last && unit != null && Math.abs((weight_kg ?? qty) * unit - last.price_cents) <= 1) {
+    // Ligne de détail "2 x 1,99", "0,456 kg x 12,90 €/kg", ou "1 x" + prix unitaire
+    const d = parseDetail(l.text, l.cents);
+    if (d) {
+      const n = d.weight_kg ?? d.qty;
+      if (last && !pendingLabel && d.unit != null && Math.abs(n * d.unit - last.price_cents) <= 1) {
         // le détail colle avec le montant de l'article au-dessus
-        last.qty = qty;
-        last.unit_price_cents = unit;
-        last.weight_kg = weight_kg;
+        Object.assign(last, { qty: d.qty, qty_source: "detail", unit_price_cents: d.unit, weight_kg: d.weight_kg });
+      } else if (pendingLabel && (d.total != null || d.unit != null)) {
+        const price = d.total ?? Math.round(n * d.unit!);
+        items.push(newItem(items.length, pendingLabel, price, d.qty, "detail", d.unit, d.weight_kg));
+        pendingLabel = null;
       }
       continue;
     }
@@ -246,26 +285,43 @@ export function interpret(t: Transcription): Interpretation {
     const qty = parseNumber(l.qty);
     const q = qty && qty > 0 && Number.isInteger(qty) ? qty : 1;
     const unit = q > 1 && l.cents % q === 0 ? l.cents / q : q === 1 ? l.cents : null;
-    items.push(newItem(items.length, l, l.cents, q, unit, null));
+    items.push(newItem(items.length, l, l.cents, q, q > 1 ? "column" : "default", unit, null));
   }
 
   // Après le premier total : totaux imprimés, paiements, lignes négatives
-  const printed: Totals = { gross_cents: null, discounts_cents: null, paid_cents: null, n_items: null };
-  let paidStrong: number | null = null, paidWeak: number | null = null;
-  const payments: number[] = [], change: number[] = [];
+  const printed: Totals = { gross_cents: null, discounts_cents: null, paid_cents: null, n_items: null, n_lines: null };
+  let paidStrong: number | null = null, paidWeak: number | null = null, grossFromSubtotal = false, tva: number | null = null;
+  const payments: number[] = [], change: number[] = [], amounts: number[] = [];
   const tail_discounts: { text: string; amount_cents: number }[] = [];
 
   for (const l of lines.slice(stop)) {
     // "6 ARTICLE(S)  TOTAL A PAYER  12,65" : la même ligne donne le nombre d'articles ET un total.
-    if (COUNT_RE.test(l.n)) printed.n_items ??= parseCount(l.text, l.qty, l.amount);
-    if (l.cents == null || (COUNT_RE.test(l.n) && !TOTAL_RE.test(l.n))) continue;
-    if (DISCOUNT_TOTAL_RE.test(l.n)) printed.discounts_cents ??= Math.abs(l.cents);
-    else if (GROSS_RE.test(l.n)) printed.gross_cents ??= l.cents;
-    else if (PAID_STRONG_RE.test(l.n) && !NOT_PAID_RE.test(l.n)) paidStrong ??= l.cents;
-    else if (PAID_WEAK_RE.test(l.n)) paidWeak ??= l.cents;
-    else if (CHANGE_RE.test(l.n)) change.push(Math.abs(l.cents));
-    else if (PAYMENT_RE.test(l.n)) payments.push(l.cents);
-    else if (l.cents < 0 || DISCOUNT_WORD_RE.test(l.n)) tail_discounts.push({ text: l.text, amount_cents: Math.abs(l.cents) });
+    const isCount = COUNT_RE.test(l.n);
+    if (isCount) {
+      const n = parseCount(l.text, l.qty, l.amount);
+      if (/\bLIGNES?\b/.test(l.n)) printed.n_lines ??= n;
+      else printed.n_items ??= n;
+    }
+    if (l.cents == null || (isCount && !TOTAL_RE.test(l.n))) continue;
+    amounts.push(l.cents);
+    const label = isCount ? l.n.replace(COUNT_STRIP_RE, " ").replace(/\s+/g, " ").trim() : l.n;
+
+    if (DISCOUNT_TOTAL_RE.test(label)) printed.discounts_cents ??= Math.abs(l.cents);
+    else if (GROSS_RE.test(label)) {
+      if (printed.gross_cents == null) grossFromSubtotal = /SOUS TOTAL|^S TOTAL/.test(label);
+      printed.gross_cents ??= l.cents;
+    } else if (TVA_RE.test(label)) tva ??= l.cents;
+    else if (PAID_STRONG_RE.test(label) && !NOT_PAID_RE.test(label)) paidStrong ??= l.cents;
+    else if (PAID_WEAK_RE.test(label)) paidWeak ??= l.cents;
+    else if (CHANGE_RE.test(label)) change.push(Math.abs(l.cents));
+    else if (PAYMENT_RE.test(label)) payments.push(l.cents);
+    else if (l.cents < 0 || DISCOUNT_WORD_RE.test(label)) tail_discounts.push({ text: l.text, amount_cents: Math.abs(l.cents) });
+  }
+
+  // Un SOUS-TOTAL qui, ajouté à la TVA, redonne un autre total imprimé est un montant hors taxes.
+  if (grossFromSubtotal && tva != null && amounts.includes(printed.gross_cents! + tva)) {
+    notes.push(`SOUS-TOTAL ${printed.gross_cents} = montant HT (+ TVA ${tva} = un autre total) : pas un total avant remises`);
+    printed.gross_cents = null;
   }
 
   // Net payé : "A PAYER" > "TOTAL" seul > somme des paiements − rendu
@@ -278,14 +334,31 @@ export function interpret(t: Transcription): Interpretation {
   }
   if (printed.paid_cents == null) paid_source = null;
 
+  const tail = sum(tail_discounts.map((d) => d.amount_cents));
+  const net = () =>
+    sum(items.map((i) => i.price_cents)) - sum(items.map((i) => i.discount_cents)) - sum(global_discounts.map((d) => d.amount_cents));
+
+  // Quantité en colonne : le montant est soit le total de la ligne, soit le prix unitaire.
+  // On garde la lecture « prix unitaire » seulement si c'est elle qui donne total − remises = payé.
+  const columnItems = items.filter((i) => i.qty_source === "column");
+  if (columnItems.length && printed.paid_cents != null && net() !== printed.paid_cents && net() - tail !== printed.paid_cents) {
+    const extra = sum(columnItems.map((i) => i.price_cents * (i.qty - 1)));
+    if (net() + extra === printed.paid_cents || net() + extra - tail === printed.paid_cents) {
+      for (const i of columnItems) {
+        i.unit_price_cents = i.price_cents;
+        i.price_cents *= i.qty;
+        i.paid_cents = i.price_cents - i.discount_cents;
+      }
+      notes.push(`quantités en colonne lues comme prix unitaires (${columnItems.map((i) => i.raw_label).join(", ")}) : c'est ce qui redonne le total payé`);
+    }
+  }
+
   // Remises de fin : vraies remises ou récap ? On tranche avec total − remises = payé.
   let tail_mode: TailMode = "none";
   if (tail_discounts.length) {
-    const net = sum(items.map((i) => i.price_cents)) - sum(items.map((i) => i.discount_cents)) - sum(global_discounts.map((d) => d.amount_cents));
-    const tail = sum(tail_discounts.map((d) => d.amount_cents));
     if (printed.paid_cents == null) tail_mode = "undetermined";
-    else if (net === printed.paid_cents) tail_mode = "recap";
-    else if (net - tail === printed.paid_cents) tail_mode = "applied";
+    else if (net() === printed.paid_cents) tail_mode = "recap";
+    else if (net() - tail === printed.paid_cents) tail_mode = "applied";
     else tail_mode = "undetermined";
 
     if (tail_mode === "applied") {
@@ -309,29 +382,6 @@ export function interpret(t: Transcription): Interpretation {
     tail_mode,
     printed,
     paid_source,
-  };
-}
-
-function newItem(
-  position: number,
-  l: { text: string; section?: string | null; mark?: string | null },
-  price: number,
-  qty: number,
-  unit: number | null,
-  weight_kg: number | null,
-): ExtractedItem {
-  return {
-    position,
-    raw_label: l.text,
-    section: l.section ?? null,
-    mark: l.mark ?? null,
-    qty,
-    weight_kg,
-    unit_price_cents: unit,
-    price_cents: price,
-    discount_cents: 0,
-    discount_pct: null,
-    discount_text: null,
-    paid_cents: price,
+    notes,
   };
 }
