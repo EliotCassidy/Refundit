@@ -200,8 +200,10 @@ export type Database = {
           line_item_id: string
           missing_fields: string[]
           receipt_id: string
+          refund_cents: number | null
           resolved_at: string | null
           status: Database["public"]["Enums"]["claim_status"]
+          stripe_payment_id: string | null
           submission_channel: string | null
           submitted_at: string | null
           updated_at: string
@@ -226,8 +228,10 @@ export type Database = {
           line_item_id: string
           missing_fields?: string[]
           receipt_id: string
+          refund_cents?: number | null
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["claim_status"]
+          stripe_payment_id?: string | null
           submission_channel?: string | null
           submitted_at?: string | null
           updated_at?: string
@@ -252,8 +256,10 @@ export type Database = {
           line_item_id?: string
           missing_fields?: string[]
           receipt_id?: string
+          refund_cents?: number | null
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["claim_status"]
+          stripe_payment_id?: string | null
           submission_channel?: string | null
           submitted_at?: string | null
           updated_at?: string
@@ -353,6 +359,96 @@ export type Database = {
           },
         ]
       }
+      notcoca_requests: {
+        Row: {
+          address: string | null
+          best_before: string | null
+          city: string | null
+          civility: string | null
+          compensation_cents: number | null
+          created_at: string
+          decided_at: string | null
+          drink: string | null
+          email: string
+          first_name: string
+          format: string | null
+          id: string
+          last_name: string
+          message: string
+          packaging: string | null
+          phone: string | null
+          postal_code: string | null
+          production_code: string | null
+          purchase_date: string | null
+          quantity: number | null
+          reason: string
+          refund_cents: number | null
+          status: string
+          still_has_product: string | null
+          store: string | null
+          stripe_payment_id: string | null
+          ticket_number: string
+        }
+        Insert: {
+          address?: string | null
+          best_before?: string | null
+          city?: string | null
+          civility?: string | null
+          compensation_cents?: number | null
+          created_at?: string
+          decided_at?: string | null
+          drink?: string | null
+          email: string
+          first_name: string
+          format?: string | null
+          id?: string
+          last_name: string
+          message: string
+          packaging?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          production_code?: string | null
+          purchase_date?: string | null
+          quantity?: number | null
+          reason: string
+          refund_cents?: number | null
+          status?: string
+          still_has_product?: string | null
+          store?: string | null
+          stripe_payment_id?: string | null
+          ticket_number: string
+        }
+        Update: {
+          address?: string | null
+          best_before?: string | null
+          city?: string | null
+          civility?: string | null
+          compensation_cents?: number | null
+          created_at?: string
+          decided_at?: string | null
+          drink?: string | null
+          email?: string
+          first_name?: string
+          format?: string | null
+          id?: string
+          last_name?: string
+          message?: string
+          packaging?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          production_code?: string | null
+          purchase_date?: string | null
+          quantity?: number | null
+          reason?: string
+          refund_cents?: number | null
+          status?: string
+          still_has_product?: string | null
+          store?: string | null
+          stripe_payment_id?: string | null
+          ticket_number?: string
+        }
+        Relationships: []
+      }
       product_matches: {
         Row: {
           confirmations: number
@@ -402,6 +498,7 @@ export type Database = {
           last_name: string
           phone: string | null
           postal_code: string
+          stripe_account_id: string | null
           updated_at: string
         }
         Insert: {
@@ -416,6 +513,7 @@ export type Database = {
           last_name: string
           phone?: string | null
           postal_code: string
+          stripe_account_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -430,6 +528,7 @@ export type Database = {
           last_name?: string
           phone?: string | null
           postal_code?: string
+          stripe_account_id?: string | null
           updated_at?: string
         }
         Relationships: []

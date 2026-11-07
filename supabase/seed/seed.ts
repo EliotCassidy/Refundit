@@ -47,6 +47,13 @@ const BRANDS: TablesInsert<"brands">[] = [
   { name: "Lu", manufacturer: "Mondelez", aliases: ["lu "], source: "seed",
     contact_url: "https://contactus.mdlzapps.com/Lulechampdespossibles/contact/fr-FR/", contact_email: null,
     verified: true, last_checked_at: "2026-11-07T12:00:00Z", agent_hints: null },
+  // NotCoca: FICTIONAL demo brand served by this app at /notcoca (must be public for the H cloud
+  // browser → set NOTCOCA_CONTACT_URL to the deployed https://…/notcoca/contact).
+  ...(process.env.NOTCOCA_CONTACT_URL
+    ? [{ name: "NotCoca", manufacturer: "NotCoca (marque fictive de démo)", aliases: ["notcoca", "not coca"], source: "manual" as const,
+        contact_url: process.env.NOTCOCA_CONTACT_URL, contact_email: null, verified: true,
+        last_checked_at: new Date().toISOString(), agent_hints: null }]
+    : []),
 ];
 
 async function main() {
@@ -91,6 +98,8 @@ async function main() {
       brand_id: brandId("Evian"), brand_name_guess: "Evian", quantity: 1, unit_price_cents: 323, total_price_cents: 323 },
     { position: 3, raw_label: "COCA COLA 1.75L", product_name: "Coca-Cola Original 1,75 L",
       brand_id: brandId("Coca-Cola"), brand_name_guess: "Coca-Cola", quantity: 1, unit_price_cents: 245, total_price_cents: 245 },
+    { position: 5, raw_label: "NOTCOCA ORIGINAL 1.75L", product_name: "NOTCOCA ORIGINAL 1.75L",
+      brand_id: brandId("NotCoca"), brand_name_guess: null, quantity: 1, unit_price_cents: 245, total_price_cents: 245 },
     { position: 4, raw_label: "BONNE MAMAN CONF FRAISE 370G", product_name: "BONNE MAMAN CONF FRAISE 370G",
       brand_id: brandId("Bonne Maman"), brand_name_guess: null, quantity: 1, unit_price_cents: 329, total_price_cents: 329 },
   ];

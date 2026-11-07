@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import type { Database } from "../database.types";
 
-const PUBLIC_PATHS = ["/login"];
+const PUBLIC_PATHS = ["/login", "/notcoca"]; // /notcoca = fictional demo brand site, public
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });

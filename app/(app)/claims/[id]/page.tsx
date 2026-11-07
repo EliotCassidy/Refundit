@@ -57,6 +57,12 @@ export default async function ClaimPage({ params }: PageProps<"/claims/[id]">) {
             Envoyée via {claim.submission_channel === "email" ? "e-mail au service client" : "le formulaire de contact de la marque"}
           </p>
         )}
+        {claim.refund_cents != null && (
+          <p className="rounded-lg bg-green-50 p-2 text-sm text-green-900">
+            Remboursement reçu : <strong>{(claim.refund_cents / 100).toLocaleString("fr-FR", { style: "currency", currency: "EUR" })}</strong>
+            {claim.stripe_payment_id && <span className="text-green-800/70"> · Stripe {claim.stripe_payment_id}</span>}
+          </p>
+        )}
         {claim.confirmation_number && (
           <p className="text-sm">N° de confirmation : <strong>{claim.confirmation_number}</strong></p>
         )}

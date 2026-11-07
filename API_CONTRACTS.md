@@ -312,5 +312,14 @@ Reads (receipt, items, profile) go directly through the Supabase client with RLS
 
 `/submit` and `/cancel` accept either the user's session (the owner of the claim) or the header `x-internal-key: $INTERNAL_API_KEY` for server-to-server calls from `/api/claims`.
 
+### NotCoca (fictional demo brand, Dev 2)
+| Method | Path | Body | Response |
+|---|---|---|---|
+| POST | `/api/notcoca/requests` | NotCoca contact form (`NotCocaRequestSchema`, `lib/notcoca/catalog.ts`) | `201 { ticketNumber }` · `400` invalid form |
+| POST | `/api/notcoca/admin/login` | form `key` | `303` → `/notcoca/admin` + cookie |
+| POST | `/api/notcoca/admin/requests/:id/decision` | `{ kind: "refund", refundCents, compensationCents }` or `{ kind: "reject", reason }` | `200 { paymentId \| null }` · `401` without admin cookie |
+
+Tables/columns: `notcoca_requests` (service role only), `profiles.stripe_account_id`, `claims.refund_cents`, `claims.stripe_payment_id` (migration `20261107200000`).
+
 ### Mock mode (unblocks Dev 1 before the agent works)
 If `AGENT_MOCK=true`, `/submit` skips H. It sets `submitting`, then `/sync` moves the claim to `submitted` after ~10s with a fake `h_agent_view_url`. Dev 2 ships this stub by milestone M0.

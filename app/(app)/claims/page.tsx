@@ -17,7 +17,7 @@ export default async function ClaimsPage() {
   const supabase = await createClient();
   const { data } = await supabase
     .from("claims")
-    .select("id, status, issue_type, dry_run, missing_fields, created_at, line_items(product_name, raw_label), brands(name)")
+    .select("id, status, issue_type, dry_run, missing_fields, refund_cents, created_at, line_items(product_name, raw_label), brands(name)")
     .neq("status", "cancelled")
     .order("created_at", { ascending: false });
   const claims = data ?? [];
@@ -79,6 +79,11 @@ export default async function ClaimsPage() {
                 <span className="text-sm text-neutral-500">
                   {c.brands?.name ? `${c.brands.name} · ` : ""}
                   {ISSUE_LABELS_FR[c.issue_type]}
+                  {c.refund_cents != null && (
+                    <span className="font-medium text-green-700">
+                      {" · "}Remboursé {(c.refund_cents / 100).toLocaleString("fr-FR", { style: "currency", currency: "EUR" })}
+                    </span>
+                  )}
                 </span>
               </Link>
             </li>

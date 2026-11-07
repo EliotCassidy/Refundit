@@ -102,9 +102,9 @@ Priorities:
 ## Demo script (~2 min)
 1. Problem (15s): "Your Pringles were crushed. Would you go find Kellanova's contact form? Nobody does."
 2. Snap the receipt on a phone → items appear, brands recognized.
-3. Tick Pringles → "Produit écrasé", Coca-Cola → "Boisson sans gaz" → Submit.
+3. Tick the NotCoca soda → "Boisson sans gaz" → Submit. (NotCoca = our fictional demo brand at `/notcoca`; Coca-Cola, Lu, Bonne Maman are the real forms already validated in dry run.)
 4. **Agent View live:** the agent opens the brand site, finds the form, fills it, attaches the receipt, submits. (Core of the demo; the user can stop it at any time.)
-5. Dashboard: the claim goes to `submitted` with a confirmation number. Show the older claim with the brand reply → `accepted`.
+5. Dashboard: the claim goes to `submitted` with NotCoca's ticket number. Switch to the NotCoca back-office → **Rembourser 2,45 € + 5 €** → Stripe test payment to the user's connected account → NotCoca's email lands → Refundit dashboard shows **Acceptée · Remboursé 7,45 €**.
 6. Close: one inbox for every brand, every claim tracked, only genuine issues.
 
 ## Explicitly not building

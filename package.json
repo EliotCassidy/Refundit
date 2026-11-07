@@ -13,7 +13,8 @@
     "db:push": "supabase db push --remote",
     "spike": "tsx scripts/agent-spike.ts",
     "eval:extract": "tsx --env-file=.env.local --conditions=react-server lib/receipts/eval/extract.ts",
-    "test:receipts": "tsx lib/receipts/eval/cases.ts"
+    "test:receipts": "tsx lib/receipts/eval/cases.ts",
+    "stripe:demo-account": "tsx scripts/stripe-connect-demo.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -29,6 +30,7 @@
     "react-dom": "19.3.0",
     "server-only": "^0.0.1",
     "sharp": "^0.35.5",
+    "stripe": "^23.1.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {

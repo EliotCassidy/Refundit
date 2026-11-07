@@ -26,7 +26,7 @@ function smtp() {
 export type OutgoingEmail = {
   to: string;
   fromName: string;
-  alias: string;
+  alias: string | null; // claim alias → Reply-To plus address; null = plain mailbox (NotCoca demo brand)
   subject: string;
   text: string;
   attachment?: { filename: string; base64: string; contentType: string } | null;
@@ -35,7 +35,7 @@ export type OutgoingEmail = {
 
 export async function sendEmail(m: OutgoingEmail): Promise<{ id: string }> {
   if (!emailSendingConfigured()) throw new Error("GMAIL_USER / GMAIL_APP_PASSWORD not set");
-  const replyTo = plusAddress(m.alias)!;
+  const replyTo = m.alias ? plusAddress(m.alias)! : undefined;
   const info = await smtp().sendMail({
     from: { name: m.fromName.replace(/[<>"]/g, ""), address: process.env.GMAIL_USER! },
     to: m.to,
@@ -43,7 +43,9 @@ export async function sendEmail(m: OutgoingEmail): Promise<{ id: string }> {
     subject: m.subject,
     text: m.text,
     inReplyTo: m.inReplyTo ?? undefined,
-    headers: { [OUTGOING_HEADER]: m.alias }, // so the inbox poller never mistakes our own mail for a reply
+    // Marks Refundit's own mail so the inbox poller never takes it for a brand reply. NotCoca's
+    // mail is deliberately NOT marked: it simulates a real brand answering.
+    headers: m.alias ? { [OUTGOING_HEADER]: m.alias } : undefined,
     references: m.inReplyTo ?? undefined,
     attachments: m.attachment
       ? [{ filename: m.attachment.filename, content: Buffer.from(m.attachment.base64, "base64"), contentType: m.attachment.contentType }]

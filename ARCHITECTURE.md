@@ -173,6 +173,17 @@ The email given to brands is **always the claim's inbound address**, never the u
 
 Retry = a new session with attempt+1. Allow at most 2 automatic attempts per claim.
 
+## 5b. Demo brand "NotCoca" + Stripe (Dev 2)
+
+NotCoca is a **fictional** soda brand served by this app at `/notcoca` (public, no Refundit auth, `noindex`). Its page structure and contact flow mirror a real French soda consumer-service site (spike 2026-11-07) so the agent faces a realistic multi-step form; its visual identity (logo, colours, type) is its own, with no third-party branding.
+
+1. `/notcoca/contact`: two-step form (request → customer details) → `POST /api/notcoca/requests` → `notcoca_requests` + ticket `NC-xxxxxx` shown on screen.
+2. `/notcoca/admin` (key `NOTCOCA_ADMIN_KEY`, hashed cookie): list requests, **Rembourser** (refund + compensation) or **Refuser**.
+3. Refund → Stripe **destination charge** in TEST mode (`lib/notcoca/payout.ts`): one PaymentIntent with `pm_card_visa`, `confirm: true`, `transfer_data.destination` = the user's connected account (`profiles.stripe_account_id`, created by `npm run stripe:demo-account`). Non-`sk_test_` keys are refused. The claim gets `refund_cents` + `stripe_payment_id`.
+4. NotCoca emails the customer like a real brand (Gmail, *without* the Refundit outgoing header) → Refundit's poller classifies it `accepted` → the dashboard shows "Remboursé 7,45 €".
+
+Demo shortcut, said in the pitch: NotCoca and Refundit share the same Stripe test platform, and NotCoca finds the payee from the claim's plus address. A real brand would pay to the IBAN given in its form.
+
 ## 6. LLM usage
 
 There's one provider for the whole app (Dev 1 picks it while building the receipt parser), wrapped in `lib/shared/llm.ts` with a typed helper `generateObject(schema, prompt, {images?})`.

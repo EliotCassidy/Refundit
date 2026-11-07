@@ -37,6 +37,7 @@ tickets/**               (test receipts for the parser evals)
 - the H spikes
 - brand contact discovery: `getBrandContact` + Linkup (`lib/brands/discover.ts`)
 - email fallback and replies to brands (Gmail SMTP, `lib/email/send.ts`)
+- **NotCoca** demo brand site (`/notcoca`: public form + back-office) and Stripe Connect test payouts
 
 **Owns:**
 ```
@@ -44,6 +45,7 @@ app/(app)/claims/**                  app/api/claims/[id]/**
 app/api/webhooks/**  app/api/email/**  lib/agent/**                 scripts/agent-spike.ts
 lib/claims/**                        lib/email/**
 lib/brands/discover.ts               lib/brands/index.ts (getBrandContact)
+app/notcoca/**  app/api/notcoca/**  lib/notcoca/**  lib/stripe.ts  scripts/stripe-connect-demo.ts
 ```
 
 ## Shared (coordinate before changing)
