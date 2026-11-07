@@ -20,16 +20,23 @@ if (!url || !serviceKey || !demoPassword) {
 const db = createClient<Database>(url, serviceKey, { auth: { persistSession: false } });
 
 const BRANDS: TablesInsert<"brands">[] = [
-  // Verified 2026-11-07 by H agent dry run (h/web-surfer-flash): form found and filled in 59 s / 12 steps.
-  // Pringles (Kellanova, now Mars) consumer service goes through the Kellogg's France contact page.
+  // Spike 2026-11-07: NOT automatable. The Kellogg's France form (Pringles = Kellanova, now Mars) is in an
+  // iframe whose submit button the agent can't reach, and it has no customer name/email fields at all.
+  // Linkup found no official French support email. → claims go straight to needs_manual.
   { name: "Pringles", manufacturer: "Kellanova", aliases: ["pringles", "pringl"], source: "seed",
-    contact_url: "https://www.kelloggs.fr/fr_FR/contact_us_fr.html", verified: true,
-    last_checked_at: "2026-11-07T12:00:00Z" },
-  { name: "Evian", manufacturer: "Danone", aliases: ["evian"], source: "seed" },
-  // Verified 2026-11-07 by H agent dry run (h/web-surfer-flash): form found and filled in 146 s / 35 steps.
+    contact_url: null, contact_email: null, verified: false, last_checked_at: "2026-11-07T12:00:00Z",
+    agent_hints: "Formulaire Kellogg's (kelloggs.fr/fr_FR/contact_us_fr.html) dans une iframe, sans champs client : non automatisable." },
+  // Spike 2026-11-07: Danone waters form found and reachable, but it REQUIRES the DLC/DDM and batch number
+  // (not on the receipt) → agent stops with missing_info → email fallback. Email found by Linkup (in sources).
+  { name: "Evian", manufacturer: "Danone", aliases: ["evian"], source: "seed",
+    contact_url: "https://danone.fr/footer/Contact/eaux/reclamation-produit.html",
+    contact_email: "contactconsodanonefrance@danone.com", verified: false,
+    last_checked_at: "2026-11-07T12:00:00Z", agent_hints: null },
+  // Verified 2026-11-07 by H agent dry run (h/web-surfer-flash): full form incl. customer details and
+  // email filled, real submit button found, no guessed fields; 146–179 s. No file-upload field on this form.
   { name: "Coca-Cola", manufacturer: "The Coca-Cola Company", aliases: ["coca-cola", "coca cola", "coca"], source: "seed",
-    contact_url: "https://www.coca-cola.com/fr/fr/about-us/contact-us", verified: true,
-    last_checked_at: "2026-11-07T12:00:00Z" },
+    contact_url: "https://www.coca-cola.com/fr/fr/about-us/contact-us", contact_email: null, verified: true,
+    last_checked_at: "2026-11-07T12:00:00Z", agent_hints: null },
   // TODO(dev1): add the other demo brands after the spike, with verified contact_url + agent_hints.
 ];
 

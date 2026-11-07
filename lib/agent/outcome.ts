@@ -45,13 +45,22 @@ export function decideOutcome(s: SessionSnapshot, claimDryRun: boolean): Outcome
   const payload = { ...base, answer: a };
 
   if (a.submitted) {
+    // Already sent: we can't undo it, but guessed fields are recorded in the event payload.
     return { to: "submitted", patch: { confirmation_number: a.confirmation_number, failure_reason: null, dry_run: false }, payload };
   }
   if (a.blocker) {
     return { to: "needs_manual", patch: { failure_reason: `${a.blocker}: ${a.notes}`.slice(0, 500) }, payload };
   }
   if (claimDryRun) {
-    // Form filled, stopped before the final click on purpose.
+    // Form filled, stopped before the final click on purpose. Only counts if the self-checks pass.
+    const problems = [
+      !a.customer_email_entered && "customer email not entered",
+      !a.submit_button_found && "final submit button not found",
+      a.guessed_fields.length > 0 && `guessed fields: ${a.guessed_fields.join(", ")}`,
+    ].filter(Boolean);
+    if (problems.length) {
+      return { to: "needs_manual", patch: { failure_reason: `form_incomplete: ${problems.join("; ")}`.slice(0, 500) }, payload };
+    }
     return { to: "submitted", patch: { confirmation_number: null, failure_reason: null, dry_run: true }, payload };
   }
   return { to: "agent_failed", patch: { failure_reason: `not_submitted: ${a.notes}`.slice(0, 500) }, payload };

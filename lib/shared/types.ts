@@ -118,6 +118,10 @@ export const AgentAnswerSchema = z.object({
   confirmation_number: z.string().nullable(),
   form_url: z.string().nullable(),
   blocker: z.enum(AGENT_BLOCKERS).nullable(),
+  // Self-checks, verified in code (lib/agent/outcome.ts), because prompts alone were not enough:
+  customer_email_entered: z.boolean(), // the customer's email was typed into the form
+  submit_button_found: z.boolean(), // the button that actually SENDS the request was found
+  guessed_fields: z.array(z.string()), // fields filled with a value NOT provided (must be empty)
   notes: z.string(),
 });
 export type AgentAnswer = z.infer<typeof AgentAnswerSchema>;

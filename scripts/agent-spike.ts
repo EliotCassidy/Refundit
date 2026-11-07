@@ -1,7 +1,7 @@
 // OWNER: Dev 2. H spike (IMPLEMENTATION_PLAN.md Phase 1): run the agent in DRY RUN on a
 // brand contact form and report what happened. Never submits a form.
 //
-//   npm run spike -- <contact_url> [--brand "Pringles"] [--agent h/web-surfer-pro] [--receipt path/to/receipt.jpg]
+//   npm run spike -- <contact_url> [--brand "Pringles"] [--product "Pringles Original 175g"] [--agent h/web-surfer-pro] [--receipt path/to/receipt.jpg]
 //
 // Prints the Agent View URL right away (watch it live), then the structured answer.
 import { readFileSync } from "node:fs";
@@ -21,6 +21,7 @@ const { values, positionals } = parseArgs({
     brand: { type: "string" },
     agent: { type: "string", default: process.env.AGENT_ID || "h/web-surfer-flash" },
     receipt: { type: "string" },
+    product: { type: "string" }, // e.g. "Coca-Cola Original 1,75 L"
   },
 });
 const contactUrl = positionals[0];
@@ -42,7 +43,7 @@ const brand = values.brand ?? null;
 const complaintText = buildComplaintText({
   firstName: "Camille",
   lastName: "Test",
-  productName: brand ? `${brand} (produit test)` : "Produit test",
+  productName: values.product ?? (brand ? `${brand} (produit test)` : "Produit test"),
   brandName: brand,
   storeName: "Carrefour Market",
   purchasedAt: new Date().toISOString(),
@@ -67,7 +68,7 @@ const instruction = buildInstruction({
     phone: "0600000000",
     email: "spike@inbound.invalid",
   },
-  product: { name: "Produit test", brand, ean: null, purchasedAt: new Date().toISOString(), storeName: "Carrefour Market", priceCents: 289 },
+  product: { name: values.product ?? "Produit test", brand, ean: null, purchasedAt: new Date().toISOString(), storeName: "Carrefour Market", priceCents: 289 },
   complaintText,
   receiptFileName: receiptFile?.name ?? null,
 });

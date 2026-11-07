@@ -13,7 +13,7 @@ export type ComplaintFacts = {
   totalPriceCents: number | null;
   issueType: IssueType;
   issueDescription: string | null;
-  hasReceiptAttachment: boolean;
+  hasReceiptAttachment: boolean; // kept for callers; the text no longer depends on it
 };
 
 const ISSUE_SENTENCES: Record<IssueType, string> = {
@@ -55,9 +55,8 @@ export function buildComplaintText(f: ComplaintFacts): string {
   if (description) lines.push(`Précisions : ${description}`);
   lines.push(
     "",
-    f.hasReceiptAttachment
-      ? "Vous trouverez mon ticket de caisse en pièce jointe comme preuve d'achat."
-      : "Je tiens mon ticket de caisse à votre disposition comme preuve d'achat.",
+    // Neutral on purpose: many forms have no upload field, so "en pièce jointe" could be false.
+    "Je tiens mon ticket de caisse à votre disposition comme preuve d'achat.",
     "Je vous remercie de bien vouloir me proposer un remboursement ou un geste commercial.",
     "",
     "Cordialement,",

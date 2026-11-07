@@ -239,8 +239,14 @@ export const AgentAnswerSchema = z.object({
   confirmation_number: z.string().nullable(),
   form_url: z.string().nullable(),              // URL of the form actually used
   blocker: z.enum(AGENT_BLOCKERS).nullable(),
+  customer_email_entered: z.boolean(),          // self-check: customer email typed into the form
+  submit_button_found: z.boolean(),             // self-check: the real "send" button was found
+  guessed_fields: z.array(z.string()),          // fields filled WITHOUT provided data (must be empty)
   notes: z.string(),                            // short explanation / 'dry_run_ready'
 });
+// Dry run counts as success only if customer_email_entered && submit_button_found && guessed_fields is empty,
+// otherwise the claim goes to needs_manual "form_incomplete: …" (spike finding: the agent sometimes stopped
+// on step 1 of a multi-step form, or picked arbitrary dropdown values).
 export type AgentAnswer = z.infer<typeof AgentAnswerSchema>;
 
 // ---- Brand contact (Dev 1 provides, Dev 2 consumes) ----
