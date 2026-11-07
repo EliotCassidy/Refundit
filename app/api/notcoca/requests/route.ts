@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     store: d.store,
     purchase_date: d.purchase_date ?? null,
     message: d.message,
-    civility: d.civility,
+    civility: d.civility ?? null,
     last_name: d.last_name,
     first_name: d.first_name,
     address: d.address,

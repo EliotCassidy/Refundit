@@ -35,19 +35,18 @@ export const NotCocaRequestSchema = z
     store: optional,
     purchase_date: z.preprocess(blankToUndefined, z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional()),
     message: z.string().trim().min(10).max(4000),
-    civility: z.enum(CIVILITIES),
+    // Short form (jury demo): only the essentials. Older fields stay optional (columns are nullable).
+    civility: z.enum(CIVILITIES).optional(),
     last_name: z.string().trim().min(1).max(100),
     first_name: z.string().trim().min(1).max(100),
-    address: z.string().trim().min(1).max(200),
-    postal_code: z.string().trim().regex(/^\d{5}$/),
-    city: z.string().trim().min(1).max(100),
+    address: optional,
+    postal_code: optional,
+    city: optional,
     phone: optional,
     email: z.email(),
-    email_confirm: z.email(),
     terms: z.literal(true),
   })
-  .refine((d) => d.email.toLowerCase() === d.email_confirm.toLowerCase(), { message: "Les adresses e-mail ne correspondent pas", path: ["email_confirm"] })
-  .refine((d) => d.reason !== PROBLEM_REASON || (d.still_has_product && d.drink && d.packaging && d.format && d.purchase_date), {
+  .refine((d) => d.reason !== PROBLEM_REASON || (d.still_has_product && d.drink && d.format), {
     message: "Merci de renseigner les informations sur la boisson",
     path: ["drink"],
   });

@@ -11,7 +11,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { driver, type Config, type DriveStep, type Driver } from "driver.js";
 import { Hand, Lightbulb, PartyPopper, RotateCcw, Sparkles, X } from "lucide-react";
-import { getDemo, patchDemo, setDemo, useDemoRaw, type DemoState } from "./demo-state";
+import { getDemo, leaveDemo, patchDemo, setDemo, useDemoRaw, type DemoState } from "./demo-state";
 
 const BASE: Config = {
   animate: true,
@@ -70,6 +70,7 @@ export function DemoTour() {
   const drv = useRef<Driver | null>(null);
 
   const step = state?.step ?? null;
+  const seenKey = state?.seen?.join(",") ?? "";
   const seen = (k: string) => Boolean(state?.seen?.includes(k));
   const markSeen = (k: string) => patchDemo({ seen: [...(getDemo()?.seen ?? []), k] });
 
@@ -77,7 +78,7 @@ export function DemoTour() {
   useEffect(() => () => {
     drv.current?.destroy();
     drv.current = null;
-  }, [pathname, step, status, firstRequest, ready]);
+  }, [pathname, step, status, firstRequest, ready, seenKey]);
 
   // Step transitions driven by navigation.
   useEffect(() => {
@@ -155,7 +156,7 @@ export function DemoTour() {
       // 3) Receipt: pick NotCoca, choose a problem, send. The tour only moves on once the card is complete
       //    (Oui + problem + product): no "next" button that would leave the jury stuck.
       if (step === "receipt" && /^\/receipts\/(?!new)/.test(pathname)) {
-        if (ready) {
+        if (ready && seen("receipt-done")) {
           const el = await waitFor(() => document.querySelector("#demo-submit"));
           if (!el) return;
           spot({
@@ -165,13 +166,26 @@ export function DemoTour() {
           });
           return;
         }
-        const card = await waitFor(notcocaCard, 40_000);
+        const card = await waitFor(() => document.querySelector("li[data-demo-ready]") ?? notcocaCard(), 40_000);
         if (!card || cancelled) return;
-        spot({
-          element: card,
-          disableActiveInteraction: false,
-          popover: { title: "Un problème avec NotCoca ?", description: "Touche « Oui » sur la boisson NotCoca, puis choisis le problème de ton choix.", side: "top", align: "center", showButtons: [] },
-        });
+        spot(
+          {
+            element: card,
+            disableActiveInteraction: false,
+            popover: {
+              title: "Un problème avec NotCoca ?",
+              description: ready
+                ? "Parfait. Tu peux continuer."
+                : "Touche « Oui » sur la boisson NotCoca, puis choisis le problème de ton choix.",
+              side: "top",
+              align: "center",
+              showButtons: ["next"],
+              nextBtnText: "J'ai fini",
+              disableButtons: ready ? [] : ["next"],
+            },
+          },
+          { onNextClick: () => { if (document.querySelector("li[data-demo-ready]")) markSeen("receipt-done"); } },
+        );
         return;
       }
 
@@ -219,6 +233,7 @@ export function DemoTour() {
             onHighlighted: (e) => e?.querySelector("button[type=submit]")?.addEventListener("click", () => { markSeen("missing"); }, { once: true }),
           });
         } else if (status === "submitted") {
+          window.dispatchEvent(new Event("refundit-demo:close-agent"));
           show(
             {
               steps: [
@@ -325,7 +340,28 @@ export function DemoTour() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run on page / step / page-state changes only
-  }, [step, pathname, status, firstRequest, received, ready]);
+  }, [step, pathname, status, firstRequest, received, ready, seenKey]);
+
+  // While the agent works (1st run, then again after the missing info), keep its screen open.
+  const forceAgent = step === "agent" && status === "submitting" && seen("agent-live");
+  useEffect(() => {
+    if (!forceAgent) return;
+    const open = () => window.dispatchEvent(new Event("refundit-demo:open-agent"));
+    open();
+    const t = setInterval(open, 4000);
+    return () => clearInterval(t);
+  }, [forceAgent]);
+
+  // One jury at a time: renew the demo lock while this tab is open.
+  const session = state?.session;
+  useEffect(() => {
+    if (!session) return;
+    const beat = () =>
+      fetch("/api/demo/heartbeat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session }) }).catch(() => undefined);
+    void beat();
+    const t = setInterval(beat, 30_000);
+    return () => clearInterval(t);
+  }, [session]);
 
   // Final step: fetch the brand's email and refresh until the balance goes up.
   useEffect(() => {
@@ -359,7 +395,7 @@ function DemoChip() {
   return (
     <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+1.5rem)] left-4 z-[60] inline-flex items-center gap-1 rounded-full bg-ink py-1 pl-3 pr-1 text-[12px] font-semibold text-surface shadow-lg">
       <Sparkles className="size-3.5" aria-hidden /> Mode démo
-      <button type="button" onClick={() => setDemo(null)} aria-label="Quitter le mode démo" className="ml-1 grid size-6 place-items-center rounded-full bg-white/15 hover:bg-white/25">
+      <button type="button" onClick={() => void leaveDemo()} aria-label="Quitter le mode démo" className="ml-1 grid size-6 place-items-center rounded-full bg-white/15 hover:bg-white/25">
         <X className="size-3.5" aria-hidden />
       </button>
     </div>
@@ -385,7 +421,7 @@ function EndCard() {
   const router = useRouter();
   async function restart() {
     await fetch("/api/demo/reset", { method: "POST" }).catch(() => undefined);
-    setDemo({ step: "intro" });
+    setDemo({ step: "intro", session: getDemo()?.session });
     router.push("/");
     router.refresh();
   }
@@ -404,7 +440,7 @@ function EndCard() {
           <button type="button" onClick={restart} className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-ink font-semibold text-surface">
             <RotateCcw className="size-4" aria-hidden /> Recommencer la démo
           </button>
-          <button type="button" onClick={() => setDemo(null)} className="h-11 rounded-full font-semibold text-muted hover:text-ink">Quitter le mode démo</button>
+          <button type="button" onClick={() => void leaveDemo()} className="h-11 rounded-full font-semibold text-muted hover:text-ink">Quitter le mode démo</button>
         </div>
       </motion.div>
     </motion.div>

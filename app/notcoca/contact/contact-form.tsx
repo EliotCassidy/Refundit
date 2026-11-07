@@ -1,10 +1,10 @@
 "use client";
-// OWNER: Dev 2. NotCoca two-step contact form. Step 1: the request (product questions only when
-// the reason is a product problem). Step 2: customer details. Native controls on purpose
+// OWNER: Dev 2. NotCoca two-step contact form, kept short (essentials only). Step 1: the request, with
+// "do you still have the drink?" first (the agent can't answer it → it stops early and asks the user). Step 2: name + email. Native controls on purpose
 // (labels, <select>, required) so it behaves like a real brand form for the H agent.
 import { useState } from "react";
 import { ArrowLeft, ArrowRight, Check, ChevronDown, Send } from "lucide-react";
-import { CIVILITIES, DRINKS, FORMATS, PACKAGINGS, PROBLEM_REASON, REASONS, YES_NO } from "@/lib/notcoca/catalog";
+import { DRINKS, FORMATS, PROBLEM_REASON, REASONS, YES_NO } from "@/lib/notcoca/catalog";
 
 const control =
   "w-full rounded-xl border border-neutral-200 bg-neutral-50 px-4 text-[15px] text-neutral-900 transition placeholder:text-neutral-400 hover:border-neutral-300 focus:border-notcoca focus:bg-white focus:outline-none focus:ring-4 focus:ring-notcoca/15";
@@ -115,26 +115,16 @@ export function ContactForm() {
           {reason === PROBLEM_REASON && (
             <div className="flex flex-col gap-4 rounded-3xl bg-notcoca/[0.04] p-4 ring-1 ring-notcoca/10 sm:p-5">
               <Select name="still_has_product" label="Pouvez-vous confirmer que vous avez toujours la boisson concernée ?" options={YES_NO} />
-              <Select name="drink" label="La réclamation porte sur quelle boisson ?" options={DRINKS} />
               <div className="grid gap-4 sm:grid-cols-2">
-                <Select name="packaging" label="Veuillez sélectionner le packaging concerné" options={PACKAGINGS} />
-                <Select name="format" label="Veuillez sélectionner le format concerné" options={FORMATS} />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-3">
-                <Field name="quantity" label="Nombre de boissons concernées" type="number" required={false} />
-                <Field name="best_before" label="DDM (à consommer de préférence avant)" required={false} placeholder="JJ/MM/AAAA" />
-                <Field name="production_code" label="Code de production" required={false} />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field name="store" label="Point de vente (magasin)" required={false} />
-                <Field name="purchase_date" label="Date d'achat" type="date" />
+                <Select name="drink" label="Boisson concernée" options={DRINKS} />
+                <Select name="format" label="Format" options={FORMATS} />
               </div>
             </div>
           )}
 
           <label className={label}>
             <span>Votre message *</span>
-            <textarea name="message" required minLength={10} rows={6} className={area} />
+            <textarea name="message" required minLength={10} rows={4} className={area} />
           </label>
 
           <button className={`${primary} self-start`}>
@@ -153,19 +143,11 @@ export function ContactForm() {
           }}
           className="flex flex-col gap-4"
         >
-          <Select name="civility" label="Civilité" options={CIVILITIES} />
           <div className="grid gap-4 sm:grid-cols-2">
             <Field name="last_name" label="Nom" />
             <Field name="first_name" label="Prénom" />
           </div>
-          <Field name="address" label="Adresse postale" />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field name="postal_code" label="Code postal" />
-            <Field name="city" label="Ville" />
-          </div>
-          <Field name="phone" label="Numéro de téléphone" type="tel" required={false} />
           <Field name="email" label="Adresse e-mail" type="email" />
-          <Field name="email_confirm" label="Confirmez votre adresse e-mail" type="email" />
           <label className="flex items-start gap-3 rounded-2xl bg-neutral-50 p-4 text-sm">
             <input name="terms" type="checkbox" required className="mt-0.5 size-4 shrink-0 accent-notcoca" />
             <span>J&apos;ai lu et j&apos;accepte les conditions d&apos;utilisation. *</span>

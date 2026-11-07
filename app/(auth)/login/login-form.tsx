@@ -61,8 +61,17 @@ export function LoginForm({ next }: { next: string }) {
       return setError(error.message);
     }
     if (demo && isDemoEmail(credentials.email)) {
-      await fetch("/api/demo/reset", { method: "POST" }).catch(() => undefined);
-      setDemo({ step: "intro" });
+      // One jury at a time: take the demo lock (and reset the account), or step back out.
+      const session = crypto.randomUUID();
+      const res = await fetch("/api/demo/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session }) }).catch(() => null);
+      if (!res?.ok) {
+        const body = await res?.json().catch(() => null);
+        await supabase.auth.signOut();
+        setPending(false);
+        setDemoMode(false);
+        return setError(body?.error?.message ?? "Mince, la démo n'a pas pu démarrer. Réessaye dans un instant.");
+      }
+      setDemo({ step: "intro", session });
       router.replace("/");
     } else {
       setDemo(null);
