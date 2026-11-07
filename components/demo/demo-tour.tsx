@@ -7,6 +7,7 @@
 import "driver.js/dist/driver.css";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
+import confetti from "canvas-confetti";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { driver, type Config, type DriveStep, type Driver } from "driver.js";
@@ -515,6 +516,25 @@ function WaitNote({ title, text, onClose, delay }: { title: string; text: string
 
 function EndCard() {
   const router = useRouter();
+  // Celebration: two side cannons, then a burst from the top (above the end card's overlay).
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const colors = ["#22C55E", "#86EFAC", "#FDE68A", "#111714", "#ffffff"];
+    const fire = (o: confetti.Options) => confetti({ zIndex: 300, colors, disableForReducedMotion: true, ...o });
+    const end = Date.now() + 1400;
+    let frame = 0;
+    const sides = () => {
+      fire({ particleCount: 4, angle: 60, spread: 60, origin: { x: 0, y: 0.75 }, startVelocity: 55 });
+      fire({ particleCount: 4, angle: 120, spread: 60, origin: { x: 1, y: 0.75 }, startVelocity: 55 });
+      if (Date.now() < end) frame = requestAnimationFrame(sides);
+    };
+    sides();
+    const t = setTimeout(() => fire({ particleCount: 140, spread: 100, origin: { y: 0.3 }, startVelocity: 40, scalar: 1.1 }), 350);
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(t);
+    };
+  }, []);
   async function restart() {
     // A new jury = a new throwaway account: back to the login page, which starts the demo again.
     setDemo(null);
