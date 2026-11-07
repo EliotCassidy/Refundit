@@ -9,7 +9,7 @@ import { createAdminClient } from "@/lib/shared/supabase/admin";
 import type { ClaimStatus } from "@/lib/shared/types";
 import { findAlias } from "./address";
 import { classifyReply } from "./classify";
-import { emailSendingConfigured } from "./send";
+import { emailSendingConfigured, OUTGOING_HEADER } from "./send";
 
 const LOOKBACK_DAYS = 14;
 
@@ -49,6 +49,12 @@ export async function pollInbox(): Promise<PollResult> {
       if (!msg || !msg.source) continue;
       const mail = await simpleParser(msg.source);
       const messageId = mail.messageId ?? `uid-${uid}`;
+      if (mail.headers.has(OUTGOING_HEADER.toLowerCase())) {
+        // A copy of one of our own outgoing emails: not a brand reply.
+        await client.messageFlagsAdd(String(uid), ["\\Seen"], { uid: true });
+        result.skipped++;
+        continue;
+      }
       const recipients = [...addresses(mail.to), ...addresses(mail.cc), ...[mail.headers.get("delivered-to")].flat().map(String)];
       const alias = findAlias(recipients, mail.subject ?? "", mail.text ?? "");
 

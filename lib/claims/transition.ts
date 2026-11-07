@@ -46,6 +46,8 @@ export async function transitionClaim(
 
   const now = new Date().toISOString();
   const patch: TablesUpdate<"claims"> = { ...opts.patch, status: to };
+  // Requested fields only make sense while waiting for the user.
+  if (to !== "waiting_input" && claim.missing_fields.length && !opts.patch?.missing_fields) patch.missing_fields = [];
   if (to === "submitted" && !claim.submitted_at) patch.submitted_at = now;
   if (to === "accepted" || to === "refused") patch.resolved_at = now;
 

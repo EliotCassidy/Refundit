@@ -6,6 +6,8 @@ import "server-only";
 import nodemailer, { type Transporter } from "nodemailer";
 import { plusAddress } from "./address";
 
+export const OUTGOING_HEADER = "X-Refundit-Outgoing";
+
 export function emailSendingConfigured(): boolean {
   return Boolean(process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD);
 }
@@ -41,6 +43,7 @@ export async function sendEmail(m: OutgoingEmail): Promise<{ id: string }> {
     subject: m.subject,
     text: m.text,
     inReplyTo: m.inReplyTo ?? undefined,
+    headers: { [OUTGOING_HEADER]: m.alias }, // so the inbox poller never mistakes our own mail for a reply
     references: m.inReplyTo ?? undefined,
     attachments: m.attachment
       ? [{ filename: m.attachment.filename, content: Buffer.from(m.attachment.base64, "base64"), contentType: m.attachment.contentType }]
