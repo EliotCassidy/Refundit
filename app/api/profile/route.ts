@@ -15,7 +15,7 @@ export const ProfileFormSchema = z.object({
     .regex(/^[+]?[0-9][0-9 ().\-]{5,19}$/, "Numéro de téléphone invalide.")
     .max(20),
   address_line1: z.string().trim().min(1, "L'adresse est requise.").max(120),
-  address_line2: z.string().trim().max(120).transform((v) => (v ? v : null)),
+  address_line2: z.string().trim().max(120).optional().transform((v) => (v || null)),
   postal_code: z.string().trim().min(1, "Le code postal est requis.").max(10),
   city: z.string().trim().min(1, "La ville est requise.").max(100),
   country: z.string().trim().min(1, "Le pays est requis.").max(100).default("FR"),
