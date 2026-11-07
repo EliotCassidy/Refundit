@@ -18,12 +18,20 @@ export type OutcomeDecision = {
 
 const TERMINAL = new Set(["completed", "failed", "timed_out", "interrupted"]);
 
+/**
+ * Observed in the spike: catalog agents (h/web-surfer-flash) can settle in "idle" after answering
+ * instead of "completed". An idle session WITH an answer is treated as completed.
+ */
+export function isSettled(status: string, latestAnswer: unknown): boolean {
+  return TERMINAL.has(status) || (status === "idle" && latestAnswer != null);
+}
+
 /** Returns null while the session is still running (or idle/paused). */
 export function decideOutcome(s: SessionSnapshot, claimDryRun: boolean): OutcomeDecision | null {
-  if (!TERMINAL.has(s.status)) return null;
+  if (!isSettled(s.status, s.latestAnswer)) return null;
   const base = { h_status: s.status, h_outcome: s.outcome ?? null };
 
-  if (s.status !== "completed") {
+  if (s.status !== "completed" && s.status !== "idle") {
     const reason = s.errorCode ?? s.status;
     return { to: "agent_failed", patch: { failure_reason: reason }, payload: { ...base, error: s.error ?? null } };
   }

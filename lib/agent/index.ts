@@ -190,6 +190,7 @@ export async function submitClaim(claim: ClaimRow): Promise<SubmitResult> {
       maxSteps: 60,
       maxTimeS: 600,
       timezone: "Europe/Paris",
+      idleTimeoutS: null, // end as soon as the agent answers (we observed "idle" otherwise)
       idempotencyKey: `claim-${claim.id}-${claim.attempt + 1}`,
     });
     const details = await session.get();
@@ -221,10 +222,14 @@ export async function syncClaim(claim: ClaimRow): Promise<ClaimRow["status"]> {
   if (claim.status !== "submitting" || !claim.h_session_id) return claim.status;
 
   const status = await h().sessions.getSessionStatus({ id: claim.h_session_id });
-  const isTerminal = ["completed", "failed", "timed_out", "interrupted"].includes(status.status);
-  if (!isTerminal) return claim.status;
+  const isFinal = ["completed", "failed", "timed_out", "interrupted", "idle"].includes(status.status);
+  if (!isFinal) return claim.status;
 
   const session = await h().sessions.getSession({ id: claim.h_session_id });
+  if (status.status === "idle") {
+    // The agent answered but keeps the session open: close it to free a concurrency slot.
+    await h().session(claim.h_session_id).cancel().catch(() => undefined);
+  }
   const decision = decideOutcome(
     { status: status.status, errorCode: status.errorCode, error: status.error, outcome: status.outcome, latestAnswer: session.latestAnswer },
     claim.dry_run,

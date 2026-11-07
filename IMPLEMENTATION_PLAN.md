@@ -41,6 +41,15 @@ Priorities:
   | Which model? | flash / pro |
 
   → fills `brands` seed rows (`verified`, `agent_hints`, `captcha_observed`, `requires_receipt_upload`).
+  - **Results 2026-11-07 (h/web-surfer-flash, dry run, no receipt file):**
+
+    | Brand | Contact URL | Form found & filled | CAPTCHA | Upload | Duration |
+    |---|---|---|---|---|---|
+    | Pringles (Kellanova) | kelloggs.fr/fr_FR/contact_us_fr.html | yes | not reported | not tested | 59 s / 12 steps |
+    | Coca-Cola | coca-cola.com/fr/fr/about-us/contact-us | yes | not reported | not tested | 146 s / 35 steps |
+
+    Finding: sessions can settle in `idle` after answering → handled (`isSettled`, `idleTimeoutS: null`, webhook must subscribe to `session.idle`).
+    Still to test: receipt upload (`--receipt`), Evian (Danone eaux form), 1–2 more brands.
 - [ ] **Resend spike:** create the account, check that arbitrary addresses on `<id>.resend.app` arrive at a webhook on the free plan, and that the Receiving API returns the body. If not, switch to Postmark.
 - [x] Ship the `AGENT_MOCK` stub for `/submit` + `/sync` (unblocks Dev 1).
 

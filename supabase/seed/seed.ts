@@ -20,15 +20,22 @@ if (!url || !serviceKey || !demoPassword) {
 const db = createClient<Database>(url, serviceKey, { auth: { persistSession: false } });
 
 const BRANDS: TablesInsert<"brands">[] = [
-  { name: "Pringles", manufacturer: "Kellanova", aliases: ["pringles", "pringl"], source: "seed" },
+  // Verified 2026-11-07 by H agent dry run (h/web-surfer-flash): form found and filled in 59 s / 12 steps.
+  // Pringles (Kellanova, now Mars) consumer service goes through the Kellogg's France contact page.
+  { name: "Pringles", manufacturer: "Kellanova", aliases: ["pringles", "pringl"], source: "seed",
+    contact_url: "https://www.kelloggs.fr/fr_FR/contact_us_fr.html", verified: true,
+    last_checked_at: "2026-11-07T12:00:00Z" },
   { name: "Evian", manufacturer: "Danone", aliases: ["evian"], source: "seed" },
-  { name: "Coca-Cola", manufacturer: "The Coca-Cola Company", aliases: ["coca-cola", "coca cola", "coca"], source: "seed" },
+  // Verified 2026-11-07 by H agent dry run (h/web-surfer-flash): form found and filled in 146 s / 35 steps.
+  { name: "Coca-Cola", manufacturer: "The Coca-Cola Company", aliases: ["coca-cola", "coca cola", "coca"], source: "seed",
+    contact_url: "https://www.coca-cola.com/fr/fr/about-us/contact-us", verified: true,
+    last_checked_at: "2026-11-07T12:00:00Z" },
   // TODO(dev1): add the other demo brands after the spike, with verified contact_url + agent_hints.
 ];
 
 async function main() {
   // 1. Brands
-  const { error: brandsError } = await db.from("brands").upsert(BRANDS, { onConflict: "name" });
+  const { error: brandsError } = await db.from("brands").upsert(BRANDS, { onConflict: "name", defaultToNull: false });
   if (brandsError) throw brandsError;
   const { data: brands } = await db.from("brands").select("id, name");
   const brandId = (name: string) => brands?.find((b) => b.name === name)?.id ?? null;

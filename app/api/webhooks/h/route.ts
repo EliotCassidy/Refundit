@@ -1,6 +1,7 @@
 // OWNER: Dev 2. H Company webhook (ARCHITECTURE.md §4.4).
 // Registered once per org: POST https://agp.eu.hcompany.ai/api/v2/webhooks with
-// enabled_events ["session.completed","session.failed","session.timed_out"]; the returned
+// enabled_events ["session.completed","session.failed","session.timed_out","session.idle"]
+// ("session.idle" is needed: catalog agents can settle in idle after answering); the returned
 // `secret` (whsec_…, shown once) goes in H_WEBHOOK_SECRET.
 // Idempotency: at-least-once deliveries are harmless because syncClaim only acts on
 // claims still in 'submitting' and transitions are compare-and-set.

@@ -83,6 +83,7 @@ async function main() {
     maxSteps: 60,
     maxTimeS: 600,
     timezone: "Europe/Paris",
+    idleTimeoutS: null,
   });
   const details = await session.get();
   console.log(`\nSession ${session.id} (${values.agent})`);
@@ -93,6 +94,7 @@ async function main() {
   const status = await session.status();
   const seconds = Math.round((Date.now() - started) / 1000);
 
+  if (result.status === "idle") await session.cancel().catch(() => undefined); // free the slot
   console.log("\n=== Spike result ===");
   console.log(JSON.stringify({
     url: contactUrl,
