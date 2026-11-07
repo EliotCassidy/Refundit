@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import { ChevronRight, MessageCircleQuestion } from "lucide-react";
 import { ReceiptScan } from "@/components/ui/receipt-scan";
 import { displayLabel } from "@/components/ui/format";
-import { Aurora } from "@/components/ui/aurora";
 import { FadeIn } from "@/components/ui/motion";
 import { STATUS_GROUP } from "@/components/ui/status";
 import { createClient, getUser } from "@/lib/shared/supabase/server";
@@ -47,7 +46,6 @@ export default async function DashboardPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-[720px] flex-col gap-8">
-      <Aurora />
       <DashboardHero firstName={profile.first_name} received={received} pending={pending} openCount={open.length} needsCount={needsYou.length} />
 
       {!profile.iban && (

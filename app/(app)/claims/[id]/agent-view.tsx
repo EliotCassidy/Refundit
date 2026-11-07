@@ -2,6 +2,7 @@
 // OWNER: Dev 2. Compact Agent View: thumbnail + last action + live dot + Stop.
 // "Voir en grand" opens a lightbox (full screenshot, replay slider, action log).
 import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { Bot, ChevronLeft, ChevronRight, Maximize2, X } from "lucide-react";
 
@@ -83,7 +84,12 @@ export function AgentView({ claimId, live, actions }: { claimId: string; live: b
 
       {actions && <div className="mt-3">{actions}</div>}
 
-      <AnimatePresence>{open && <Lightbox shots={shots} log={log} live={live} onClose={() => setOpen(false)} />}</AnimatePresence>
+      {/* Portal: a transformed ancestor (FadeIn) would otherwise trap the fixed overlay inside this card. */}
+      {typeof document !== "undefined" &&
+        createPortal(
+          <AnimatePresence>{open && <Lightbox shots={shots} log={log} live={live} onClose={() => setOpen(false)} />}</AnimatePresence>,
+          document.body,
+        )}
     </section>
   );
 }
@@ -105,7 +111,7 @@ function Lightbox({ shots, log, live, onClose }: { shots: Step[]; log: Step[]; l
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-[#111714]/60 backdrop-blur-sm sm:items-center sm:p-6"
+      className="fixed inset-0 z-[100] flex items-end justify-center bg-[#111714]/60 backdrop-blur-sm sm:items-center sm:p-6"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}

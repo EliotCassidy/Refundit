@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowLeft, ArrowRight, Check, Landmark, Mail, ScanLine, ShieldCheck, Sparkles, Zap } from "lucide-react";
-import { Aurora, glass } from "@/components/ui/aurora";
+import { glass } from "@/components/ui/aurora";
 import { Logo } from "@/components/ui/brand";
 import { Button } from "@/components/ui/button";
 import { formatIban, isValidIban } from "@/lib/shared/iban";
@@ -108,7 +108,6 @@ export function OnboardingWizard() {
 
   return (
     <div className="mx-auto flex min-h-[calc(100dvh-9rem)] w-full max-w-[460px] flex-col justify-center py-2">
-      <Aurora />
       <motion.div layout transition={{ duration: 0.35, ease }} className={`${glass} flex flex-col p-6 sm:p-8`}>
       {/* Progress + back */}
       {step !== "welcome" && step !== "done" && (

@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AccountMenu } from "@/components/ui/account-menu";
+import { Aurora } from "@/components/ui/aurora";
 import { Logo } from "@/components/ui/brand";
 import { ScanFab } from "@/components/ui/scan-fab";
 import { createClient, getUser } from "@/lib/shared/supabase/server";
@@ -15,6 +16,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
+      <Aurora />
       <header className="sticky top-0 z-30 border-b border-line/70 bg-surface/70 backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3 md:px-8">
           <Link href="/" aria-label="Refundit, tableau de bord"><Logo /></Link>
