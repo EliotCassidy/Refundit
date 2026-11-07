@@ -9,6 +9,7 @@ import { chainKey, findConfirmedMatches, labelKey } from "./matches";
 import { readCached, writeCached } from "./net";
 import { offDocument, quantityVariants, searchObf, searchOff, withImage, type Hit } from "./off";
 import { linkupEnabled, webProducts } from "./linkup";
+import { DEMO_BRAND, notcocaCandidates } from "./notcoca";
 import { parseSizes } from "./ean";
 import { referencePrice, samePriceAtChain } from "./prices";
 import { brandConflict, CONFIRMED_BONUS, labelWords, preScore, privateLabel, rank, wordHit, type Candidate } from "./rank";
@@ -59,6 +60,8 @@ const loadConfirmed = (chain: string | null, rawLabel: string) =>
  * null si rien n'est connu. Le garde-fou de marque est toujours réappliqué à la validation automatique.
  */
 export async function knownCandidates(chain: string | null, rawLabel: string, registryBrand?: string | null): Promise<ProductCandidates | null> {
+  // 0) Notre marque de démo fictive (absente d'Open Food Facts) : son propre catalogue, jamais un vrai Coca-Cola.
+  if (registryBrand === DEMO_BRAND) return notcocaCandidates(rawLabel);
   const confirmed = await loadConfirmed(chain, rawLabel);
   if (confirmed.length) {
     const candidates = confirmed.slice(0, 3).map((m) => ({
@@ -109,6 +112,9 @@ export async function identifyProduct(input: IdentifyInput, debug?: IdentifyDebu
   const t0 = Date.now();
   const times: Record<string, number> = {};
   const lap = (name: string, since: number) => (times[name] = Date.now() - since);
+
+  // NotCoca (marque de démo fictive) : toujours son catalogue, même pour « Chercher d'autres produits ».
+  if (input.registryBrand === DEMO_BRAND && !input.userQuery) return notcocaCandidates(input.rawLabel);
 
   // Déjà connu (choix manuel ou dernier résultat) : réponse immédiate avec la photo, sans LLM ni recherche.
   if (!input.full && !input.userQuery) {

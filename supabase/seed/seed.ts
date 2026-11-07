@@ -5,8 +5,7 @@
 // (IMPLEMENTATION_PLAN.md Phase 1). Never put an unverified URL here.
 import { config } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
-import type { Database, Json, TablesInsert } from "../../lib/shared/database.types";
-import { normalize } from "../../lib/receipts/text";
+import type { Database, TablesInsert } from "../../lib/shared/database.types";
 
 config({ path: ".env.local" });
 
@@ -116,22 +115,6 @@ async function main() {
       .insert(missing.map((i) => ({ ...i, receipt_id: receipt.id, user_id: user.id })));
     if (error) throw error;
   }
-
-  // 5. The demo NotCoca line is "already known" (1 manual confirmation in the shared cache, same keys as
-  // lib/receipts/products/matches.ts): its card shows at once with a photo, and the claim keeps the NotCoca brand.
-  // FICTIONAL product: EAN 2000000000008 uses the GS1 20-29 prefix (in-store use, never a real product); the photo
-  // is a real Coca-Cola bottle from Open Food Facts (accepted for the demo).
-  const notcocaLabel = "NOTCOCA ORIGINAL 1.75L";
-  const notcoca = {
-    ean: "2000000000008", brand: "NotCoca", name: "NotCoca Original", quantity: "1,75 L",
-    image_url: "https://images.openfoodfacts.org/images/products/544/900/026/7412/front_en.94.400.jpg",
-    source: "confirmed_match",
-  };
-  const { error: matchError } = await db.from("product_matches").upsert({
-    store_chain: normalize("Carrefour Market"), label_key: normalize(notcocaLabel), raw_label: notcocaLabel,
-    ean: notcoca.ean, product: notcoca as Json, manual_confirmations: 1,
-  }, { onConflict: "store_chain,label_key,ean" });
-  if (matchError) throw matchError;
 
   console.log(`Seed OK: ${BRANDS.length} brands, demo user ${demoEmail}`);
 }

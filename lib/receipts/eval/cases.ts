@@ -6,6 +6,7 @@ import { isValidEan, parseSizes, sizesMatch } from "../products/ean";
 import { rank, privateLabel, brandConflict, WEB_REASON, type Candidate } from "../products/rank";
 import { quantityVariants } from "../products/off";
 import { getJson, isEmptyResult, isFresh } from "../products/net";
+import { notcocaCandidates } from "../products/notcoca";
 
 let fails = 0;
 function eq(name: string, got: unknown, want: unknown) {
@@ -329,6 +330,16 @@ eq("20 conflit de marque",
   eq("21 bonus web", [named.candidates[0].score - plain.score, named.candidates[0].reasons.includes(WEB_REASON)], [15, true]);
   eq("21 bonus web réduit pour les réponses suivantes", rank([{ ...coca, web: 0.7 }], input).candidates[0].score - plain.score, 11);
   eq("21 jamais validé auto sur une preuve web", named.confident, false);
+}
+
+// --- 22. NotCoca (marque de démo fictive, absente d'OFF) : son catalogue, la recette et le format lus sur le ticket
+{
+  const top = (label: string) => notcocaCandidates(label).candidates[0];
+  eq("22 NotCoca", [top("NOTCOCA 6X33CL").name, top("NOTCOCA 6X33CL").quantity, top("NOTCOCA ZERO 1.5L").name, top("NOTCOCA ZERO 1.5L").quantity],
+    ["NotCoca Original", "6 x 33 cl", "NotCoca Zéro", "1,5 L"]);
+  eq("22 NotCoca Original 1,75 L = EAN du seed", top("NOTCOCA ORIGINAL 1.75L").ean, "2000000000008");
+  eq("22 EAN fictifs valides, photo NotCoca",
+    notcocaCandidates("NOTCOCA CHERRY 33CL").candidates.every((c) => isValidEan(c.ean) && c.ean.startsWith("2") && c.image_url?.startsWith("/notcoca/cans/")), true);
 }
 
 async function asyncCases() {
