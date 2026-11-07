@@ -1,29 +1,54 @@
-// OWNER: Dev 2. One claim: compact header + progress, compact agent (Stop), refund, conversation.
+// OWNER: Dev 2. One claim, laid out like a bank transaction detail: centered header with the one amount
+// that matters, a 3-step progress, grouped detail rows, the agent as a single row, then the follow-up timeline.
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
-import { Money, StripeBadge } from "@/components/ui/brand";
+import { ChevronLeft } from "lucide-react";
 import { displayLabel } from "@/components/ui/format";
-import { FadeIn } from "@/components/ui/motion";
-import { STATUS_LABEL, StatusBadge } from "@/components/ui/status";
+import { AnimatedMoney, FadeIn } from "@/components/ui/motion";
+import { StatusBadge } from "@/components/ui/status";
+import { StoreIcon } from "@/components/ui/store-logo";
 import { createClient } from "@/lib/shared/supabase/server";
 import { ISSUE_LABELS_FR } from "@/lib/shared/types";
+import { findStore } from "@/lib/stores";
 import { AutoRefresh } from "../auto-refresh";
 import { AgentView } from "./agent-view";
 import { ClaimActions } from "./claim-actions";
-import { Conversation, type Message } from "./conversation";
 import { MissingInfoForm } from "./missing-info-form";
+import { ClaimProgress } from "./progress";
+import { Timeline, type TimelineItem } from "./timeline";
 
-const fmt = (iso: string) =>
-  new Date(iso).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" });
+const day = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", timeZone: "Europe/Paris" });
+const longDay = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Paris" });
 const euros = (cents: number) => (cents / 100).toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+
+const group = "overflow-hidden rounded-[24px] bg-white/80 shadow-[0_1px_2px_rgba(17,23,20,0.04),0_12px_32px_-18px_rgba(17,23,20,0.18)] ring-1 ring-black/[0.05] backdrop-blur-xl";
+
+function Row({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-4 px-5 py-3.5">
+      <span className="text-[14px] text-muted">{label}</span>
+      <span className="min-w-0 truncate text-right text-[14px] font-medium">{children}</span>
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="flex flex-col gap-2">
+      <h2 className="px-5 text-[13px] font-medium text-muted">{title}</h2>
+      <div className={group}>{children}</div>
+    </section>
+  );
+}
 
 export default async function ClaimPage({ params }: PageProps<"/claims/[id]">) {
   const { id } = await params;
   const supabase = await createClient();
   const { data: claim } = await supabase
     .from("claims")
-    .select("*, line_items(product_name, raw_label, total_price_cents), brands(name), receipts(store_name, purchased_at)")
+    .select("*, line_items(product_name, raw_label, total_price_cents), brands(name), receipts(store_name, purchased_at, store:raw_parse->store)")
     .eq("id", id)
     .maybeSingle();
   if (!claim) notFound();
@@ -37,143 +62,147 @@ export default async function ClaimPage({ params }: PageProps<"/claims/[id]">) {
   const product = displayLabel(claim.line_items?.product_name || claim.line_items?.raw_label || "Produit");
   const stake = claim.line_items?.total_price_cents ?? 0;
   const live = claim.status === "submitting";
+  const refunded = claim.refund_cents != null;
   const hasAgent = Boolean(claim.h_session_id && !claim.h_session_id.startsWith("mock-"));
+
+  const chain = (claim.receipts?.store as { chain?: string | null } | null)?.chain ?? null;
+  const store = findStore(chain, claim.receipts?.store_name);
+  const printed = claim.receipts?.store_name ? capitalize(claim.receipts.store_name) : null;
+  const branch = store && printed && !store.match.test(printed.toLowerCase()) ? printed : null;
+  const storeLabel = [store?.name ?? printed, branch].filter(Boolean).join(" · ");
 
   // Progress: Envoyée → Réponse → Remboursée
   const sent = Boolean(claim.submitted_at) || ["submitted", "waiting_input", "accepted", "refused"].includes(claim.status);
-  const answered = (emails ?? []).length > 0 || ["accepted", "refused"].includes(claim.status);
+  const firstEmail = emails?.[0]?.received_at ?? null;
+  const answered = Boolean(firstEmail) || ["accepted", "refused"].includes(claim.status);
+  const acceptedAt = events?.find((e) => e.to_status === "accepted")?.created_at ?? null;
   const done = claim.status === "accepted";
+  const stopped = ["cancelled", "refused"].includes(claim.status);
   const steps = [
-    { label: "Envoyée", on: sent },
-    { label: "Réponse", on: answered },
-    { label: claim.refund_cents != null ? "Remboursée" : "Acceptée", on: done },
+    { label: "Envoyée", on: sent, date: sent ? day(claim.submitted_at ?? claim.updated_at) : null },
+    { label: "Réponse", on: answered, date: firstEmail ? day(firstEmail) : null },
+    { label: refunded ? "Remboursée" : claim.status === "refused" ? "Refusée" : "Acceptée", on: done, date: acceptedAt ? day(acceptedAt) : null },
   ];
 
-  // Conversation: our complaint, system events, brand emails, our replies.
-  const messages: Message[] = [];
-  if (claim.complaint_text && sent) {
-    messages.push({
+  // Follow-up timeline.
+  const items: TimelineItem[] = [];
+  if (sent) {
+    items.push({
       key: "sent",
       at: claim.submitted_at ?? claim.created_at,
-      from: "system",
-      title: claim.submission_channel === "email" ? "Envoyée par e-mail" : "Envoyée via le formulaire de la marque",
-      body: "",
-      tag: null,
-    });
-    messages.push({
-      key: "complaint",
-      at: claim.submitted_at ?? claim.created_at,
-      from: "me",
-      title: "Ta réclamation",
-      body: claim.complaint_text,
-      tag: claim.dry_run ? "Test : non envoyée" : claim.confirmation_number ? `Dossier ${claim.confirmation_number}` : null,
+      kind: "sent",
+      title: claim.submission_channel === "email" ? `Réclamation envoyée par e-mail` : `Réclamation envoyée sur le site de ${brand}`,
+      meta: claim.dry_run ? "Mode test : formulaire rempli, non envoyé" : null,
+      body: claim.complaint_text ?? undefined,
     });
   }
   for (const m of emails ?? []) {
-    messages.push({ key: m.id, at: m.received_at, from: "brand", title: m.subject ?? `Réponse de ${brand}`, body: m.body_text ?? "", sender: m.from_address, tag: m.classification_reason });
+    items.push({ key: m.id, at: m.received_at, kind: "email", title: m.subject ?? `Réponse de ${brand}`, meta: m.from_address, body: m.body_text ?? undefined });
   }
   const answers = Object.entries((claim.user_answers ?? {}) as Record<string, string>);
+  const answerText = answers.map(([k, v]) => `${k.trim()}\n→ ${v}`).join("\n\n");
   for (const e of events ?? []) {
     const p = (e.payload ?? {}) as { reply_to_brand?: string };
     if (p.reply_to_brand && answers.length) {
-      messages.push({ key: e.id, at: e.created_at, from: "me", title: "Ta réponse par e-mail", body: answers.map(([k, v]) => `${k} : ${v}`).join("\n"), tag: null });
+      items.push({ key: e.id, at: e.created_at, kind: "answer", title: "Tu as répondu par e-mail", body: answerText });
     } else if (e.from_status === "waiting_input" && e.to_status === "submitting" && answers.length) {
-      messages.push({ key: e.id, at: e.created_at, from: "me", title: "Infos transmises par l'agent", body: answers.map(([k, v]) => `${k} : ${v}`).join("\n"), tag: null });
+      items.push({ key: e.id, at: e.created_at, kind: "answer", title: "Tes réponses, transmises par l'agent", body: answerText });
     } else if (e.to_status === "cancelled") {
-      messages.push({ key: e.id, at: e.created_at, from: "system", title: "Réclamation arrêtée", body: "", tag: null });
+      items.push({ key: e.id, at: e.created_at, kind: "cancelled", title: "Réclamation arrêtée" });
     } else if (e.to_status === "accepted") {
-      messages.push({
+      items.push({
         key: e.id,
         at: e.created_at,
-        from: "system",
-        title: claim.refund_cents != null ? `Remboursement reçu : ${euros(claim.refund_cents)}` : "Demande acceptée",
-        body: "",
-        tag: null,
-        tone: "success",
+        kind: "accepted",
+        title: refunded ? `Remboursement de ${euros(claim.refund_cents!)} reçu` : "Demande acceptée",
+        meta: refunded ? "Virement sécurisé par Stripe" : null,
       });
     }
   }
-  messages.sort((a, b) => a.at.localeCompare(b.at));
+  items.sort((a, b) => a.at.localeCompare(b.at));
+
+  // Same lists as ClaimActions: only render its slot when it has a button (avoids an empty gap).
+  const actionable = (!hasAgent || !live) && ["draft", "submitting", "needs_manual", "waiting_input", "agent_failed"].includes(claim.status);
 
   return (
-    <div className="mx-auto flex w-full max-w-[680px] flex-col gap-4">
-      <Link href="/" className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-muted hover:text-ink">
-        <ArrowLeft className="size-4" aria-hidden /> Tableau de bord
+    <div className="mx-auto flex w-full max-w-[600px] flex-col gap-7">
+      <Link href="/" className="-ml-1 inline-flex w-fit items-center gap-0.5 text-sm font-medium text-muted transition hover:text-ink">
+        <ChevronLeft className="size-4" aria-hidden /> Retour
       </Link>
 
       {/* Header */}
-      <FadeIn>
-        <header className="flex flex-col gap-4 rounded-[20px] border border-line bg-raised/90 p-5 backdrop-blur">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[13px] text-muted">{[brand, ISSUE_LABELS_FR[claim.issue_type]].join(" · ")}</p>
-              <h1 className="mt-1 text-[22px] font-bold leading-tight tracking-tight md:text-[26px]">{product}</h1>
-            </div>
-            <div className="flex shrink-0 flex-col items-end gap-1.5">
-              <Money cents={claim.refund_cents ?? stake} className={`text-[20px] ${claim.refund_cents != null ? "text-brand-strong" : ""}`} />
-              <StatusBadge status={claim.status} refunded={claim.refund_cents != null} dryRun={claim.dry_run} />
-            </div>
-          </div>
-          <ol className="grid grid-cols-3 gap-2">
-            {steps.map((s, i) => (
-              <li key={s.label} className="flex flex-col gap-1.5">
-                <span className="h-1 overflow-hidden rounded-full bg-line">
-                  <span className={`block h-full rounded-full transition-all duration-700 ${s.on ? "w-full" : "w-0"} ${i === 2 ? "bg-brand" : "bg-ink"}`} />
-                </span>
-                <span className={`text-xs font-medium ${s.on ? "text-ink" : "text-muted"}`}>{s.label}</span>
-              </li>
-            ))}
-          </ol>
-          {claim.failure_reason && ["needs_manual", "agent_failed"].includes(claim.status) && (
-            <p className="rounded-[12px] bg-warning-soft px-3 py-2 text-sm text-on-warning-soft">{claim.failure_reason}</p>
-          )}
-        </header>
+      <FadeIn className="flex flex-col items-center text-center">
+        <div className="relative">
+          <span className="grid size-16 place-items-center rounded-full bg-ink text-2xl font-bold text-surface">{brand.charAt(0).toUpperCase()}</span>
+          {store && <StoreIcon store={store} size={26} className="absolute -bottom-1 -right-1 rounded-full ring-[3px] ring-white" />}
+        </div>
+        <p className="mt-4 text-[14px] text-muted">{[brand, ISSUE_LABELS_FR[claim.issue_type]].join(" · ")}</p>
+        <h1 className="mt-1 max-w-[460px] text-balance text-[22px] font-semibold leading-tight tracking-tight">{product}</h1>
+        <AnimatedMoney cents={claim.refund_cents ?? stake} className={`mt-4 text-[44px] font-semibold leading-none tracking-tight ${refunded ? "text-brand-strong" : ""}`} />
+        <div className="mt-3 flex items-center gap-2 text-[13px] text-muted">
+          <StatusBadge status={claim.status} refunded={refunded} dryRun={claim.dry_run} />
+          <span>{refunded ? "sur ton compte" : stopped ? "" : "en jeu"}</span>
+        </div>
       </FadeIn>
 
-      {/* Refund */}
-      {claim.refund_cents != null && (
-        <FadeIn delay={0.05}>
-          <section className="flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-brand/30 bg-brand-soft px-5 py-4">
-            <div>
-              <p className="text-[13px] font-medium text-on-brand-soft">Remboursement reçu</p>
-              <Money cents={claim.refund_cents} className="text-[28px] leading-tight text-brand-strong" />
-            </div>
-            <StripeBadge className="rounded-full bg-raised px-3 py-1.5" />
-          </section>
+      {!stopped && (
+        <FadeIn delay={0.05} className={`${group} px-3 py-5`}>
+          <ClaimProgress steps={steps} active={!done && !["agent_failed", "needs_manual"].includes(claim.status)} />
         </FadeIn>
       )}
 
-      {/* What the user must do */}
-      {claim.status === "waiting_input" && claim.missing_fields.length > 0 && (
+      {claim.failure_reason && ["needs_manual", "agent_failed"].includes(claim.status) && (
         <FadeIn delay={0.05}>
+          <p className="rounded-[18px] bg-warning-soft px-5 py-3.5 text-[14px] text-on-warning-soft">{claim.failure_reason}</p>
+        </FadeIn>
+      )}
+
+      {claim.status === "waiting_input" && claim.missing_fields.length > 0 && (
+        <FadeIn delay={0.08}>
           <MissingInfoForm claimId={claim.id} fields={claim.missing_fields} answers={(claim.user_answers ?? {}) as Record<string, string>} />
         </FadeIn>
       )}
 
-      {/* Agent (compact) */}
-      <FadeIn delay={0.08}>
-        {hasAgent ? (
-          <AgentView claimId={claim.id} live={live} actions={live ? <ClaimActions claimId={claim.id} status={claim.status} /> : undefined} />
-        ) : null}
-      </FadeIn>
-      {(!hasAgent || !live) && <ClaimActions claimId={claim.id} status={claim.status} />}
+      {actionable && (
+        <FadeIn delay={0.08}>
+          <ClaimActions claimId={claim.id} status={claim.status} />
+        </FadeIn>
+      )}
 
-      {/* Conversation */}
-      <FadeIn delay={0.12}>
-        <Conversation messages={messages} brand={brand} waiting={sent && !answered && !["cancelled", "refused"].includes(claim.status)} />
+      <FadeIn delay={0.1}>
+        <Section title="Détails">
+          <div className="divide-y divide-black/[0.05]">
+            {storeLabel && (
+              <Row label="Magasin">
+                <span className="inline-flex items-center gap-2">
+                  <StoreIcon store={store} fallbackName={storeLabel} size={20} className="rounded-[6px]" />
+                  {storeLabel}
+                </span>
+              </Row>
+            )}
+            {claim.receipts?.purchased_at && <Row label="Date d'achat">{longDay(claim.receipts.purchased_at)}</Row>}
+            <Row label="Prix payé"><span className="money">{euros(stake)}</span></Row>
+            {claim.confirmation_number && <Row label="N° de dossier"><span className="mono text-[13px]">{claim.confirmation_number}</span></Row>}
+            {refunded && (
+              <Row label="Remboursement">
+                <span className="money text-brand-strong">+{euros(claim.refund_cents!)}</span>
+                <span className="ml-1.5 font-normal text-muted">via Stripe</span>
+              </Row>
+            )}
+          </div>
+          {hasAgent && (
+            <div className="border-t border-black/[0.05]">
+              <AgentView claimId={claim.id} live={live} actions={live ? <ClaimActions claimId={claim.id} status={claim.status} /> : undefined} />
+            </div>
+          )}
+        </Section>
       </FadeIn>
 
-      <details className="rounded-[16px] px-1 text-sm">
-        <summary className="cursor-pointer text-[13px] font-medium text-muted hover:text-ink">Historique détaillé</summary>
-        <ol className="mt-3 flex flex-col gap-1.5 border-l border-line pl-4 text-[13px]">
-          <li><span className="text-muted">{fmt(claim.created_at)}</span> · Demande créée</li>
-          {(events ?? [])
-            .filter((e) => e.type === "status_change" && e.to_status)
-            .map((e) => (
-              <li key={e.id}><span className="text-muted">{fmt(e.created_at)}</span> · {STATUS_LABEL[e.to_status!]}</li>
-            ))}
-        </ol>
-      </details>
+      <FadeIn delay={0.14}>
+        <Section title="Suivi">
+          <Timeline items={items} waitingFor={sent && !answered && !stopped ? brand : null} />
+        </Section>
+      </FadeIn>
 
       <AutoRefresh syncClaimIds={live ? [claim.id] : []} />
     </div>

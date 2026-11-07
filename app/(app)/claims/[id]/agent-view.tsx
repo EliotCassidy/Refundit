@@ -1,10 +1,10 @@
 "use client";
-// OWNER: Dev 2. Compact Agent View: thumbnail + last action + live dot + Stop.
+// OWNER: Dev 2. Agent View as one list row: thumbnail + last action + live dot (+ Stop below).
 // "Voir en grand" opens a lightbox (full screenshot, replay slider, action log).
 import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
-import { Bot, ChevronLeft, ChevronRight, Maximize2, X } from "lucide-react";
+import { Bot, ChevronLeft, ChevronRight, X } from "lucide-react";
 
 type Step = { at: string; kind: string; text: string | null; screenshot: string | null; pageUrl: string | null };
 
@@ -36,53 +36,48 @@ export function AgentView({ claimId, live, actions }: { claimId: string; live: b
   const lastAction = log.at(-1)?.text ?? (live ? "Ouverture du navigateur…" : null);
 
   return (
-    <section className="rounded-[20px] border border-line bg-raised/90 p-3 backdrop-blur">
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => last && setOpen(true)}
-          disabled={!last}
-          aria-label="Voir l'écran de l'agent en grand"
-          className="group relative h-[72px] w-24 shrink-0 overflow-hidden rounded-[12px] border border-line bg-sunken"
-        >
+    <div>
+      <button
+        type="button"
+        onClick={() => last && setOpen(true)}
+        disabled={!last}
+        aria-label={live ? "Regarder l'agent en direct" : "Revoir le parcours de l'agent"}
+        className="group flex w-full items-center gap-3.5 px-5 py-3.5 text-left transition-colors enabled:hover:bg-black/[0.02]"
+      >
+        <span className="relative h-11 w-14 shrink-0 overflow-hidden rounded-[10px] bg-sunken ring-1 ring-black/[0.06]">
           {last?.screenshot ? (
             // eslint-disable-next-line @next/next/no-img-element -- authenticated proxy route
-            <img src={last.screenshot} alt="" className="size-full object-cover object-top transition group-hover:scale-105" />
+            <img src={last.screenshot} alt="" className="size-full object-cover object-top transition duration-500 group-hover:scale-110" />
           ) : (
-            <span className="grid size-full place-items-center text-muted"><Bot className="size-6" aria-hidden /></span>
+            <span className="grid size-full place-items-center text-muted"><Bot className="size-5" aria-hidden /></span>
           )}
-          {last && (
-            <span className="absolute inset-0 grid place-items-center bg-black/0 opacity-0 transition group-hover:bg-black/30 group-hover:opacity-100">
-              <Maximize2 className="size-4 text-white" aria-hidden />
-            </span>
-          )}
-        </button>
-
-        <div className="min-w-0 flex-1">
-          <p className="flex items-center gap-2 text-sm font-semibold">
-            {live ? (
-              <>
-                <span className="relative flex size-2"><span className="absolute inline-flex size-full animate-ping rounded-full bg-danger opacity-60" /><span className="relative inline-flex size-2 rounded-full bg-danger" /></span>
-                L&apos;agent travaille
-              </>
-            ) : (
-              <>Agent · {shots.length} écran{shots.length > 1 ? "s" : ""}</>
-            )}
-          </p>
-          <AnimatePresence mode="wait">
-            <motion.p key={lastAction ?? error ?? "none"} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} className="mt-0.5 truncate text-[13px] text-muted">
-              {error ?? lastAction ?? "Aucune action enregistrée"}
-            </motion.p>
+          {live && <span className="absolute right-1 top-1 size-2 rounded-full bg-danger ring-2 ring-white" />}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[15px] font-medium">
+            {live ? "L'agent travaille" : "Parcours de l'agent"}
+          </span>
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.span
+              key={live ? (lastAction ?? "") : "summary"}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              className="block truncate text-[13px] text-muted"
+            >
+              {error ?? (live ? lastAction : shots.length ? `${shots.length} écrans enregistrés` : "Aucune action enregistrée")}
+            </motion.span>
           </AnimatePresence>
-          {last && (
-            <button type="button" onClick={() => setOpen(true)} className="mt-1 text-[13px] font-semibold text-ink underline-offset-2 hover:underline">
-              {live ? "Regarder en direct" : "Revoir le parcours"}
-            </button>
-          )}
-        </div>
-      </div>
+        </span>
+        {last && (
+          <span className="flex shrink-0 items-center gap-1 text-[13px] font-medium text-muted transition group-hover:text-ink">
+            {live ? "Direct" : "Voir"}
+            <ChevronRight className="size-4 transition group-hover:translate-x-0.5" aria-hidden />
+          </span>
+        )}
+      </button>
 
-      {actions && <div className="mt-3">{actions}</div>}
+      {actions && <div className="px-5 pb-4">{actions}</div>}
 
       {/* Portal: a transformed ancestor (FadeIn) would otherwise trap the fixed overlay inside this card. */}
       {typeof document !== "undefined" &&
@@ -90,7 +85,7 @@ export function AgentView({ claimId, live, actions }: { claimId: string; live: b
           <AnimatePresence>{open && <Lightbox shots={shots} log={log} live={live} onClose={() => setOpen(false)} />}</AnimatePresence>,
           document.body,
         )}
-    </section>
+    </div>
   );
 }
 
