@@ -33,10 +33,10 @@ export function AgentView({ claimId, live, actions }: { claimId: string; live: b
   const shot = shots.length ? shots[Math.max(0, Math.min(current, shots.length - 1))] : null;
 
   return (
-    <section className={`flex flex-col gap-3 rounded-[28px] p-4 md:p-5 ${live ? "panel panel-claim" : "border border-line bg-raised"}`}>
+    <section className={`flex flex-col gap-3 rounded-[20px] p-4 md:p-5 ${live ? "panel panel-claim" : "border border-line bg-raised"}`}>
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold">{live ? "L'agent remplit le formulaire" : "Replay de l'agent"}</h2>
+          <h2 className="text-lg font-semibold">{live ? "L'agent remplit le formulaire" : "Replay de l'agent"}</h2>
           <p className={`text-sm ${live ? "text-[#5B635E]" : "text-muted"}`}>
             {live ? "Tu peux le regarder… et l'arrêter à tout moment." : `${shots.length} écrans · ${actionsLog.length} actions`}
           </p>
@@ -54,7 +54,7 @@ export function AgentView({ claimId, live, actions }: { claimId: string; live: b
           <span className="flex gap-1" aria-hidden>
             <span className="size-2.5 rounded-full bg-[#E3E1D8]" /><span className="size-2.5 rounded-full bg-[#E3E1D8]" /><span className="size-2.5 rounded-full bg-[#E3E1D8]" />
           </span>
-          <span className="money min-w-0 flex-1 truncate rounded-full bg-white px-3 py-1 text-[11px] font-normal text-[#5B635E]">
+          <span className="mono min-w-0 flex-1 truncate rounded-full bg-white px-3 py-1 text-[11px] font-normal text-[#5B635E]">
             {shot?.pageUrl ?? (live ? "ouverture du navigateur…" : "—")}
           </span>
         </div>
@@ -73,7 +73,7 @@ export function AgentView({ claimId, live, actions }: { claimId: string; live: b
           <button onClick={() => setIndex(Math.max(0, current - 1))} className="grid size-9 place-items-center rounded-full border border-line-strong/50" aria-label="Écran précédent">←</button>
           <input type="range" min={0} max={shots.length - 1} value={current} onChange={(e) => setIndex(Number(e.target.value))} className="flex-1 accent-[var(--ink)]" aria-label="Parcourir le replay" />
           <button onClick={() => setIndex(Math.min(shots.length - 1, current + 1))} className="grid size-9 place-items-center rounded-full border border-line-strong/50" aria-label="Écran suivant">→</button>
-          <span className="money w-12 text-right text-xs text-muted">{current + 1}/{shots.length}</span>
+          <span className="mono w-12 text-right text-xs text-muted">{current + 1}/{shots.length}</span>
         </div>
       )}
 

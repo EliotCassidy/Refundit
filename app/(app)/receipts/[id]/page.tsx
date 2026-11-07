@@ -53,10 +53,10 @@ export default async function ReceiptPage({ params }: PageProps<"/receipts/[id]"
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-5">
-      <header className="panel panel-check flex items-center gap-4 rounded-[28px] p-5 md:p-6">
+      <header className="panel panel-check flex items-center gap-4 rounded-[20px] p-5 md:p-6">
         <Candy kind="check" size={52} />
         <div className="min-w-0 flex-1">
-          <h1 className="title-tight text-[34px] font-bold md:text-[44px]">Coche</h1>
+          <h1 className="text-[26px] font-bold tracking-tight md:text-[30px]">Coche</h1>
           <p className="text-sm text-[#5B635E]">le produit qui a un problème.</p>
         </div>
       </header>
@@ -65,11 +65,11 @@ export default async function ReceiptPage({ params }: PageProps<"/receipts/[id]"
       <div className="flex items-center justify-between gap-3 rounded-[20px] border border-dashed border-line-strong/60 bg-raised px-4 py-3">
         <div className="min-w-0">
           <p className="truncate font-bold">{receipt.store_name ?? "Ticket de caisse"}</p>
-          <p className="money text-xs font-normal text-muted">
+          <p className="mono text-xs text-muted">
             {[frDate(receipt.purchased_at), x?.time].filter(Boolean).join(" · ") || "Date non lue"} · {boardItems.length} article{boardItems.length > 1 ? "s" : ""}
           </p>
         </div>
-        {receipt.total_cents != null && <span className="money shrink-0 text-lg">{euros(receipt.total_cents)}</span>}
+        {receipt.total_cents != null && <span className="mono shrink-0 text-lg font-semibold">{euros(receipt.total_cents)}</span>}
       </div>
 
       {x?.needs_review && (
@@ -79,7 +79,7 @@ export default async function ReceiptPage({ params }: PageProps<"/receipts/[id]"
       )}
 
       <div className="flex flex-col gap-3">
-        <h2 className="text-xl font-bold">Quel produit a un problème ?</h2>
+        <h2 className="text-lg font-semibold">Quel produit a un problème ?</h2>
         <p className="text-sm text-muted">Identifiés à partir du ticket. Corrigez si besoin, puis touchez « Oui » sur celui qui pose problème.</p>
         <ProductBoard receiptId={receipt.id} items={boardItems} />
       </div>

@@ -1,12 +1,13 @@
 "use client";
-// Shared UI. App navigation with active state (sidebar on desktop, top bar on mobile).
+// Shared UI. App navigation with active state (sidebar on desktop, icon bar on mobile).
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { CreditCard, LayoutDashboard, User, type LucideIcon } from "lucide-react";
 
-const ITEMS = [
-  { href: "/", label: "Tableau de bord", icon: "M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-4H4zM14 4v4h6V4z" },
-  { href: "/billing", label: "Abonnement", icon: "M3 7h18v10H3zM3 11h18M7 15h3" },
-  { href: "/profile", label: "Profil", icon: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0" },
+const ITEMS: { href: string; label: string; Icon: LucideIcon }[] = [
+  { href: "/", label: "Tableau de bord", Icon: LayoutDashboard },
+  { href: "/billing", label: "Abonnement", Icon: CreditCard },
+  { href: "/profile", label: "Profil", Icon: User },
 ];
 
 const isActive = (path: string, href: string) => (href === "/" ? path === "/" || path.startsWith("/claims") : path.startsWith(href));
@@ -14,21 +15,23 @@ const isActive = (path: string, href: string) => (href === "/" ? path === "/" ||
 export function SideNav() {
   const path = usePathname();
   return (
-    <nav className="flex flex-col gap-1">
-      {ITEMS.map((i) => (
-        <Link
-          key={i.href}
-          href={i.href}
-          className={`flex items-center gap-3 rounded-[14px] px-3 py-2.5 text-sm font-semibold transition ${
-            isActive(path, i.href) ? "bg-ink text-surface" : "text-muted hover:bg-sunken hover:text-ink"
-          }`}
-        >
-          <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinejoin="round" aria-hidden>
-            <path d={i.icon} />
-          </svg>
-          {i.label}
-        </Link>
-      ))}
+    <nav className="flex flex-col gap-0.5">
+      {ITEMS.map(({ href, label, Icon }) => {
+        const active = isActive(path, href);
+        return (
+          <Link
+            key={href}
+            href={href}
+            aria-current={active ? "page" : undefined}
+            className={`flex items-center gap-3 rounded-[10px] px-3 py-2 text-sm transition ${
+              active ? "bg-sunken font-semibold text-ink" : "font-medium text-muted hover:bg-sunken/60 hover:text-ink"
+            }`}
+          >
+            <Icon className="size-[18px]" strokeWidth={active ? 2.2 : 1.8} aria-hidden />
+            {label}
+          </Link>
+        );
+      })}
     </nav>
   );
 }
@@ -37,16 +40,14 @@ export function TopNav() {
   const path = usePathname();
   return (
     <nav className="flex items-center gap-1">
-      {ITEMS.slice(1).map((i) => (
+      {ITEMS.slice(1).map(({ href, label, Icon }) => (
         <Link
-          key={i.href}
-          href={i.href}
-          aria-label={i.label}
-          className={`grid size-10 place-items-center rounded-full transition ${isActive(path, i.href) ? "bg-ink text-surface" : "text-ink hover:bg-sunken"}`}
+          key={href}
+          href={href}
+          aria-label={label}
+          className={`grid size-9 place-items-center rounded-full transition ${isActive(path, href) ? "bg-sunken text-ink" : "text-muted hover:text-ink"}`}
         >
-          <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinejoin="round" aria-hidden>
-            <path d={i.icon} />
-          </svg>
+          <Icon className="size-[18px]" strokeWidth={1.8} aria-hidden />
         </Link>
       ))}
     </nav>

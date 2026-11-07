@@ -1,4 +1,5 @@
 // Shared UI (design system). Logo, money, Stripe badge, candy icons.
+import { Lock } from "lucide-react";
 import type { ReactNode } from "react";
 
 export function Logo({ className = "" }: { className?: string }) {
@@ -9,7 +10,7 @@ export function Logo({ className = "" }: { className?: string }) {
           <path d="M5 12.5l4.5 4.5L19 7.5" />
         </svg>
       </span>
-      <span className="text-lg">Refundit</span>
+      <span className="text-[17px]">Refundit</span>
     </span>
   );
 }
@@ -17,19 +18,17 @@ export function Logo({ className = "" }: { className?: string }) {
 const fmt = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
 export const formatEuros = (cents: number) => fmt.format(cents / 100);
 
-export function Money({ cents, className = "" }: { cents: number; className?: string }) {
-  return <span className={`money ${className}`}>{formatEuros(cents)}</span>;
+/** Display amount (tabular sans). Use mono={true} for ticket-like amounts in lists. */
+export function Money({ cents, className = "", mono = false }: { cents: number; className?: string; mono?: boolean }) {
+  return <span className={`${mono ? "mono font-medium" : "money"} ${className}`}>{formatEuros(cents)}</span>;
 }
 
 /** "Paiements sécurisés par Stripe" — the name only (no third-party logo artwork). */
 export function StripeBadge({ className = "" }: { className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-medium ${className}`}>
-      <svg viewBox="0 0 24 24" className="size-3.5" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-        <rect x="4" y="10" width="16" height="10" rx="2" />
-        <path d="M8 10V7a4 4 0 0 1 8 0v3" />
-      </svg>
-      Paiements sécurisés par <span className="font-bold tracking-tight text-[#8f8aff]">Stripe</span>
+    <span className={`inline-flex items-center gap-1.5 text-xs text-muted ${className}`}>
+      <Lock className="size-3.5" strokeWidth={2} aria-hidden />
+      Paiements sécurisés par <span className="font-semibold text-[#635BFF]">Stripe</span>
     </span>
   );
 }
@@ -47,7 +46,7 @@ const CANDY_GLYPH: Record<CandyKind, ReactNode> = {
     </svg>
   ),
   claim: <span className="text-[60%] leading-none">!</span>,
-  recover: <span className="money text-[50%] leading-none">€</span>,
+  recover: <span className="text-[50%] font-bold leading-none">€</span>,
 };
 
 export function Candy({ kind, size = 44 }: { kind: CandyKind; size?: number }) {
@@ -56,4 +55,9 @@ export function Candy({ kind, size = 44 }: { kind: CandyKind; size?: number }) {
       {CANDY_GLYPH[kind]}
     </span>
   );
+}
+
+/** Standard white card: 1px line border, flat fill, 20px radius. */
+export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return <div className={`rounded-[20px] border border-line bg-raised ${className}`}>{children}</div>;
 }

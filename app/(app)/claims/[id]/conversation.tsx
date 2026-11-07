@@ -15,9 +15,9 @@ const fmt = (iso: string) =>
 export function Conversation({ messages, brand, waiting }: { messages: Message[]; brand: string; waiting: boolean }) {
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-xl font-bold">Échanges avec {brand}</h2>
+      <h2 className="text-lg font-semibold">Échanges avec {brand}</h2>
       {messages.length === 0 ? (
-        <p className="rounded-[24px] border border-dashed border-line-strong/50 p-5 text-center text-sm text-muted">
+        <p className="rounded-[16px] border border-dashed border-line-strong/50 p-5 text-center text-sm text-muted">
           Les messages apparaîtront ici dès que l&apos;agent aura envoyé ta réclamation.
         </p>
       ) : (
@@ -25,15 +25,15 @@ export function Conversation({ messages, brand, waiting }: { messages: Message[]
           {messages.map((m) => (
             <li key={m.key} className={`flex ${m.from === "me" ? "justify-end" : "justify-start"}`}>
               <article
-                className={`flex w-full max-w-[92%] flex-col gap-2 rounded-[22px] p-4 md:max-w-[75%] ${
-                  m.from === "me" ? "rounded-br-md bg-ink text-surface" : "rounded-bl-md border border-line bg-raised"
+                className={`flex w-full max-w-[92%] flex-col gap-2 rounded-[18px] px-4 py-3.5 md:max-w-[75%] ${
+                  m.from === "me" ? "rounded-br-md bg-[#1F2A24] text-[#F2F4F1]" : "rounded-bl-md border border-line bg-raised"
                 }`}
               >
                 <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
                   <span className="text-sm font-bold">{m.title}</span>
                   <time className={`text-xs ${m.from === "me" ? "opacity-60" : "text-muted"}`}>{fmt(m.at)}</time>
                 </header>
-                {m.sender && <span className="money -mt-1 text-[11px] text-muted">{m.sender}</span>}
+                {m.sender && <span className="mono -mt-1 text-[11px] text-muted">{m.sender}</span>}
                 <details className="group" open={m.from === "brand"}>
                   <summary className={`cursor-pointer list-none text-xs font-semibold ${m.from === "me" ? "opacity-70" : "text-muted"} group-open:hidden`}>
                     Afficher le message

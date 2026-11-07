@@ -10,7 +10,7 @@
   --on-brand-soft: #166534;
   --brand-neon: #4ade80;
 
-  --surface: #f8f7f2;
+  --surface: #f8f7f2; /* blanc crème */
   --surface-raised: #ffffff;
   --surface-sunken: #efede5;
   --line: #e3e1d8;
@@ -33,31 +33,8 @@
   --foreground: var(--ink);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --brand: #2edb6e;
-    --on-brand: #06140b;
-    --brand-strong: #4ade80;
-    --brand-soft: #12301e;
-    --on-brand-soft: #86efac;
-    --surface: #0f1412;
-    --surface-raised: #18201c;
-    --surface-sunken: #0a0e0c;
-    --line: #2a332e;
-    --line-strong: #6b746e;
-    --ink: #f2f4f1;
-    --ink-muted: #a4ada7;
-    --info: #60a5fa;
-    --info-soft: #172554;
-    --on-info-soft: #93c5fd;
-    --warning: #fbbf24;
-    --warning-soft: #3a2a0e;
-    --on-warning-soft: #fcd34d;
-    --danger: #f87171;
-    --danger-soft: #3a1717;
-    --on-danger-soft: #fca5a5;
-  }
-}
+/* Light cream theme only (product decision): no automatic dark mode. */
+:root { color-scheme: light; }
 
 @theme inline {
   --color-background: var(--background);
@@ -102,20 +79,25 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Money is always mono (guide §7). */
+/* Numbers: tabular figures. .money = display amounts (sans), .mono = ticket-like data (refs, list amounts). */
 .money {
-  font-family: var(--font-jetbrains), ui-monospace, Menlo, monospace;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.mono {
+  font-family: var(--font-jetbrains), ui-monospace, Menlo, monospace;
   font-variant-numeric: tabular-nums;
 }
 
-/* Overline: "RÉCUPÉRÉ AU TOTAL" */
-.overline {
+/* Eyebrow label. (Not ".overline": Tailwind already has an `overline` text-decoration utility.) */
+.eyebrow {
   font-size: 12px;
   line-height: 16px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
+  color: var(--ink-muted);
 }
 
 /* Tight poster headings (guide §7: H1 app). */

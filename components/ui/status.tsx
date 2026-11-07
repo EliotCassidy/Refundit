@@ -48,7 +48,7 @@ export function StatusBadge({ status, refunded, dryRun }: { status: ClaimStatus;
   const label = status === "accepted" && refunded ? "Remboursée" : STATUS_LABEL[status];
   return (
     <span className="inline-flex items-center gap-1.5">
-      <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${s.badge}`}>
+      <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${s.badge}`}>
         <span className={`size-1.5 rounded-full ${s.dot} ${status === "submitting" ? "animate-pulse" : ""}`} />
         {label}
       </span>

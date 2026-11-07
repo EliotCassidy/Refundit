@@ -1,7 +1,9 @@
 // OWNER: Dev 2. One claim: progress, live agent (with Stop), refund, conversation with the brand.
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { Money, StripeBadge } from "@/components/ui/brand";
+import { displayLabel } from "@/components/ui/format";
 import { STATUS_LABEL, StatusBadge } from "@/components/ui/status";
 import { createClient } from "@/lib/shared/supabase/server";
 import { ISSUE_LABELS_FR } from "@/lib/shared/types";
@@ -30,7 +32,7 @@ export default async function ClaimPage({ params }: PageProps<"/claims/[id]">) {
   ]);
 
   const brand = claim.brands?.name ?? "la marque";
-  const product = claim.line_items?.product_name || claim.line_items?.raw_label || "Produit";
+  const product = displayLabel(claim.line_items?.product_name || claim.line_items?.raw_label || "Produit");
   const stake = claim.line_items?.total_price_cents ?? 0;
   const live = claim.status === "submitting";
   const hasAgent = Boolean(claim.h_session_id && !claim.h_session_id.startsWith("mock-"));
@@ -81,28 +83,28 @@ export default async function ClaimPage({ params }: PageProps<"/claims/[id]">) {
 
   return (
     <div className="flex flex-col gap-5 md:gap-6">
-      <Link href="/" className="inline-flex w-fit items-center gap-1 text-sm font-semibold text-muted hover:text-ink">
-        ← Tableau de bord
+      <Link href="/" className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-muted hover:text-ink">
+        <ArrowLeft className="size-4" aria-hidden /> Tableau de bord
       </Link>
 
       {/* Header */}
-      <header className="flex flex-col gap-4 rounded-[28px] border border-line bg-raised p-5 md:p-6">
+      <header className="flex flex-col gap-5 rounded-[20px] border border-line bg-raised p-5 md:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="overline text-muted">{[brand, claim.receipts?.store_name].filter(Boolean).join(" · ")}</p>
-            <h1 className="mt-1 text-2xl font-bold tracking-tight md:text-3xl">{product}</h1>
+            <p className="eyebrow">{[brand, claim.receipts?.store_name].filter(Boolean).join(" · ")}</p>
+            <h1 className="mt-1.5 text-[24px] font-bold tracking-tight md:text-[28px]">{product}</h1>
             <p className="mt-1 text-sm text-muted">{ISSUE_LABELS_FR[claim.issue_type]}</p>
           </div>
           <div className="flex flex-col items-end gap-2">
             <StatusBadge status={claim.status} refunded={claim.refund_cents != null} dryRun={claim.dry_run} />
-            <Money cents={claim.refund_cents ?? stake} className={`text-xl ${claim.refund_cents != null ? "text-brand-strong" : ""}`} />
+            <Money cents={claim.refund_cents ?? stake} className={`text-[22px] ${claim.refund_cents != null ? "text-brand-strong" : ""}`} />
           </div>
         </div>
 
         <ol className="grid grid-cols-3 gap-2">
           {steps.map((s, i) => (
             <li key={s.label} className="flex flex-col gap-1.5">
-              <span className={`h-1.5 rounded-full ${s.on ? (i === 2 ? "bg-brand" : "bg-ink") : "bg-sunken"}`} />
+              <span className={`h-1 rounded-full ${s.on ? (i === 2 ? "bg-brand" : "bg-ink") : "bg-line"}`} />
               <span className={`text-xs font-semibold md:text-sm ${s.on ? "" : "text-muted"}`}>{s.label}</span>
               {s.sub && <span className="text-[11px] text-muted md:text-xs">{s.sub}</span>}
             </li>
@@ -110,7 +112,7 @@ export default async function ClaimPage({ params }: PageProps<"/claims/[id]">) {
         </ol>
 
         {claim.confirmation_number && (
-          <p className="text-sm text-muted">N° de dossier <span className="money text-ink">{claim.confirmation_number}</span></p>
+          <p className="text-sm text-muted">N° de dossier <span className="mono text-ink">{claim.confirmation_number}</span></p>
         )}
         {claim.failure_reason && ["needs_manual", "agent_failed"].includes(claim.status) && (
           <p className="rounded-[14px] bg-warning-soft p-3 text-sm text-on-warning-soft">{claim.failure_reason}</p>
@@ -119,13 +121,13 @@ export default async function ClaimPage({ params }: PageProps<"/claims/[id]">) {
 
       {/* Refund */}
       {claim.refund_cents != null && (
-        <section className="flex flex-wrap items-center justify-between gap-3 rounded-[28px] bg-[#111714] p-5 text-[#F2F4F1] md:p-6">
-          <div className="flex flex-col gap-1">
-            <span className="overline text-[#A4ADA7]">Remboursement reçu</span>
-            <Money cents={claim.refund_cents} className="text-4xl text-[#4ADE80]" />
-            {claim.stripe_payment_id && <span className="money text-xs text-[#A4ADA7]">{claim.stripe_payment_id}</span>}
+        <section className="flex flex-wrap items-center justify-between gap-4 rounded-[20px] border border-brand/30 bg-brand-soft p-5 md:p-6">
+          <div className="flex flex-col gap-1.5">
+            <span className="eyebrow text-on-brand-soft">Remboursement reçu</span>
+            <Money cents={claim.refund_cents} className="text-[36px] leading-none text-brand-strong" />
+            {claim.stripe_payment_id && <span className="mono text-xs text-on-brand-soft/70">{claim.stripe_payment_id}</span>}
           </div>
-          <StripeBadge className="text-[#F2F4F1]" />
+          <StripeBadge className="rounded-full bg-raised px-3 py-1.5" />
         </section>
       )}
 
@@ -145,8 +147,8 @@ export default async function ClaimPage({ params }: PageProps<"/claims/[id]">) {
       <Conversation messages={messages} brand={brand} waiting={sent && !answered} />
 
       {/* Raw history */}
-      <details className="rounded-[24px] border border-line bg-raised p-4 text-sm">
-        <summary className="cursor-pointer font-semibold">Historique détaillé</summary>
+      <details className="rounded-[16px] border border-line bg-raised px-4 py-3 text-sm">
+        <summary className="cursor-pointer font-medium text-muted">Historique détaillé</summary>
         <ol className="mt-3 flex flex-col gap-2 border-l border-line pl-4">
           <li><span className="text-muted">{fmt(claim.created_at)}</span> · Demande créée</li>
           {(events ?? [])

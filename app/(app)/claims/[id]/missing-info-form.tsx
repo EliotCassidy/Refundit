@@ -31,11 +31,11 @@ export function MissingInfoForm({ claimId, fields, answers }: { claimId: string;
   }
 
   return (
-    <section className="flex flex-col gap-4 rounded-[28px] border border-warning/50 bg-warning-soft p-5 text-on-warning-soft md:p-6">
+    <section className="flex flex-col gap-4 rounded-[20px] border border-warning/50 bg-warning-soft p-5 text-on-warning-soft md:p-6">
       <div className="flex items-start gap-3">
         <Candy kind="claim" size={40} />
         <div>
-          <h2 className="text-lg font-bold">La marque a besoin de toi</h2>
+          <h2 className="text-lg font-semibold">La marque a besoin de toi</h2>
           <p className="text-sm opacity-90">
             {fields.length > 1 ? "Ces infos sont" : "Cette info est"} souvent sur l&apos;emballage. Dès que tu réponds, l&apos;agent repart.
           </p>

@@ -1,7 +1,8 @@
 "use client";
-// Shared UI. Floating "Scanner" button, bottom right on every app screen (hidden on the scan screen).
+// Shared UI. Floating "Scanner" button, bottom right on mobile (desktop has it in the sidebar).
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ScanLine } from "lucide-react";
 
 export function ScanFab() {
   const path = usePathname();
@@ -10,11 +11,9 @@ export function ScanFab() {
     <Link
       href="/receipts/new"
       aria-label="Scanner un ticket de caisse"
-      className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom))] right-5 z-40 inline-flex items-center gap-2 rounded-full bg-brand px-5 py-4 font-bold text-on-brand shadow-[0_10px_30px_rgba(17,23,20,0.25)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(17,23,20,0.3)] active:translate-y-0 md:bottom-8 md:right-8"
+      className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom))] right-5 z-40 inline-flex items-center gap-2 rounded-full bg-brand py-3.5 pl-4 pr-5 text-[15px] font-semibold text-on-brand shadow-[0_8px_24px_rgba(21,128,61,0.28)] transition active:scale-95 md:hidden"
     >
-      <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M7 12h10" />
-      </svg>
+      <ScanLine className="size-5" strokeWidth={2.2} aria-hidden />
       Scanner
     </Link>
   );
