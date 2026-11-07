@@ -11,7 +11,7 @@ import {
 } from "@/lib/shared/types";
 import { euros } from "@/lib/receipts/format";
 import { AnimatePresence, motion } from "motion/react";
-import { Check, CircleCheck, CircleHelp, Send } from "lucide-react";
+import { Check, CircleCheck, CircleHelp, Package, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { group } from "@/components/ui/list";
 import { StoreBanner } from "@/components/ui/store-logo";
@@ -310,12 +310,19 @@ function ProductCard({ it, s, patch, identify, confirm }: {
      <div className={`overflow-hidden rounded-[16.5px] ${active ? "bg-white" : "bg-raised"}`}>
       <div className="flex items-center gap-3 p-3">
         <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-[16px] bg-black/[0.03]">
-          {info.image
-            // eslint-disable-next-line @next/next/no-img-element -- images Open Food Facts / Open Beauty Facts, domaine externe
-            ? <img src={info.image} alt="" className="size-full object-contain p-1" onError={(e) => (e.currentTarget.style.display = "none")} />
-            : s.searching
-              ? <div className="size-8 animate-spin rounded-full border-2 border-line-strong/50 border-t-foreground" />
-              : <div className="size-8 rounded-[14px] bg-sunken" />}
+          {s.searching ? (
+            <div className="size-8 animate-spin rounded-full border-2 border-line-strong/50 border-t-foreground" />
+          ) : (
+            // Pas de photo dans les bases Open Facts (ex. produit trouvé sur le web par Linkup) : icône produit,
+            // qui reste visible aussi si l'image ne charge pas.
+            <div className="relative grid size-full place-items-center">
+              <Package className="size-7 text-muted/60" strokeWidth={1.6} aria-hidden />
+              {info.image && (
+                // eslint-disable-next-line @next/next/no-img-element -- images Open Food Facts / Open Beauty Facts, domaine externe
+                <img src={info.image} alt="" className="absolute inset-0 size-full bg-[#fbfaf7] object-contain p-1" onError={(e) => (e.currentTarget.style.display = "none")} />
+              )}
+            </div>
+          )}
         </div>
         <div className="min-w-0 flex-1">
           <p className="line-clamp-2 text-[15px] font-medium leading-snug">
@@ -491,7 +498,7 @@ function ProductPicker({ state: s, onPick, onRetry, onSearch, onManual }: {
           {c.image_url
             // eslint-disable-next-line @next/next/no-img-element -- images Open Food Facts, domaine externe
             ? <img src={small(c.image_url) ?? undefined} alt="" className="size-12 shrink-0 rounded object-contain" onError={(e) => (e.currentTarget.style.display = "none")} />
-            : <span className="size-12 shrink-0 rounded bg-sunken" />}
+            : <span className="grid size-12 shrink-0 place-items-center rounded-[10px] bg-black/[0.03]"><Package className="size-5 text-muted/60" strokeWidth={1.6} aria-hidden /></span>}
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-medium">{c.name}</span>
             <span className="block truncate text-xs text-muted">{[c.brand, c.quantity].filter(Boolean).join(" · ")}</span>
