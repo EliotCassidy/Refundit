@@ -29,10 +29,11 @@ async function write(db: Db, session: string) {
 
 const fresh = (l: Lock | null) => Boolean(l && Date.now() - new Date(l.at).getTime() < LOCK_TTL_MS);
 
-/** Takes (or renews) the lock for this session. false = another jury holds it. */
-export async function acquireDemoLock(db: Db, session: string): Promise<boolean> {
+/** Takes (or renews) the lock for this session. false = another jury holds it (force = take it anyway,
+ *  e.g. the other jury closed their tab: their next heartbeat gets 409 and their tour stops). */
+export async function acquireDemoLock(db: Db, session: string, force = false): Promise<boolean> {
   const cur = await read(db);
-  if (cur && cur.session !== session && fresh(cur)) return false;
+  if (!force && cur && cur.session !== session && fresh(cur)) return false;
   await write(db, session);
   return true;
 }

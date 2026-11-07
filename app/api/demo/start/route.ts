@@ -9,7 +9,7 @@ import { createAdminClient } from "@/lib/shared/supabase/admin";
 import { getUser } from "@/lib/shared/supabase/server";
 
 export const maxDuration = 60;
-const Body = z.object({ session: z.string().min(8).max(100) });
+const Body = z.object({ session: z.string().min(8).max(100), force: z.boolean().optional() });
 
 export async function POST(request: Request) {
   const user = await getUser();
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   const parsed = Body.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return apiError(400, "invalid_session", "Session de démo invalide.");
   const db = createAdminClient();
-  if (!(await acquireDemoLock(db, parsed.data.session))) {
+  if (!(await acquireDemoLock(db, parsed.data.session, parsed.data.force))) {
     return apiError(409, "demo_busy", "Mince, un autre jury est déjà connecté, ressaye dans quelques minutes.");
   }
   try {

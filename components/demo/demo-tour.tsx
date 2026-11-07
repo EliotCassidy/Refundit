@@ -10,7 +10,8 @@ import { createPortal } from "react-dom";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { driver, type Config, type DriveStep, type Driver } from "driver.js";
-import { Hand, Lightbulb, PartyPopper, RotateCcw, Sparkles, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Hand, Lightbulb, PartyPopper, RotateCcw, Sparkles, Timer, X } from "lucide-react";
+import { toast } from "sonner";
 import { getDemo, leaveDemo, patchDemo, setDemo, useDemoRaw, type DemoState } from "./demo-state";
 
 const BASE: Config = {
@@ -356,8 +357,14 @@ export function DemoTour() {
   const session = state?.session;
   useEffect(() => {
     if (!session) return;
-    const beat = () =>
-      fetch("/api/demo/heartbeat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session }) }).catch(() => undefined);
+    const beat = async () => {
+      const res = await fetch("/api/demo/heartbeat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session }) }).catch(() => null);
+      if (res?.status === 409) {
+        // Another jury forced the takeover: stop this tour (never touches their lock).
+        setDemo(null);
+        toast.info("Un autre jury a repris la démo", { description: "Ta visite guidée s'arrête ici." });
+      }
+    };
     void beat();
     const t = setInterval(beat, 30_000);
     return () => clearInterval(t);
@@ -381,8 +388,9 @@ export function DemoTour() {
       {typeof document !== "undefined" &&
         createPortal(
           <AnimatePresence>
-            {step === "agent" && status === "submitting" && seen("agent-live") && <CancelNote key="note" />}
-            {step === "agent" && status === "submitting" && seen("agent-live") && <FunFacts key="facts" />}
+            {step === "agent" && status === "submitting" && seen("agent-live") && (
+              <AgentSide key="side" second={seen("missing")} />
+            )}
             {step === "done" && <EndCard key="end" />}
           </AnimatePresence>,
           document.body,
@@ -402,18 +410,74 @@ function DemoChip() {
   );
 }
 
-function CancelNote() {
+/** Right-hand column while the agent works (desktop: right of its screen; phone: top + bottom). */
+function AgentSide({ second }: { second: boolean }) {
+  return (
+    <>
+      <div className="fixed left-1/2 top-[calc(env(safe-area-inset-top)+0.75rem)] z-[120] flex w-[min(340px,calc(100%-2rem))] -translate-x-1/2 flex-col gap-2 lg:left-auto lg:right-6 lg:top-6 lg:translate-x-0">
+        {second ? <SecondRunNote /> : <WaitNote title="Environ 1 min en moyenne" text="C'est le temps qu'il faut à l'agent pour arriver à la prochaine étape. Prends une pause et lis les « Le savais-tu ? »." />}
+        <div className="hidden lg:block">
+          <Note tone="amber" icon={<Hand className="size-4" aria-hidden />} title="Tu gardes la main" delay={0.6}>
+            Tu peux arrêter l&apos;agent à tout moment avec « Arrêter l&apos;agent » : rien n&apos;est envoyé sans toi.
+          </Note>
+        </div>
+      </div>
+      <FunFacts />
+    </>
+  );
+}
+
+function Note({ tone, icon, title, children, delay = 0.2 }: { tone: "amber" | "dark" | "green"; icon: React.ReactNode; title: string; children: React.ReactNode; delay?: number }) {
+  const cls =
+    tone === "amber" ? "bg-[#FEF3C7] text-[#422006]" : tone === "green" ? "bg-[#DCFCE7] text-[#14532D]" : "bg-white text-ink ring-1 ring-black/[0.06]";
   return (
     <motion.div
-      initial={{ y: -30, opacity: 0, rotate: -1.5 }}
-      animate={{ y: 0, opacity: 1, rotate: -1.5 }}
-      exit={{ y: -30, opacity: 0 }}
-      transition={{ type: "spring", stiffness: 300, damping: 24, delay: 0.4 }}
-      className="fixed left-1/2 top-[calc(env(safe-area-inset-top)+0.75rem)] z-[120] w-[min(340px,calc(100%-2rem))] -translate-x-1/2 rounded-[18px] bg-[#FEF3C7] px-4 py-3 text-[14px] text-[#422006] shadow-[0_18px_40px_-12px_rgba(66,32,6,0.45)]"
+      initial={{ y: -16, opacity: 0, scale: 0.97 }}
+      animate={{ y: 0, opacity: 1, scale: 1 }}
+      exit={{ y: -16, opacity: 0 }}
+      transition={{ type: "spring", stiffness: 300, damping: 24, delay }}
+      className={`rounded-[18px] px-4 py-3 text-[14px] shadow-[0_18px_40px_-14px_rgba(17,23,20,0.45)] ${cls}`}
     >
-      <p className="flex items-center gap-2 font-semibold"><Hand className="size-4" aria-hidden /> Tu gardes la main</p>
-      <p className="mt-0.5 text-[13px] leading-snug">Tu peux arrêter l&apos;agent à tout moment avec « Arrêter l&apos;agent » : rien n&apos;est envoyé sans toi.</p>
+      <p className="flex items-center gap-2 font-semibold">{icon} {title}</p>
+      <div className="mt-0.5 text-[13px] leading-snug">{children}</div>
     </motion.div>
+  );
+}
+
+/** "~1 min" note with a bar that fills over a minute. */
+function WaitNote({ title, text }: { title: string; text: string }) {
+  return (
+    <Note tone="dark" icon={<Timer className="size-4" aria-hidden />} title={title}>
+      {text}
+      <span className="mt-2 block h-1 overflow-hidden rounded-full bg-black/[0.07]">
+        <motion.span className="block h-full rounded-full bg-brand" initial={{ width: "0%" }} animate={{ width: "100%" }} transition={{ duration: 60, ease: "linear" }} />
+      </span>
+    </Note>
+  );
+}
+
+/** 2nd run (after the missing info): reassure, explain it's asynchronous, then "1 more minute". */
+function SecondRunNote() {
+  const [later, setLater] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setLater(true), 9000);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <AnimatePresence mode="wait">
+      {later ? (
+        <motion.div key="later" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <WaitNote title="Encore environ 1 min, tiens bon :)" text="L'agent termine le formulaire NotCoca et l'envoie." />
+        </motion.div>
+      ) : (
+        <motion.div key="now" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <Note tone="green" icon={<Sparkles className="size-4" aria-hidden />} title="Cette fois, tout va marcher">
+            L&apos;agent a toutes les infos nécessaires. Cette demande d&apos;infos marche aussi en asynchrone : pas besoin
+            d&apos;attendre devant l&apos;écran de l&apos;agent, elle t&apos;attend dans « À faire » sur ton tableau de bord.
+          </Note>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -451,46 +515,75 @@ function EndCard() {
 // the H cost per claim is the team's own figure.
 const FACTS = [
   { k: "≈ 0,11 €", t: "C'est le coût moyen en appels à l'API H Company pour une demande de remboursement." },
+  { k: "≈ 1 min", t: "Le temps qu'il faut à l'agent pour ouvrir le site de la marque, trouver le formulaire et le remplir." },
   { k: "0 invention", t: "L'agent ne remplit un champ qu'avec tes vraies infos. S'il en manque une, il s'arrête et te la demande." },
+  { k: "≈ 10 s", t: "Pour lire une photo de ticket : chaque ligne est recopiée et les montants sont vérifiés avec le total." },
   { k: "1 adresse / demande", t: "Les marques répondent sur une adresse e-mail dédiée à ta demande, jamais sur la tienne." },
+  { k: "Tout est filmé", t: "Chaque écran de l'agent est enregistré : tu peux revoir tout son parcours, étape par étape." },
   { k: "< 1 centime", t: "Marque inconnue ? Un seul appel Linkup trouve son formulaire ou son e-mail de contact." },
   { k: "3 bases ouvertes", t: "Open Food Facts, Open Beauty Facts et Open Prices aident à reconnaître le produit exact de ton ticket." },
+  { k: "Honnête par design", t: "Tu confirmes que le problème est réel avant tout envoi : Refundit ne réclame que pour de vrais problèmes." },
   { k: "Stripe", t: "Le remboursement arrive via Stripe (en mode test pour la démo), transférable vers ton compte." },
 ];
 
 function FunFacts() {
   const [i, setI] = useState(0);
+  const [tick, setTick] = useState(0); // restarts the auto-advance after a manual change
   useEffect(() => {
-    const t = setInterval(() => setI((n) => (n + 1) % FACTS.length), 6500);
+    const t = setInterval(() => setI((n) => (n + 1) % FACTS.length), 8000);
     return () => clearInterval(t);
-  }, []);
+  }, [tick]);
+  const go = (d: number) => {
+    setI((n) => (n + d + FACTS.length) % FACTS.length);
+    setTick((t) => t + 1);
+  };
   const f = FACTS[i];
   return (
     <motion.div
       initial={{ y: 40, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: 40, opacity: 0 }}
-      className="fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] left-1/2 z-[120] w-[min(380px,calc(100%-2rem))] -translate-x-1/2"
+      className="fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] left-1/2 z-[120] w-[min(340px,calc(100%-2rem))] -translate-x-1/2 lg:bottom-6 lg:left-auto lg:right-6 lg:translate-x-0"
     >
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={i}
-          initial={{ opacity: 0, y: 12, rotateX: -25 }}
-          animate={{ opacity: 1, y: 0, rotateX: 0 }}
-          exit={{ opacity: 0, y: -12, rotateX: 25 }}
-          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-          className="rounded-[20px] bg-[#111714] px-5 py-4 text-[#F2F4F1] shadow-[0_20px_50px_-15px_rgba(0,0,0,0.6)]"
-        >
+      <div className="relative overflow-hidden rounded-[20px] bg-[#111714] px-5 pb-4 pt-4 text-[#F2F4F1] shadow-[0_20px_50px_-15px_rgba(0,0,0,0.6)]">
+        <div className="flex items-center justify-between">
           <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#86EFAC]"><Lightbulb className="size-3.5" aria-hidden /> Le savais-tu ?</p>
-          <p className="mt-1.5 text-[22px] font-semibold leading-tight tracking-tight">{f.k}</p>
-          <p className="mt-1 text-[14px] leading-snug text-[#C9D1CC]">{f.t}</p>
-          <div className="mt-3 flex gap-1">
-            {FACTS.map((_, n) => (
-              <span key={n} className={`h-1 flex-1 rounded-full ${n === i ? "bg-[#86EFAC]" : "bg-white/15"}`} />
-            ))}
+          <div className="flex gap-1">
+            <button type="button" onClick={() => go(-1)} aria-label="Fait précédent" className="grid size-7 place-items-center rounded-full bg-white/10 transition hover:bg-white/20"><ChevronLeft className="size-4" aria-hidden /></button>
+            <button type="button" onClick={() => go(1)} aria-label="Fait suivant" className="grid size-7 place-items-center rounded-full bg-white/10 transition hover:bg-white/20"><ChevronRight className="size-4" aria-hidden /></button>
           </div>
-        </motion.div>
-      </AnimatePresence>
+        </div>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, x: 24 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -24 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            onDragEnd={(_, info) => {
+              if (info.offset.x < -40) go(1);
+              else if (info.offset.x > 40) go(-1);
+            }}
+            className="min-h-[92px] cursor-grab active:cursor-grabbing"
+          >
+            <p className="mt-2 text-[22px] font-semibold leading-tight tracking-tight">{f.k}</p>
+            <p className="mt-1 text-[14px] leading-snug text-[#C9D1CC]">{f.t}</p>
+          </motion.div>
+        </AnimatePresence>
+        <div className="mt-3 flex gap-1">
+          {FACTS.map((_, n) => (
+            <button
+              key={n}
+              type="button"
+              aria-label={`Fait ${n + 1}`}
+              onClick={() => { setI(n); setTick((t) => t + 1); }}
+              className={`h-1 flex-1 rounded-full transition-colors ${n === i ? "bg-[#86EFAC]" : "bg-white/15 hover:bg-white/30"}`}
+            />
+          ))}
+        </div>
+      </div>
     </motion.div>
   );
 }

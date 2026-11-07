@@ -5,6 +5,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { Bot, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { useDemoRaw } from "@/components/demo/demo-state";
 
 type Step = { at: string; kind: string; text: string | null; screenshot: string | null; pageUrl: string | null };
 
@@ -102,6 +103,8 @@ export function AgentView({ claimId, live, actions }: { claimId: string; live: b
 }
 
 function Lightbox({ shots, log, live, onClose }: { shots: Step[]; log: Step[]; live: boolean; onClose: () => void }) {
+  // Jury demo: notes and fun facts sit in a right-hand column, so the agent's screen moves left on large screens.
+  const demo = useDemoRaw() !== null;
   const [index, setIndex] = useState<number | null>(null); // null = follow latest
   const current = index ?? shots.length - 1;
   const shot = shots[Math.max(0, Math.min(current, shots.length - 1))];
@@ -118,7 +121,7 @@ function Lightbox({ shots, log, live, onClose }: { shots: Step[]; log: Step[]; l
 
   return (
     <motion.div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-[#111714]/45 p-3 backdrop-blur-[3px] sm:p-8"
+      className={`fixed inset-0 z-[100] flex items-center justify-center bg-[#111714]/45 p-3 backdrop-blur-[3px] sm:p-8 ${demo ? "lg:pr-[380px]" : ""}`}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}

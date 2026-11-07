@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { group } from "@/components/ui/list";
 import { PasswordInput } from "@/components/ui/password-input";
 import { createClient } from "@/lib/shared/supabase/client";
-import { Sparkles } from "lucide-react";
+import { LogOut, MoreHorizontal, Sparkles } from "lucide-react";
+import * as Dropdown from "@radix-ui/react-dropdown-menu";
 import { setDemo } from "@/components/demo/demo-state";
 import { DEMO_EMAIL, DEMO_PASSWORD, isDemoEmail } from "@/lib/demo/config";
 
@@ -19,6 +20,8 @@ export function LoginForm({ next }: { next: string }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [demo, setDemoMode] = useState(false);
+  const [busy, setBusy] = useState(false); // another jury holds the demo
+  const forceRef = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -63,9 +66,11 @@ export function LoginForm({ next }: { next: string }) {
     if (demo && isDemoEmail(credentials.email)) {
       // One jury at a time: take the demo lock (and reset the account), or step back out.
       const session = crypto.randomUUID();
-      const res = await fetch("/api/demo/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session }) }).catch(() => null);
+      const res = await fetch("/api/demo/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session, force: forceRef.current }) }).catch(() => null);
+      forceRef.current = false;
       if (!res?.ok) {
         const body = await res?.json().catch(() => null);
+        setBusy(body?.error?.code === "demo_busy");
         // "local": only this browser. The default (global) would also sign out the jury already in the demo.
         await supabase.auth.signOut({ scope: "local" });
         if (emailRef.current) emailRef.current.value = "";
@@ -74,6 +79,7 @@ export function LoginForm({ next }: { next: string }) {
         setDemoMode(false);
         return setError(body?.error?.message ?? "Mince, la démo n'a pas pu démarrer. Réessaye dans un instant.");
       }
+      setBusy(false);
       setDemo({ step: "intro", session });
       router.replace("/");
     } else {
@@ -118,9 +124,32 @@ export function LoginForm({ next }: { next: string }) {
       </div>
       <AnimatePresence>
         {error && (
-          <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="px-5 text-sm text-on-danger-soft">
-            {error}
-          </motion.p>
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="flex items-start gap-2 px-5">
+            <p className="flex-1 text-sm text-on-danger-soft">{error}</p>
+            {busy && (
+              // The other jury may have closed their tab before the end: let this one take over.
+              <Dropdown.Root>
+                <Dropdown.Trigger aria-label="Plus d'options" className="grid size-8 shrink-0 place-items-center rounded-full text-muted outline-none transition hover:bg-black/[0.05] hover:text-ink data-[state=open]:bg-black/[0.05]">
+                  <MoreHorizontal className="size-5" aria-hidden />
+                </Dropdown.Trigger>
+                <Dropdown.Portal>
+                  <Dropdown.Content align="end" sideOffset={6} className="z-[90] min-w-[260px] rounded-[16px] bg-white/95 p-1.5 shadow-[0_18px_40px_rgba(17,23,20,0.18)] ring-1 ring-black/[0.06] backdrop-blur-xl data-[state=open]:animate-[menu-in_140ms_ease-out]">
+                    <Dropdown.Item
+                      onSelect={() => {
+                        forceRef.current = true;
+                        setError(null);
+                        setBusy(false);
+                        void toggleDemo();
+                      }}
+                      className="flex cursor-pointer select-none items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-sm font-medium text-on-danger-soft outline-none data-[highlighted]:bg-danger-soft"
+                    >
+                      <LogOut className="size-4" aria-hidden /> Forcer la déconnexion de l&apos;autre jury
+                    </Dropdown.Item>
+                  </Dropdown.Content>
+                </Dropdown.Portal>
+              </Dropdown.Root>
+            )}
+          </motion.div>
         )}
       </AnimatePresence>
       <Button type="submit" variant="dark" size="lg" block loading={pending}>

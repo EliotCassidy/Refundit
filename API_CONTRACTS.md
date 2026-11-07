@@ -346,7 +346,7 @@ Reads (receipt, items, profile) go directly through the Supabase client with RLS
 | Method | Path | Body | Response |
 |---|---|---|---|
 | POST | `/api/demo/reset` | none (demo session) | `200 { ok, removed: { claims, receipts } }` — restores the saved snapshot (private Storage `receipts/_demo/snapshot.json`) (deletes what the demo run created, incl. its NotCoca requests) · `403 not_demo` |
-| POST | `/api/demo/start` | `{ session }` (demo session) | `200 { ok, removed }` takes the one-jury lock (private Storage `receipts/_demo/lock.json`, 2 min without heartbeat = free) then resets the account · `409 demo_busy` ("Mince, un autre jury est déjà connecté…") |
+| POST | `/api/demo/start` | `{ session, force? }` (demo session; `force` = "Forcer la déconnexion de l'autre jury") | `200 { ok, removed }` takes the one-jury lock (private Storage `receipts/_demo/lock.json`, 2 min without heartbeat = free) then resets the account · `409 demo_busy` ("Mince, un autre jury est déjà connecté…") |
 | POST | `/api/demo/heartbeat` | `{ session }` | `200 { ok }` renews the lock (every 30 s from the demo tab) · `409 demo_busy` |
 | POST | `/api/demo/stop` | `{ session }` | `200 { ok }` frees the lock (Quitter / fin de démo) |
 | GET | `/api/demo/notcoca-admin` | none (demo session) | `303` → `/notcoca/admin` with the back-office cookie set |
