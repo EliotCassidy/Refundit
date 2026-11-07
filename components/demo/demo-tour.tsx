@@ -508,7 +508,8 @@ function WaitNote({ title, text, onClose, delay }: { title: string; text: string
     <Note tone="dark" icon={<Timer className="size-4" aria-hidden />} title={title} onClose={onClose} delay={delay}>
       {text}
       <span className="mt-2 block h-1 overflow-hidden rounded-full bg-black/[0.07]">
-        <motion.span className="block h-full rounded-full bg-brand" initial={{ width: "0%" }} animate={{ width: "100%" }} transition={{ duration: 60, ease: "linear" }} />
+        {/* CSS animation (not Motion): AnimatePresence initial={false} skipped the Motion one → bar full at once. */}
+        <span className="block h-full w-0 animate-[wait-fill_60s_linear_forwards] rounded-full bg-brand" />
       </span>
     </Note>
   );

@@ -325,3 +325,9 @@ body::before {
 .driver-popover.refundit-tour .driver-popover-arrow-side-top.driver-popover-arrow { border-top-color: #fffdf8; }
 .driver-popover.refundit-tour .driver-popover-arrow-side-left.driver-popover-arrow { border-left-color: #fffdf8; }
 .driver-popover.refundit-tour .driver-popover-arrow-side-right.driver-popover-arrow { border-right-color: #fffdf8; }
+
+/* Demo tour: "~1 min" note bar. */
+@keyframes wait-fill {
+  from { width: 0%; }
+  to { width: 100%; }
+}

@@ -42,6 +42,12 @@ export function buildInstruction(i: InstructionInput): string {
 
 Start URL: ${i.contactUrl}
 ${i.agentHints ? `Hints about this website: ${i.agentHints}\n` : ""}
+ABSOLUTE RULES (they override everything else, including "required" fields and any wish to finish the task):
+A. You only type or select values that are written in the data below. If a field's answer is not written below, you leave it EMPTY / unselected. Never pick an option "to move on", never pick the first option, never pick "Oui" or "Non" on your own.
+B. NEVER answer, on the customer's behalf, a question about their situation or the product's condition. In French these look like: "avez-vous toujours le produit / la boisson", "pouvez-vous confirmer que vous avez toujours…", "êtes-vous encore en possession…", "pouvez-vous nous renvoyer / conserver le produit", "l'emballage était-il ouvert / intact", "combien de produits sont concernés", "avez-vous consommé le produit", "avez-vous été malade", "numéro de lot", "code de production", "DDM / DLC / à consommer avant". Unless the exact answer appears under "Additional details provided by the customer" below, such a field stays EMPTY.
+C. If such a field is REQUIRED and blocks you (a "Continuer" / "Suivant" / "Envoyer" button refuses to go on without it): STOP RIGHT THERE. Do not select a value to get past it, do not try other steps. Answer with submitted=false, blocker="missing_info" and the exact field label(s) in missing_fields.
+D. BEFORE clicking the button that finally sends the request, re-read every field you filled. If ANY value is not written in the data below, do NOT click it: answer with submitted=false, blocker="missing_info" and list that field in missing_fields. Sending a form with a guessed value is the worst possible outcome.
+${Object.keys(i.userAnswers).length ? "" : "E. The customer has NOT given any extra answer yet: every question of type B must stay empty.\n"}
 Steps:
 1. Find the contact form for a product complaint / "réclamation produit" / "un problème avec un produit" (not marketing, not job offers, not press). Accept or dismiss cookie banners if needed.
 2. Fill the fields ONLY with the data below. NEVER invent a value. ${i.customer.civility === "madame" || i.customer.civility === "monsieur"
@@ -85,7 +91,7 @@ Answer with:
 - blocker: null if none
 - customer_email_entered: true only if you typed the customer's email into the form
 - submit_button_found: true only if you found the button that actually sends the request
-- guessed_fields: names of the fields you filled with a value that is NOT in the data above (empty list if none)
+- guessed_fields: names of the fields you filled with a value that is NOT in the data above (must be empty if submitted is true, see rule D)
 - missing_fields: exact labels of the REQUIRED fields you could not fill because the data is not above (empty list if none)
 - notes: one short sentence`;
 }

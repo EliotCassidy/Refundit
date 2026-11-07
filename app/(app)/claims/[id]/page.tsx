@@ -102,6 +102,11 @@ export default async function ClaimPage({ params }: PageProps<"/claims/[id]">) {
   items.sort((a, b) => a.at.localeCompare(b.at));
 
   // Same lists as ClaimActions: only render its slot when it has a button (avoids an empty gap).
+  // Honesty check: the agent reports fields it filled with a value we didn't give (it must not send then, but if it
+  // did, the user has to know: it's their complaint).
+  const sentEvent = [...(events ?? [])].reverse().find((e) => e.to_status === "submitted");
+  const guessed = ((sentEvent?.payload as { answer?: { guessed_fields?: string[] } } | null)?.answer?.guessed_fields ?? []).filter(Boolean);
+
   const actionable = (!hasAgent || !live) && ["draft", "submitting", "needs_manual", "waiting_input", "agent_failed"].includes(claim.status);
 
   return (
@@ -134,6 +139,15 @@ export default async function ClaimPage({ params }: PageProps<"/claims/[id]">) {
       {claim.failure_reason && ["needs_manual", "agent_failed"].includes(claim.status) && (
         <FadeIn delay={0.05}>
           <p className="rounded-[18px] bg-warning-soft px-5 py-3.5 text-[14px] text-on-warning-soft">{claim.failure_reason}</p>
+        </FadeIn>
+      )}
+
+      {guessed.length > 0 && (
+        <FadeIn delay={0.05}>
+          <div className="rounded-[18px] bg-danger-soft px-5 py-3.5 text-[14px] text-on-danger-soft">
+            <p className="font-semibold">L&apos;agent a rempli sans ton accord</p>
+            <p className="mt-0.5">{guessed.map((g) => `« ${g} »`).join(", ")} : cette réponse ne venait pas de toi. Si elle est fausse, préviens la marque en répondant à son e-mail.</p>
+          </div>
         </FadeIn>
       )}
 
