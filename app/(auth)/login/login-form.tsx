@@ -66,7 +66,10 @@ export function LoginForm({ next }: { next: string }) {
       const res = await fetch("/api/demo/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session }) }).catch(() => null);
       if (!res?.ok) {
         const body = await res?.json().catch(() => null);
-        await supabase.auth.signOut();
+        // "local": only this browser. The default (global) would also sign out the jury already in the demo.
+        await supabase.auth.signOut({ scope: "local" });
+        if (emailRef.current) emailRef.current.value = "";
+        if (passwordRef.current) passwordRef.current.value = "";
         setPending(false);
         setDemoMode(false);
         return setError(body?.error?.message ?? "Mince, la démo n'a pas pu démarrer. Réessaye dans un instant.");
