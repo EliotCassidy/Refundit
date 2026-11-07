@@ -8,6 +8,10 @@ import type { ReceiptExtraction } from "@/lib/receipts/parse";
 import type { Json } from "@/lib/shared/database.types";
 import { knownCandidates } from "@/lib/receipts/products";
 import { resolveBrand } from "@/lib/brands";
+import { PageHeader } from "@/components/ui/list";
+import { FadeIn } from "@/components/ui/motion";
+import { StoreBanner } from "@/components/ui/store-logo";
+import { findStore } from "@/lib/stores";
 import { ProductBoard, type BoardItem } from "./product-board";
 
 export default async function ReceiptPage({ params }: PageProps<"/receipts/[id]">) {
@@ -67,14 +71,20 @@ export default async function ReceiptPage({ params }: PageProps<"/receipts/[id]"
   }));
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-5">
-      <header className="text-center">
-        <h1 className="text-[26px] font-semibold tracking-tight">Quel produit a un problème ?</h1>
-        <p className="mt-1.5 text-[15px] text-muted">Vérifie les produits trouvés, puis touche « Oui » sur celui qui pose problème.</p>
-      </header>
+    <div className="mx-auto flex w-full max-w-[600px] flex-col gap-6">
+      <FadeIn>
+        <PageHeader
+          title="Quel produit a un problème ?"
+          subtitle={[receipt.store_name ? receipt.store_name.charAt(0) + receipt.store_name.slice(1).toLowerCase() : null, frDate(receipt.purchased_at), `${boardItems.length} article${boardItems.length > 1 ? "s" : ""}`].filter(Boolean).join(" · ")}
+        >
+          <div className="mb-5 flex min-h-16 items-center justify-center">
+            <StoreBanner store={findStore(chain, receipt.store_name)} fallbackName={chain ?? receipt.store_name} />
+          </div>
+        </PageHeader>
+      </FadeIn>
 
       {x?.needs_review && (
-        <div className="rounded-[14px] border border-warning/50 bg-warning-soft p-3 text-sm text-on-warning-soft">
+        <div className="rounded-[18px] bg-warning-soft px-5 py-3.5 text-sm text-on-warning-soft">
           Certains montants n&apos;ont pas pu être vérifiés (ticket coupé ou peu lisible). Vérifie la liste avant de continuer.
         </div>
       )}

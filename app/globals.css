@@ -262,3 +262,18 @@ body::before {
 /* Radix Accordion height animation */
 @keyframes acc-down { from { height: 0; opacity: 0; } to { height: var(--radix-accordion-content-height); opacity: 1; } }
 @keyframes acc-up { from { height: var(--radix-accordion-content-height); opacity: 1; } to { height: 0; opacity: 0; } }
+
+/* Pending money: slowly moving diagonal stripes (dashboard split bar). */
+@layer utilities {
+  .pending-stripes {
+    background-image: repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.45) 0 6px, transparent 6px 12px);
+    background-size: 17px 17px;
+    animation: stripes 1.2s linear infinite;
+  }
+}
+@keyframes stripes {
+  to { background-position: 17px 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pending-stripes { animation: none; }
+}

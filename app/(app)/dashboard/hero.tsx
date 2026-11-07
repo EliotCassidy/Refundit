@@ -8,6 +8,7 @@ import { AnimatedMoney } from "@/components/ui/motion";
 type Props = { firstName: string; received: number; pending: number; openCount: number; needsCount: number };
 
 export function DashboardHero({ firstName, received, pending, openCount, needsCount }: Props) {
+  const total = received + pending;
   const actions = [
     { href: "/receipts/new", label: "Scanner", Icon: ScanLine, primary: true, badge: 0 },
     { href: needsCount ? "#a-faire" : "/#activite", label: "À faire", Icon: BellRing, primary: false, badge: needsCount },
@@ -22,16 +23,46 @@ export function DashboardHero({ firstName, received, pending, openCount, needsCo
           Bonjour {firstName}
         </motion.p>
         <AnimatedMoney cents={received} className="text-[52px] font-semibold leading-none tracking-tight text-ink md:text-[60px]" />
-        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mt-1 flex flex-col items-center gap-2 text-[13px] text-muted">
-          <span>récupérés au total</span>
-          {pending > 0 && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-info-soft px-2.5 py-1 text-xs font-medium text-on-info-soft">
-              <span className="size-1.5 animate-pulse rounded-full bg-info" />
-              <AnimatedMoney cents={pending} className="font-semibold" /> en attente · {openCount} demande{openCount > 1 ? "s" : ""}
-            </span>
-          )}
-        </motion.div>
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="text-[13px] text-muted">
+          récupérés au total
+        </motion.p>
       </div>
+
+      {/* Received vs pending: one split bar + legend */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+        className="mt-6 w-full max-w-[400px] rounded-[20px] bg-white/80 px-4 py-3.5 shadow-[0_1px_2px_rgba(17,23,20,0.04),0_12px_32px_-18px_rgba(17,23,20,0.18)] ring-1 ring-black/[0.05] backdrop-blur-xl"
+      >
+        <div className="flex h-2 w-full overflow-hidden rounded-full bg-black/[0.05]">
+          <motion.span
+            className="h-full bg-brand"
+            initial={{ width: 0 }}
+            animate={{ width: `${total ? (received / total) * 100 : 0}%` }}
+            transition={{ duration: 0.9, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          />
+          <motion.span
+            className="pending-stripes h-full bg-info/70"
+            initial={{ width: 0 }}
+            animate={{ width: `${total ? (pending / total) * 100 : 0}%` }}
+            transition={{ duration: 0.9, delay: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          />
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-3 text-left">
+          <div>
+            <p className="flex items-center gap-1.5 text-[12px] text-muted"><span className="size-2 rounded-full bg-brand" />Reçu</p>
+            <AnimatedMoney cents={received} className="text-[17px] font-semibold text-brand-strong" />
+          </div>
+          <div className="text-right">
+            <p className="flex items-center justify-end gap-1.5 text-[12px] text-muted">
+              <span className={`size-2 rounded-full bg-info ${pending ? "animate-pulse" : ""}`} />
+              En attente{openCount ? ` · ${openCount} demande${openCount > 1 ? "s" : ""}` : ""}
+            </p>
+            <AnimatedMoney cents={pending} className={`text-[17px] font-semibold ${pending ? "text-ink" : "text-muted"}`} />
+          </div>
+        </div>
+      </motion.div>
 
       <div className="mt-8 grid w-full max-w-[420px] grid-cols-4 gap-2">
         {actions.map(({ href, label, Icon, primary, badge }, i) => (

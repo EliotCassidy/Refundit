@@ -45,7 +45,8 @@ export default async function DashboardPage() {
   const feed: FeedClaim[] = claims;
 
   const received = claims.reduce((sum, c) => sum + (c.refundCents ?? 0), 0);
-  const open = claims.filter((c) => STATUS_GROUP[c.status] === "progress" || STATUS_GROUP[c.status] === "action");
+  // Pending = money still to come: every claim not refunded yet and not stopped (incl. accepted without a payment yet).
+  const open = claims.filter((c) => c.refundCents == null && STATUS_GROUP[c.status] !== "stopped");
   const pending = open.reduce((sum, c) => sum + c.stakeCents, 0);
   const needsYou = claims.filter((c) => STATUS_GROUP[c.status] === "action");
   const submitting = claims.filter((c) => c.status === "submitting").map((c) => c.id);

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { group } from "@/components/ui/list";
+import { PasswordInput } from "@/components/ui/password-input";
 import { createClient } from "@/lib/shared/supabase/client";
 
 const input = "h-[52px] w-full bg-transparent px-5 text-[15px] text-ink outline-none transition placeholder:text-muted focus:bg-black/[0.015]";
@@ -41,9 +42,8 @@ export function LoginForm({ next }: { next: string }) {
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
       <div className={`${group} divide-y divide-black/[0.05]`}>
       <input name="email" type="email" required placeholder="E-mail" autoComplete="email" className={input} />
-      <input
+      <PasswordInput
         name="password"
-        type="password"
         required
         minLength={6}
         placeholder="Mot de passe"
