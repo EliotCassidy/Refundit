@@ -262,6 +262,20 @@ export function DemoTour() {
 
       // 6) NotCoca back-office: refund the request.
       if (step === "admin" && pathname.startsWith("/notcoca/admin")) {
+        if (firstRequest === "rejected") {
+          show(
+            {
+              steps: [{ popover: { title: "Demande refusée", description: "NotCoca a répondu par e-mail avec son motif. Retourne sur Refundit : la réponse est lue et classée automatiquement.", showButtons: ["next"], nextBtnText: "Retour sur Refundit" } }],
+              onNextClick: () => {
+                const id = getDemo()?.claimId;
+                patchDemo({ step: "final-refused" });
+                router.push(id ? `/claims/${id}` : "/");
+              },
+            },
+            (d) => d.drive(),
+          );
+          return;
+        }
         if (firstRequest === "refunded") {
           show(
             {
@@ -303,11 +317,21 @@ export function DemoTour() {
                     side: "bottom",
                     align: "center",
                     showButtons: ["next"],
+                    nextBtnText: "Suivant",
+                  },
+                },
+                {
+                  popover: {
+                    title: "Bon à savoir",
+                    description:
+                      "Dans la vraie vie, cette étape peut prendre jusqu'à 5 jours ouvrés selon le service client. Mais les marques acceptent dans plus de 70 % des cas, pour clore le ticket au plus vite.",
+                    showButtons: ["next"],
                     nextBtnText: "Voir l'échange",
                   },
                 },
               ],
-              onNextClick: () => {
+              onNextClick: (_el, _step, { driver: d }) => {
+                if (!d.isLastStep()) return d.moveNext();
                 const id = getDemo()?.claimId;
                 patchDemo({ step: "final-claim" });
                 router.push(id ? `/claims/${id}` : "/");
@@ -319,6 +343,34 @@ export function DemoTour() {
           spot({
             element: "#demo-balance",
             popover: { title: "La réponse arrive…", description: "Refundit relève la boîte mail dédiée à ta demande. Quelques secondes…", side: "bottom", align: "center", showButtons: [] },
+          });
+        }
+        return;
+      }
+
+      // 7b) Refused by NotCoca: wait for the reply on the claim page, then show it.
+      if (step === "final-refused" && pathname.startsWith("/claims/")) {
+        const el = await waitFor(() => document.querySelector("#demo-suivi"));
+        if (!el) return;
+        if (status === "refused") {
+          spot(
+            {
+              element: el,
+              popover: {
+                title: "Refus reçu et classé",
+                description: "La réponse de NotCoca et son motif sont dans le suivi, sans que tu aies rien à trier. C'est rare : les marques acceptent dans plus de 70 % des cas.",
+                side: "top",
+                align: "center",
+                showButtons: ["next"],
+                nextBtnText: "Terminer la démo",
+              },
+            },
+            { onNextClick: () => patchDemo({ step: "done" }) },
+          );
+        } else {
+          spot({
+            element: el,
+            popover: { title: "La réponse arrive…", description: "Refundit relève la boîte mail dédiée à ta demande. Quelques secondes…", side: "top", align: "center", showButtons: [] },
           });
         }
         return;
@@ -355,13 +407,14 @@ export function DemoTour() {
 
   // Final step: fetch the brand's email and refresh until the balance goes up.
   useEffect(() => {
-    if (step !== "final" || pathname !== "/") return;
+    const waiting = (step === "final" && pathname === "/") || (step === "final-refused" && pathname.startsWith("/claims/") && status !== "refused");
+    if (!waiting) return;
     const t = setInterval(async () => {
       await fetch("/api/email/poll", { method: "POST" }).catch(() => undefined);
       router.refresh();
     }, 8000);
     return () => clearInterval(t);
-  }, [step, pathname, router]);
+  }, [step, pathname, status, router]);
 
   if (!state) return null;
   return (

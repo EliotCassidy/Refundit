@@ -2,7 +2,7 @@
 // OWNER: Dev 2. Jury demo progress, kept in this browser only (localStorage): which step of the tour we're on.
 import { useSyncExternalStore } from "react";
 
-export type DemoStep = "intro" | "scan" | "receipt" | "claim-list" | "agent" | "admin" | "final" | "final-claim" | "done";
+export type DemoStep = "intro" | "scan" | "receipt" | "claim-list" | "agent" | "admin" | "final" | "final-refused" | "final-claim" | "done";
 export type DemoState = { step: DemoStep; baseline?: number; claimId?: string; seen?: string[] };
 
 const KEY = "refundit-demo";
