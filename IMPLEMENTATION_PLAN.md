@@ -19,15 +19,15 @@ Priorities:
 - **P2** = only if ahead.
 
 ## Phase 0: Kickoff (both, ~1h)
-- [ ] Read all docs together. Write `supabase/migrations/<ts>_0001_init.sql` from API_CONTRACTS §2 (incl. RLS, storage bucket).
-- [ ] Create the Supabase project, Vercel project and `.env.example`. Share secrets out of band.
+- [x] Read all docs together. Write `supabase/migrations/<ts>_0001_init.sql` from API_CONTRACTS §2 (incl. RLS, storage bucket).
+- [x] Create the Supabase project, Vercel project and `.env.example`. Share secrets out of band.
 - [ ] Agree on the demo receipt: a real receipt containing Pringles, Coca-Cola and 2–3 other brands.
 
 ## Phase 1: Scaffold + spikes (parallel, until ~H+3)
 **Dev 1 (P0)**
-- [ ] `create-next-app` (TS, App Router, Tailwind, ESLint), `lib/shared/*` Supabase clients, generated types, `npm run typecheck`.
-- [ ] Supabase Auth (email + password, no email confirmation), protected `(app)` layout, mobile shell + nav.
-- [ ] Choose the LLM provider and test receipt parsing on 3 real receipt photos → `ParsedReceipt`.
+- [x] `create-next-app` (TS, App Router, Tailwind, ESLint), `lib/shared/*` Supabase clients, generated types, `npm run typecheck`.
+- [x] Supabase Auth (email + password, no email confirmation), protected `(app)` layout, mobile shell + nav.
+- [x] Choose the LLM provider and test receipt parsing on 3 real receipt photos → `ParsedReceipt`. (H model `holo4-35b-a3b`; `npm run eval:extract` on `tickets/`)
 
 **Dev 2 (P0, the most important hours of the weekend)**
 - [ ] **H spike:** run the agent by hand (SDK or CLI) on the contact forms of 3–5 candidate brands, in dry-run mode. Record for each:
@@ -62,10 +62,10 @@ Priorities:
 
 ## Phase 2: Build both halves (Saturday afternoon)
 **Dev 1**
-- [ ] P0 Onboarding form → `profiles`; redirect to it if the profile is missing.
-- [ ] P0 Upload page (camera capture) → `/api/receipts` → parsed items list (edit a product name/brand inline = P1).
-- [ ] P0 Brand registry seed (`npm run seed`) + `resolveBrand` + `getBrandContact` (registry only).
-- [ ] P0 Selection page: checkboxes + issue preset chips + optional description → `/api/claims` → redirect to `/claims`.
+- [x] P0 Onboarding form → `profiles`; redirect to it if the profile is missing.
+- [x] P0 Upload page (camera capture) → `/api/receipts` → parsed items list (edit a product name/brand inline = P1).
+- [x] P0 Brand registry seed (`npm run seed`) + `resolveBrand` + `getBrandContact` (registry only).
+- [x] P0 Selection page: checkboxes + issue preset chips + optional description → `/api/claims` → redirect to `/claims`. Merged into the receipt page (one card per product, Oui/Non toggle).
 - [ ] P1 Optional damaged-product photo upload.
 
 **Dev 2**
@@ -91,8 +91,8 @@ Priorities:
 - [x] P1 Deployed on https://refundit.vercel.app; NotCoca demo brand + Stripe Connect payout + Billing verified in production.
 
 **Dev 1**
-- [ ] P0 Quota check in `/api/receipts` (`getScanQuota` → 402) + link to `/billing` from profile/nav (API_CONTRACTS › Billing)
-- [ ] P1 Home dashboard summary (counts per status), empty states, loading states, errors in French.
+- [x] P0 Quota check in `/api/receipts` (`getScanQuota` → 402) + link to `/billing` from profile/nav (API_CONTRACTS › Billing)
+- [x] P1 Home dashboard summary (counts per status), empty states, loading states, errors in French.
 - [ ] P2 Gladia voice input for the "other" issue.
 - [ ] P2 Inline correction of parsed items.
 
