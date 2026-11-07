@@ -3,7 +3,9 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
+import { Search, X } from "lucide-react";
 import { formatEuros } from "@/components/ui/brand";
+import { SortMenu } from "@/components/ui/sort-menu";
 import { StaggerItem } from "@/components/ui/motion";
 import { STATUS_GROUP, STATUS_LABEL, type StatusGroup } from "@/components/ui/status";
 import { ISSUE_LABELS_FR, type ClaimStatus, type IssueType } from "@/lib/shared/types";
@@ -20,7 +22,7 @@ export type FeedClaim = {
 };
 
 type Filter = "all" | StatusGroup;
-type Sort = "recent" | "amount";
+type Sort = "recent" | "oldest" | "amount";
 const FILTERS: { id: Filter; label: string }[] = [
   { id: "all", label: "Tout" },
   { id: "action", label: "À faire" },
@@ -51,6 +53,8 @@ const time = (iso: string) => new Date(iso).toLocaleTimeString("fr-FR", { hour: 
 export function ActivityFeed({ claims }: { claims: FeedClaim[] }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<Sort>("recent");
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLocaleLowerCase("fr-FR");
 
   const counts = useMemo(() => {
     const c: Record<Filter, number> = { all: claims.length, action: 0, progress: 0, done: 0, stopped: 0 };
@@ -59,8 +63,14 @@ export function ActivityFeed({ claims }: { claims: FeedClaim[] }) {
   }, [claims]);
 
   const groups = useMemo(() => {
-    const list = (filter === "all" ? [...claims] : claims.filter((c) => STATUS_GROUP[c.status] === filter)).sort((a, b) =>
-      sort === "amount" ? (b.refundCents ?? b.stakeCents) - (a.refundCents ?? a.stakeCents) : b.updatedAt.localeCompare(a.updatedAt),
+    const matches = (c: FeedClaim) =>
+      !q || [c.product, c.brand ?? "", STATUS_LABEL[c.status], ISSUE_LABELS_FR[c.issueType]].join(" ").toLocaleLowerCase("fr-FR").includes(q);
+    const list = (filter === "all" ? [...claims] : claims.filter((c) => STATUS_GROUP[c.status] === filter)).filter(matches).sort((a, b) =>
+      sort === "amount"
+        ? (b.refundCents ?? b.stakeCents) - (a.refundCents ?? a.stakeCents)
+        : sort === "oldest"
+          ? a.updatedAt.localeCompare(b.updatedAt)
+          : b.updatedAt.localeCompare(a.updatedAt),
     );
     if (sort === "amount") return [{ label: "Par montant", items: list }];
     const map = new Map<string, { label: string; items: FeedClaim[] }>();
@@ -70,23 +80,51 @@ export function ActivityFeed({ claims }: { claims: FeedClaim[] }) {
       map.get(k)!.items.push(c);
     }
     return [...map.values()];
-  }, [claims, filter, sort]);
+  }, [claims, filter, sort, q]);
 
   let index = 0;
   return (
     <section id="activite" className="flex scroll-mt-20 flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">Activité</h2>
-        <select
+        <SortMenu
           value={sort}
-          onChange={(e) => setSort(e.target.value as Sort)}
-          aria-label="Trier"
-          className="rounded-full border border-white/80 bg-white/60 px-3 py-1.5 text-sm font-medium text-ink outline-none backdrop-blur"
-        >
-          <option value="recent">Plus récentes</option>
-          <option value="amount">Montant</option>
-        </select>
+          onChange={setSort}
+          options={[
+            { value: "recent", label: "Plus récentes" },
+            { value: "oldest", label: "Plus anciennes" },
+            { value: "amount", label: "Montant", hint: "Du plus élevé au plus bas" },
+          ]}
+        />
       </div>
+
+      {/* Search */}
+      <label className="relative block">
+        <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden />
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Rechercher un produit, une marque, un statut…"
+          aria-label="Rechercher dans l'activité"
+          className="h-11 w-full rounded-full border border-white/80 bg-white/60 pl-10 pr-10 text-[15px] text-ink outline-none backdrop-blur-xl transition placeholder:text-muted focus:border-ink/30 focus:bg-white [&::-webkit-search-cancel-button]:hidden"
+        />
+        <AnimatePresence>
+          {query && (
+            <motion.button
+              type="button"
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0, opacity: 0 }}
+              onClick={() => setQuery("")}
+              aria-label="Effacer la recherche"
+              className="absolute right-2.5 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded-full bg-ink/80 text-surface"
+            >
+              <X className="size-3.5" strokeWidth={2.5} aria-hidden />
+            </motion.button>
+          )}
+        </AnimatePresence>
+      </label>
 
       {/* Segmented control with a sliding pill */}
       <div className="-mx-4 overflow-x-auto px-4 md:mx-0 md:px-0">
@@ -114,7 +152,7 @@ export function ActivityFeed({ claims }: { claims: FeedClaim[] }) {
       <AnimatePresence mode="popLayout">
         {groups.length === 0 ? (
           <motion.p key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-10 text-center text-sm text-muted">
-            Rien ici pour l&apos;instant.
+            {q ? <>Aucun résultat pour « {query.trim()} ».</> : <>Rien ici pour l&apos;instant.</>}
           </motion.p>
         ) : (
           groups.map((g) => (

@@ -111,7 +111,7 @@ function Lightbox({ shots, log, live, onClose }: { shots: Step[]; log: Step[]; l
 
   return (
     <motion.div
-      className="fixed inset-0 z-[100] flex items-end justify-center bg-[#111714]/60 backdrop-blur-sm sm:items-center sm:p-6"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-[#111714]/45 p-3 backdrop-blur-[3px] sm:p-8"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -121,17 +121,17 @@ function Lightbox({ shots, log, live, onClose }: { shots: Step[]; log: Step[]; l
       aria-label="Écran de l'agent"
     >
       <motion.div
-        initial={{ y: 40, opacity: 0, scale: 0.98 }}
+        initial={{ y: 16, opacity: 0, scale: 0.96 }}
         animate={{ y: 0, opacity: 1, scale: 1 }}
-        exit={{ y: 40, opacity: 0 }}
+        exit={{ y: 16, opacity: 0, scale: 0.96 }}
         transition={{ type: "spring", stiffness: 380, damping: 34 }}
         onClick={(e) => e.stopPropagation()}
-        className="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-[24px] bg-raised shadow-2xl sm:rounded-[24px]"
+        className="relative flex max-h-[88dvh] w-full max-w-3xl flex-col overflow-hidden rounded-[24px] bg-raised shadow-[0_30px_80px_rgba(17,23,20,0.35)]"
       >
         <div className="flex items-center gap-3 border-b border-line px-4 py-3">
           <span className="mono min-w-0 flex-1 truncate rounded-full bg-sunken px-3 py-1.5 text-xs text-muted">{shot?.pageUrl ?? "—"}</span>
           {live && <span className="rounded-full bg-danger px-2 py-0.5 text-[11px] font-bold text-white">EN DIRECT</span>}
-          <button type="button" onClick={onClose} aria-label="Fermer" className="grid size-9 place-items-center rounded-full hover:bg-sunken"><X className="size-5" aria-hidden /></button>
+          <button type="button" onClick={onClose} aria-label="Fermer" className="grid size-9 shrink-0 place-items-center rounded-full bg-ink text-surface shadow-md transition hover:scale-105"><X className="size-4" strokeWidth={2.5} aria-hidden /></button>
         </div>
         <div className="min-h-0 flex-1 overflow-auto bg-sunken">
           {shot?.screenshot && (
