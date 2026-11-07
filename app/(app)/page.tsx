@@ -53,7 +53,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-[720px] flex-col gap-8">
-      <DashboardHero firstName={profile.first_name} received={received} pending={pending} openCount={open.length} needsCount={needsYou.length} />
+      <DashboardHero firstName={profile.first_name} received={received} pending={pending} openCount={open.length} needsCount={needsYou.length} hasIban={Boolean(profile.iban)} />
 
       {!profile.iban && (
         <FadeIn delay={0.05}>

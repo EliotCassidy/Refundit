@@ -1,6 +1,6 @@
 // OWNER: Dev 2. NotCoca pays the refund to the customer through Stripe Connect (TEST mode).
 // Destination charge (docs.stripe.com/connect/destination-charges): ONE PaymentIntent paid with the
-// test card pm_card_visa, transfer_data.destination = the user's connected account. No platform
+// test card pm_card_bypassPending, transfer_data.destination = the user's connected account. No platform
 // balance needed; FR platform → FR account in EUR needs no on_behalf_of.
 //
 // Demo shortcut (stated in the pitch): NotCoca and Refundit share the same Stripe test platform, and
@@ -32,7 +32,10 @@ export async function payRefund(input: { customerEmail: string; amountCents: num
     {
       amount: input.amountCents,
       currency: "eur",
-      payment_method: "pm_card_visa", // Stripe test payment method
+      // Stripe test card whose funds skip the pending balance (docs.stripe.com/testing "available balance");
+      // verified 2026-11-07: with a destination charge the connected account gets them as available at once,
+      // so the user can transfer the refund to their bank right away (POST /api/payouts).
+      payment_method: "pm_card_bypassPending",
       confirm: true,
       automatic_payment_methods: { enabled: true, allow_redirects: "never" },
       transfer_data: { destination: profile.stripe_account_id },

@@ -342,6 +342,12 @@ Reads (receipt, items, profile) go directly through the Supabase client with RLS
 - `POST /api/profile` also accepts optional `civility` and `iban` (normalized, mod-97 checked by `lib/shared/iban.ts`); they are only written when sent, so the profile page is unaffected.
 - `POST /api/profile/iban` `{ iban }` → `200 { ok: true }` · `400 invalid_iban`: sets the IBAN only (dashboard reminder).
 
+### Payouts (Dev 2) — refunds to the user's bank, Stripe TEST mode
+| Method | Path | Body | Response |
+|---|---|---|---|
+| GET | `/api/payouts` | none (user session) | `200 { availableCents, pendingCents, bankLast4 }` (Stripe balance of `profiles.stripe_account_id`) · `409 no_payout_account` · `502 stripe_error` |
+| POST | `/api/payouts` | none | `200 { payoutId, amountCents }` (pays out the whole available EUR balance to the account's bank) · `409 nothing_available` · `409 no_payout_account` · `502 stripe_error` |
+
 ### Billing (Dev 2) — "Refundit Illimité", €9.99/month, Stripe test mode
 Free plan: **1 receipt scan per calendar month** (Europe/Paris); subscribed (`active`/`trialing`): unlimited.
 
