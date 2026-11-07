@@ -69,7 +69,8 @@ export const ParsedReceiptSchema = z.object({
 export type ParsedReceipt = z.infer<typeof ParsedReceiptSchema>;
 
 // ---- Product identification, step 2 (Dev 1 produces; API_CONTRACTS §3) ----
-export const PRODUCT_SOURCES = ["off", "obf", "linkup", "confirmed_match"] as const;
+// catalog = the brand's own catalog: only our fictional demo brand NotCoca (absent from Open Food Facts, fictional EANs).
+export const PRODUCT_SOURCES = ["off", "obf", "linkup", "confirmed_match", "catalog"] as const;
 
 /** A real product for a receipt line. Every field comes from a product database (or, source "linkup", from the web
  *  page where its EAN is written when OFF doesn't have it), never from our LLM's guess. */

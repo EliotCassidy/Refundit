@@ -236,8 +236,11 @@ export const ProductSchema = z.object({
   name: z.string(),
   quantity: z.string().nullable(), // e.g. "175 g"
   image_url: z.string().nullable(),
-  source: z.enum(["off","obf","linkup","confirmed_match"]),
+  source: z.enum(["off","obf","linkup","confirmed_match","catalog"]),
 });
+// source "catalog" = the brand's own catalog, only for our fictional demo brand NotCoca (absent from Open Food Facts):
+// a label naming NotCoca gets NotCoca Original/Zéro/Cherry/Citron in the format read on the receipt, fictional EANs
+// (GS1 prefix 20-29), photo /notcoca/cans/<recipe>.png. Never a real Coca-Cola product.
 // source "linkup" = named by the Linkup web search for this label: OFF data when OFF has the EAN, otherwise brand/name/quantity
 // as described by the web page where the EAN is written (no photo). +15 in the ranking, never auto-validated (`confident` false).
 // line_items.confirmed_product (NULL until the user validates)
