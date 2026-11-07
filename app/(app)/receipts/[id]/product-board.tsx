@@ -76,7 +76,8 @@ function cardInfo(it: BoardItem, s: ItemState) {
     return {
       name: s.confirmed.name,
       meta: [s.confirmed.brand, s.confirmed.quantity].filter(Boolean).join(" · ") || null,
-      image: small(s.confirmed.image_url),
+      // Photo du produit validé, sinon celle du même produit dans les propositions (photo de secours trouvée après coup).
+      image: small(s.confirmed.image_url ?? s.candidates?.candidates.find((c) => c.ean && c.ean === (s.confirmed as { ean?: string | null }).ean)?.image_url ?? null),
       note: s.auto ? "Reconnu automatiquement" : s.confirmed.source === "user" ? "Saisi par vous" : null,
       noteTone: s.auto ? "text-brand-strong" : "text-muted",
     };

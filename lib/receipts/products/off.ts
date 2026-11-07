@@ -3,6 +3,7 @@
 // - search.openfoodfacts.org/search : q en syntaxe Lucene (ex. brands:"carrefour" ravioli), langs, page_size, fields.
 //   Seul l'index 'off' existe (pas d'OBF).
 // - world.openbeautyfacts.org/cgi/search.pl : search_terms (plein texte), json=1, page_size, fields.
+import { linkupImagesEnabled, webImage } from "./linkup";
 import type { Product } from "@/lib/shared/types";
 import { getJson } from "./net";
 import { isValidEan, type Size } from "./ean";
@@ -96,9 +97,15 @@ export async function productImage(ean: string, source: string): Promise<string 
   return d?.product?.image_front_url || d?.product?.image_url || d?.product?.image_front_small_url || null;
 }
 
-/** Complète la photo d'un produit qui n'en a pas (sans jamais faire échouer l'appelant). */
-export async function withImage<T extends { ean: string | null; image_url: string | null; source: string }>(p: T): Promise<T> {
+/**
+ * Complète la photo d'un produit qui n'en a pas (sans jamais faire échouer l'appelant) : fiche Open Facts, puis,
+ * si elle n'a pas de photo (produit trouvé sur le web), UNE recherche d'image Linkup (payante, en cache par EAN).
+ */
+export async function withImage<T extends { ean: string | null; image_url: string | null; source: string; name?: string; brand?: string | null; quantity?: string | null }>(p: T): Promise<T> {
   if (p.image_url || !p.ean) return p;
-  const image_url = await productImage(p.ean, p.source).catch(() => null);
+  let image_url = await productImage(p.ean, p.source).catch(() => null);
+  if (!image_url && linkupImagesEnabled() && p.name) {
+    image_url = await webImage({ ean: p.ean, name: p.name, brand: p.brand ?? null, quantity: p.quantity ?? null });
+  }
   return image_url ? { ...p, image_url } : p;
 }

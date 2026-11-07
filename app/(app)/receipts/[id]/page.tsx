@@ -7,6 +7,8 @@ import { frDate } from "@/lib/receipts/format";
 import type { ReceiptExtraction } from "@/lib/receipts/parse";
 import type { Json } from "@/lib/shared/database.types";
 import { knownCandidates } from "@/lib/receipts/products";
+import { withImage } from "@/lib/receipts/products/off";
+import { ProductCandidatesSchema } from "@/lib/shared/types";
 import { resolveBrand } from "@/lib/brands";
 import { PageHeader } from "@/components/ui/list";
 import { FadeIn } from "@/components/ui/motion";
@@ -50,6 +52,16 @@ export default async function ReceiptPage({ params }: PageProps<"/receipts/[id]"
   const chain = x?.store?.chain ?? receipt.store_name;
   const known = await Promise.all(
     (items ?? []).map(async (it) => {
+      // Déjà identifié mais le 1er produit n'a pas de photo (scanné avant la photo de secours Linkup) : on la complète
+      // une fois (withImage met en cache par EAN) et on l'enregistre sur l'article.
+      const saved = ProductCandidatesSchema.safeParse(it.product_candidates);
+      if (saved.success && saved.data.candidates[0] && !saved.data.candidates[0].image_url) {
+        const top = await withImage(saved.data.candidates[0]).catch(() => saved.data.candidates[0]);
+        if (!top.image_url) return null;
+        const filled = { ...saved.data, candidates: [top, ...saved.data.candidates.slice(1)] };
+        await supabase.from("line_items").update({ product_candidates: filled as unknown as Json }).eq("id", it.id);
+        return filled;
+      }
       if (it.product_candidates || it.confirmed_product) return null;
       const registryBrand = (await resolveBrand(it.raw_label, null).catch(() => null))?.name ?? null;
       const found = await knownCandidates(chain, it.raw_label, registryBrand).catch(() => null);
