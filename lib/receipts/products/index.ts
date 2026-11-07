@@ -11,7 +11,7 @@ import { offDocument, quantityVariants, searchObf, searchOff, withImage, type Hi
 import { linkupEnabled, webProducts } from "./linkup";
 import { parseSizes } from "./ean";
 import { referencePrice, samePriceAtChain } from "./prices";
-import { brandConflict, labelWords, preScore, privateLabel, rank, wordHit, type Candidate } from "./rank";
+import { brandConflict, CONFIRMED_BONUS, labelWords, preScore, privateLabel, rank, wordHit, type Candidate } from "./rank";
 import { tokens } from "../text";
 
 export type IdentifyInput = {
@@ -198,7 +198,10 @@ export async function identifyProduct(input: IdentifyInput, debug?: IdentifyDebu
   let ranked = rank(shortlist, rankInput);
 
   // Secours web (Linkup, payant) : seulement si Open Food Facts n'a rien trouvé de bon. Un appel, jamais relancé.
-  const weak = !ranked.candidates.length || ranked.candidates[0].score < LINKUP_BELOW;
+  // Décidé sur ce que la recherche a trouvé elle-même : le bonus « déjà confirmé » ne compte pas, sinon un mauvais choix
+  // enregistré rend la ligne « sûre » et « Chercher d'autres produits » ne trouve jamais mieux (MADELEINE TRADITIO).
+  const own = ranked.candidates.map((c) => c.score - (c.source === "confirmed_match" ? CONFIRMED_BONUS : 0));
+  const weak = !own.length || Math.max(...own) < LINKUP_BELOW;
   if (debug) debug.weak = weak;
   if (linkupEnabled() && weak) {
     since = Date.now();

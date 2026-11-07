@@ -75,6 +75,8 @@ function brandWrittenIn(brand: string | null, rawLabel: string): boolean {
 
 // +15 : réglé sur npm run eval:identify -- --linkup-cached (2026-11-07 : 10 → top 5 57,9 %, 15 → 59,2 %, 20 → 59,2 % mais 1er 38,2 %).
 const WEB_BONUS = 15;
+/** Produit déjà choisi à la main par des clients pour ce libellé, chez cette enseigne. */
+export const CONFIRMED_BONUS = 30;
 export const WEB_REASON = "nommé par la recherche web pour ce libellé";
 
 type Scored = Candidate & { score: number; reasons: string[]; flags: Set<string>; gap: number | null };
@@ -140,7 +142,7 @@ function score(c: Candidate, input: RankInput): Scored {
   if (!typeOk) reasons.push(`type « ${input.guess?.product_type} » absent du nom`);
 
   // 7) Déjà confirmé par d'autres clients pour ce libellé, chez cette enseigne
-  const confirmedPts = c.confirmations ? 30 : 0;
+  const confirmedPts = c.confirmations ? CONFIRMED_BONUS : 0;
   if (c.confirmations) reasons.push(`déjà confirmé ${c.confirmations} fois pour ce libellé`);
 
   // 8) Nommé par la recherche web (Linkup) pour ce libellé : le web a lu le vrai nom, le libellé abrégé ne suffit pas
