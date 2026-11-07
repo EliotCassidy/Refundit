@@ -1,6 +1,10 @@
-// Cas de test de interpret.ts / checks.ts (tickets fictifs, sans réseau ni modèle) : npm run test:receipts
+// Cas de test de l'extraction (interpret, checks) et de l'identification (EAN, formats, classement),
+// sans réseau ni modèle : npm run test:receipts
 import { interpret, parseDate, parseTime, toPurchasedAt, parseCents, type Transcription } from "../interpret";
 import { runChecks } from "../checks";
+import { isValidEan, parseSizes, sizesMatch } from "../products/ean";
+import { rank, privateLabel, type Candidate } from "../products/rank";
+import { quantityVariants } from "../products/off";
 
 let fails = 0;
 function eq(name: string, got: unknown, want: unknown) {
@@ -243,6 +247,50 @@ eq("purchased_at été", toPurchasedAt("2026-07-03", null), "2026-07-03T12:00:00
   eq("14 totaux", r.printed, { gross_cents: 1097, discounts_cents: null, paid_cents: null, n_items: 3, n_lines: null });
   eq("14 pas d'erreur de %", c.errors, []);
   eq("14 relecture (payé absent)", c.needs_review, true);
+}
+
+// --- 15. EAN : clé de contrôle
+eq("15 EAN-13 valide", isValidEan("3270190174349"), true);
+eq("15 EAN-13 clé fausse", isValidEan("3270190174348"), false);
+eq("15 EAN-8 valide", isValidEan("20083960"), true);
+eq("15 pas un EAN", [isValidEan("abc"), isValidEan("123"), isValidEan(null)], [false, false, false]);
+
+// --- 16. Formats
+eq("16 190G", parseSizes("PRINGLES ORIG 190G"), [{ total: 190, unit: "g" }]);
+eq("16 6X25CL", parseSizes("COCA 6X25CL"), [{ total: 1500, unit: "ml" }, { total: 250, unit: "ml", per: true }]);
+eq("16 1,5L", parseSizes("EVIAN 1,5L"), [{ total: 1500, unit: "ml" }]);
+eq("16 X30CAPS", parseSizes("L'OR ESPRESSO FORZA X30CAPS"), [{ total: 30, unit: "u" }]);
+eq("16 800 g (8 x 100 g) ~ 8X100G", sizesMatch(parseSizes("*8X100G FRO BLC NAT"), parseSizes("800 g(8 x 100 g)")), true);
+eq("16 650G ≠ 400g", sizesMatch(parseSizes("650G RAVIOLI"), parseSizes("400 g")), false);
+eq("16 8X100G ≠ 4 x 100 g", sizesMatch(parseSizes("*8X100G FRO BLC NAT"), parseSizes("400 g (4 x 100 g)")), false);
+eq("16 6X25CL ~ 25 cl", sizesMatch(parseSizes("COCA 6X25CL"), parseSizes("25 cl")), true);
+
+eq("16 variantes de format", quantityVariants({ total: 1750, unit: "ml" }).slice(0, 4), ["1.75 l", "1.75l", "1,75 l", "1,75l"]);
+
+// --- 17. Marque de distributeur
+eq("17 MDD", [privateLabel("Carrefour Market"), privateLabel("E.Leclerc"), privateLabel("Super U"), privateLabel("Lidl")], ["Carrefour", "Marque Repère", "U", null]);
+
+// --- 18. Classement : le libellé du ticket pèse le plus
+{
+  const c = (ean: string, name: string, brand: string | null, quantity: string | null, ref?: number): Candidate =>
+    ({ ean, name, brand, quantity, image_url: null, source: "off", reference: ref ? { cents: ref, scope: "chain", n: 3 } : null });
+  const guess = {
+    words: [{ raw: "RAVIOLI", expanded: "raviolis" }, { raw: "VEGET", expanded: "végétariens" }],
+    brand: null, brand_raw: null, product_type: "raviolis", product_type_raw: "RAVIOLI",
+    variant: "végétariens", size: "650G", full_name: "Raviolis végétariens 650 g", category: "food" as const,
+  };
+  const r = rank([
+    c("3560070602735", "Grands Ravioli Cèpes", "Carrefour", "250 g", 290),
+    c("3270190174349", "Ravioli vegetariens", "Carrefour Bio", "650 g", 345),
+    c("3560071255589", "Ravioli Végétariens", "Carrefour Veggie", "650g"),
+    c("1234567890128", "Lasagnes végétariennes", "Carrefour", "650 g", 345),
+  ], { rawLabel: "*650G RAVIOLI VEGET", guess, chain: "Carrefour Market", unitPriceCents: 345 });
+  eq("18 bon produit en tête", r.candidates[0].ean, "3270190174349");
+  const lasagnes = r.candidates.find((x) => x.ean === "1234567890128")!;
+  eq("18 lasagnes pénalisées (type absent)", lasagnes.reasons.some((x) => x.startsWith("type « raviolis » absent")), true);
+  eq("18 les deux raviolis végétariens devant", r.candidates.slice(0, 2).map((x) => x.ean).sort(), ["3270190174349", "3560071255589"]);
+  eq("18 marque supposée signalée", r.uncertain_reasons.includes("marque supposée"), true);
+  console.log("     → raisons du 1er :", r.candidates[0].reasons.join(" · "));
 }
 
 console.log(fails ? `\n${fails} échec(s)` : "\nTout passe.");
