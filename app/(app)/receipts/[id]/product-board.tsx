@@ -62,6 +62,9 @@ const initialState = (it: BoardItem): ItemState => ({
   returnTo: "idle",
 });
 
+// Photos Open Food Facts en 200 px au lieu de 400 (≈ 3 fois plus légères sur mobile ; les deux tailles existent).
+const small = (url: string | null) => url?.replace(/\.400\.jpg$/, ".200.jpg") ?? null;
+
 // Ce que la carte affiche : le produit confirmé s'il y en a un, sinon le 1er candidat, sinon le libellé du ticket.
 function cardInfo(it: BoardItem, s: ItemState) {
   const top = s.candidates?.candidates[0] ?? null;
@@ -69,7 +72,7 @@ function cardInfo(it: BoardItem, s: ItemState) {
     return {
       name: s.confirmed.name,
       meta: [s.confirmed.brand, s.confirmed.quantity].filter(Boolean).join(" · ") || null,
-      image: s.confirmed.image_url,
+      image: small(s.confirmed.image_url),
       note: s.auto ? "Reconnu automatiquement" : s.confirmed.source === "user" ? "Saisi par vous" : null,
       noteTone: s.auto ? "text-green-700 dark:text-green-400" : "text-neutral-500",
     };
@@ -81,7 +84,7 @@ function cardInfo(it: BoardItem, s: ItemState) {
     return {
       name: top.name,
       meta: [top.brand, top.quantity].filter(Boolean).join(" · ") || null,
-      image: top.image_url,
+      image: small(top.image_url),
       note: "Le plus probable",
       noteTone: "text-neutral-500",
     };
@@ -146,6 +149,12 @@ export function ProductBoard({ receiptId, items, ticket }: { receiptId: string; 
     started.current = true;
     // Dans un microtask : l'effet ne doit pas déclencher de setState synchrone (react-hooks/set-state-in-effect).
     queueMicrotask(() => {
+      // Déjà connus à l'affichage (choix de clients ou résultat en cache) : un cas sûr est validé tout de suite, en « auto ».
+      for (const it of items) {
+        const s = state[it.id];
+        const top = s.candidates?.candidates[0];
+        if (s.candidates?.confident && top && !s.confirmed) void confirm(it.id, top.ean, { auto: true });
+      }
       const todo = items.filter((it) => !state[it.id].candidates && !state[it.id].confirmed).map((it) => it.id);
       const worker = async () => {
         for (let id = todo.shift(); id; id = todo.shift()) await identify(id);
@@ -445,7 +454,7 @@ function ProductPicker({ state: s, onPick, onRetry, onSearch, onManual }: {
           className="flex items-center gap-3 rounded-[14px] border border-line-strong/50 p-2 text-left disabled:opacity-50">
           {c.image_url
             // eslint-disable-next-line @next/next/no-img-element -- images Open Food Facts, domaine externe
-            ? <img src={c.image_url} alt="" className="size-12 shrink-0 rounded object-contain" onError={(e) => (e.currentTarget.style.display = "none")} />
+            ? <img src={small(c.image_url) ?? undefined} alt="" className="size-12 shrink-0 rounded object-contain" onError={(e) => (e.currentTarget.style.display = "none")} />
             : <span className="size-12 shrink-0 rounded bg-sunken" />}
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-medium">{c.name}</span>

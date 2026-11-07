@@ -2,15 +2,16 @@
 // Un seul article par appel (la page les lance en parallèle) pour tenir dans maxDuration.
 // Requêtes et barème inspirés du prototype Python (~/Documents/hackaton/resolve.py), sans Linkup (payant).
 import "server-only";
-import type { ProductCandidates } from "@/lib/shared/types";
+import { ProductCandidatesSchema, type ProductCandidates } from "@/lib/shared/types";
 import { labelSimilarity, normalize } from "../text";
 import { expandLabel } from "./expand";
-import { findConfirmedMatches } from "./matches";
+import { chainKey, findConfirmedMatches, labelKey } from "./matches";
+import { readCached, writeCached } from "./net";
 import { offDocument, quantityVariants, searchObf, searchOff, withImage, type Hit } from "./off";
 import { linkupEnabled, webProducts } from "./linkup";
 import { parseSizes } from "./ean";
 import { referencePrice, samePriceAtChain } from "./prices";
-import { labelWords, preScore, privateLabel, rank, wordHit, type Candidate } from "./rank";
+import { brandConflict, labelWords, preScore, privateLabel, rank, wordHit, type Candidate } from "./rank";
 import { tokens } from "../text";
 
 export type IdentifyInput = {
@@ -21,6 +22,7 @@ export type IdentifyInput = {
   excludeProofId?: number; // éval : ignorer les prix Open Prices de ce ticket
   userQuery?: string; // nom du produit tapé par l'utilisateur quand la première recherche n'a rien donné
   full?: boolean; // recherche complète même si le produit est déjà connu (« Chercher d'autres produits »)
+  registryBrand?: string | null; // marque du registre lue sur le ticket (resolveBrand) : garde-fou de la validation auto
 };
 
 const LINKUP_BELOW = 70; // secours Linkup si le meilleur score est sous ce seuil (ou aucun candidat)
@@ -33,36 +35,69 @@ const clean = (s: string | null | undefined) =>
 
 const eanKey = (ean: string) => ean.replace(/^0+/, "");
 
-/** debug (évals) : rempli avec les EAN trouvés par les recherches (pool) et ceux qui ont reçu un prix (shortlist). */
-export async function identifyProduct(input: IdentifyInput, debug?: { pool?: string[]; shortlist?: string[] }): Promise<ProductCandidates> {
-  // Produits déjà confirmés À LA MAIN par des clients pour ce libellé chez cette enseigne (requête rapide en base).
-  const confirmed = await findConfirmedMatches(input.chain, input.rawLabel).catch((err) => {
+// Dernier résultat d'identification pour ce libellé chez cette enseigne (lookup_cache), avec ses photos.
+const identifyKey = (chain: string | null, rawLabel: string) => `identify:v1|${chainKey(chain)}|${labelKey(rawLabel)}`;
+
+const loadConfirmed = (chain: string | null, rawLabel: string) =>
+  findConfirmedMatches(chain, rawLabel).catch((err) => {
     console.error("[product_matches]", err);
     return [];
   });
 
-  // Raccourci « déjà connu » : réponse immédiate avec la photo, sans LLM ni Open Food Facts ni Open Prices.
-  if (confirmed.length && !input.full && !input.userQuery) {
+/**
+ * Ce qu'on sait déjà pour ce libellé, SANS aucune recherche (page du ticket et /identify, même ordre) :
+ * 1) les produits choisis à la main par des clients (product_matches, manual_confirmations ≥ 1) ;
+ * 2) le dernier résultat d'identification en cache pour ce libellé et cette enseigne.
+ * null si rien n'est connu. Le garde-fou de marque est toujours réappliqué à la validation automatique.
+ */
+export async function knownCandidates(chain: string | null, rawLabel: string, registryBrand?: string | null): Promise<ProductCandidates | null> {
+  const confirmed = await loadConfirmed(chain, rawLabel);
+  if (confirmed.length) {
     const candidates = confirmed.slice(0, 3).map((m) => ({
-        ...m.product,
-        source: "confirmed_match" as const,
-        score: 100,
-        reference_price_cents: null,
-        reasons: [`confirmé ${m.confirmations} fois par des clients pour ce libellé chez cette enseigne`],
-      }));
+      ...m.product,
+      source: "confirmed_match" as const,
+      score: 100,
+      reference_price_cents: null,
+      reasons: [`confirmé ${m.confirmations} fois par des clients pour ce libellé chez cette enseigne`],
+    }));
     candidates[0] = await withImage(candidates[0]); // la carte affiche la photo du 1er
     return {
       llm_guess: null,
       candidates,
       uncertain: false,
       uncertain_reasons: [],
-      confident: true,
+      confident: !brandConflict(registryBrand, candidates[0].brand),
       searched_at: new Date().toISOString(),
     };
   }
+  const saved = ProductCandidatesSchema.safeParse(await readCached(identifyKey(chain, rawLabel)).catch(() => undefined));
+  if (saved.success && saved.data.candidates.length) {
+    const top = saved.data.candidates[0];
+    return { ...saved.data, confident: saved.data.confident && !brandConflict(registryBrand, top.brand) };
+  }
+  return null;
+}
+
+/** debug (évals) : rempli avec les EAN trouvés par les recherches (pool) et ceux qui ont reçu un prix (shortlist). */
+export async function identifyProduct(input: IdentifyInput, debug?: { pool?: string[]; shortlist?: string[] }): Promise<ProductCandidates> {
+  const t0 = Date.now();
+  const times: Record<string, number> = {};
+  const lap = (name: string, since: number) => (times[name] = Date.now() - since);
+
+  // Déjà connu (choix manuel ou dernier résultat) : réponse immédiate avec la photo, sans LLM ni recherche.
+  if (!input.full && !input.userQuery) {
+    const known = await knownCandidates(input.chain, input.rawLabel, input.registryBrand);
+    if (known) {
+      console.log(`[identify] ${JSON.stringify({ label: input.rawLabel, known: known.candidates[0]?.source, total_ms: Date.now() - t0 })}`);
+      return known;
+    }
+  }
+  const confirmed = await loadConfirmed(input.chain, input.rawLabel); // pour le bonus +30 en recherche complète
 
   // Avec un nom tapé par l'utilisateur, pas besoin de faire deviner le libellé au LLM.
+  let since = Date.now();
   const guess = input.userQuery ? null : await expandLabel(input.rawLabel, input.chain, input.section, input.unitPriceCents);
+  lap("llm_ms", since);
 
   const type = guess?.product_type ?? null;
   const variant = guess?.variant ?? null;
@@ -100,7 +135,9 @@ export async function identifyProduct(input: IdentifyInput, debug?: { pool?: str
     ),
   );
 
+  since = Date.now();
   const results = await Promise.all(searches.map((p) => p.catch((err) => (console.error("[search]", err), [] as Hit[]))));
+  lap("search_ms", since);
 
   // Fusion par EAN (sans zéros de tête) : les produits déjà confirmés pour ce libellé passent devant.
   const byEan = new Map<string, Candidate>();
@@ -116,22 +153,27 @@ export async function identifyProduct(input: IdentifyInput, debug?: { pool?: str
 
   // Prix de référence pour les meilleurs candidats seulement (limite les appels Open Prices).
   // Le texte de l'utilisateur est la meilleure preuve quand il existe ; sinon le libellé du ticket.
-  const rankInput = { rawLabel: input.userQuery ?? input.rawLabel, guess, chain: input.chain, unitPriceCents: input.unitPriceCents };
+  const rankInput = {
+    rawLabel: input.userQuery ?? input.rawLabel, guess, chain: input.chain, unitPriceCents: input.unitPriceCents, registryBrand: input.registryBrand,
+  };
   const shortlist = [...byEan.values()].sort((a, b) => preScore(b, rankInput) - preScore(a, rankInput)).slice(0, PRICED);
   if (debug) {
     debug.pool = [...byEan.keys()];
     debug.shortlist = shortlist.map((c) => eanKey(c.ean));
   }
+  since = Date.now();
   await Promise.all(
     shortlist.map(async (c) => {
       if (c.reference === undefined) c.reference = await referencePrice(c.ean, input.chain, input.excludeProofId).catch(() => null);
     }),
   );
+  lap("prices_ms", since);
 
   let ranked = rank(shortlist, rankInput);
 
   // Secours web (Linkup, payant) : seulement si Open Food Facts n'a rien trouvé de bon. Un appel, jamais relancé.
   if (linkupEnabled() && (!ranked.candidates.length || ranked.candidates[0].score < LINKUP_BELOW)) {
+    since = Date.now();
     const extra: Candidate[] = [];
     for (const w of await webProducts(input.rawLabel, input.chain, input.unitPriceCents)) {
       // EAN lu dans une source → sa fiche ; sinon on relance Open Food Facts avec le vrai nom trouvé sur le web
@@ -150,9 +192,19 @@ export async function identifyProduct(input: IdentifyInput, debug?: { pool?: str
     await Promise.all(extra.map(async (c) => (c.reference = await referencePrice(c.ean, input.chain, input.excludeProofId).catch(() => null))));
     if (debug) debug.pool = [...byEan.keys()];
     if (extra.length) ranked = rank([...shortlist, ...extra], rankInput);
+    lap("linkup_ms", since);
   }
 
   // La carte affiche la photo du 1er : si la recherche ne l'a pas donnée, on la prend sur la fiche produit.
+  since = Date.now();
   if (ranked.candidates[0]) ranked.candidates[0] = await withImage(ranked.candidates[0]);
-  return { ...ranked, searched_at: new Date().toISOString() };
+  lap("image_ms", since);
+  const result: ProductCandidates = { ...ranked, searched_at: new Date().toISOString() };
+
+  // Mis en cache par libellé (pas un nom tapé, pas une éval, jamais un résultat vide) : affichage instantané la fois suivante.
+  if (!input.userQuery && input.excludeProofId === undefined && result.candidates.length) {
+    await writeCached(identifyKey(input.chain, input.rawLabel), result).catch((err) => console.error("[identify cache]", err));
+  }
+  console.log(`[identify] ${JSON.stringify({ label: input.rawLabel, total_ms: Date.now() - t0, ...times, candidates: result.candidates.length })}`);
+  return result;
 }

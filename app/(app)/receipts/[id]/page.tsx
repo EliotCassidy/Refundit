@@ -5,6 +5,9 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/shared/supabase/server";
 import { frDate } from "@/lib/receipts/format";
 import type { ReceiptExtraction } from "@/lib/receipts/parse";
+import type { Json } from "@/lib/shared/database.types";
+import { knownCandidates } from "@/lib/receipts/products";
+import { resolveBrand } from "@/lib/brands";
 import { ProductBoard, type BoardItem } from "./product-board";
 
 export default async function ReceiptPage({ params }: PageProps<"/receipts/[id]">) {
@@ -40,14 +43,27 @@ export default async function ReceiptPage({ params }: PageProps<"/receipts/[id]"
     const it = x?.items?.[position];
     return it && it.raw_label.trim() === label ? it.discount_cents : 0;
   };
-  const boardItems: BoardItem[] = (items ?? []).map((it) => ({
+  // Photo instantanée : pour les produits pas encore identifiés, ce qu'on sait déjà de ce libellé (choix manuels de clients,
+  // sinon dernier résultat en cache), même ordre que /identify. Enregistré sur l'article : /confirm le retrouve.
+  const chain = x?.store?.chain ?? receipt.store_name;
+  const known = await Promise.all(
+    (items ?? []).map(async (it) => {
+      if (it.product_candidates || it.confirmed_product) return null;
+      const registryBrand = (await resolveBrand(it.raw_label, null).catch(() => null))?.name ?? null;
+      const found = await knownCandidates(chain, it.raw_label, registryBrand).catch(() => null);
+      if (found) await supabase.from("line_items").update({ product_candidates: found as unknown as Json }).eq("id", it.id);
+      return found;
+    }),
+  );
+
+  const boardItems: BoardItem[] = (items ?? []).map((it, i) => ({
     id: it.id,
     raw_label: it.raw_label,
     quantity: Number(it.quantity),
     total_price_cents: it.total_price_cents,
     discount_cents: discountOf(it.position, it.raw_label),
     confirmed_product: it.confirmed_product,
-    product_candidates: it.product_candidates,
+    product_candidates: known[i] ?? it.product_candidates,
   }));
 
   return (

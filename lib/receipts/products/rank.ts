@@ -21,6 +21,7 @@ export type RankInput = {
   guess: Guess | null;
   chain: string | null;
   unitPriceCents: number | null; // prix unitaire payé AVANT remise (comparé à un prix normal)
+  registryBrand?: string | null; // marque du registre lue sur le ticket (resolveBrand), pour le garde-fou de validation auto
 };
 
 // Marques de distributeur : uniquement les plus sûres (la recherche « MDD » du brief).
@@ -174,7 +175,7 @@ export function rank(candidates: Candidate[], input: RankInput): Omit<ProductCan
     })),
     uncertain: uncertain_reasons.length > 0,
     uncertain_reasons,
-    confident: isConfident(scored),
+    confident: isConfident(scored, input.registryBrand),
   };
 }
 
@@ -186,8 +187,19 @@ const CONFIDENT_SCORE = 90;
 const CONFIDENT_MIN_SCORE = 60;
 const CONFIDENT_GAP = 20;
 
-function isConfident(scored: { score: number }[]): boolean {
+function isConfident(scored: { score: number; brand: string | null }[], registryBrand?: string | null): boolean {
   const [top, second] = scored;
-  if (!top) return false;
+  if (!top || brandConflict(registryBrand, top.brand)) return false;
   return top.score >= CONFIDENT_SCORE || (top.score >= CONFIDENT_MIN_SCORE && top.score - (second?.score ?? 0) >= CONFIDENT_GAP);
+}
+
+/**
+ * Garde-fou de la validation AUTOMATIQUE : le ticket nomme une marque du registre (ex. « NOTCOCA » → NotCoca) et le produit
+ * proposé est d'une autre marque (ex. Coca-Cola, même prix) → jamais validé tout seul. Un choix manuel n'est pas concerné.
+ */
+export function brandConflict(registryBrand: string | null | undefined, brand: string | null): boolean {
+  if (!registryBrand) return false;
+  if (!brand) return true; // marque inconnue : on ne peut pas affirmer que c'est la bonne
+  const a = normalize(registryBrand), b = normalize(brand);
+  return !(b.includes(a) || a.includes(b) || labelSimilarity(registryBrand, brand) >= 0.8);
 }

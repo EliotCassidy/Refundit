@@ -17,17 +17,32 @@ function toContact(b: BrandRow): BrandContact {
   };
 }
 
-/** Case-insensitive match on brand name and aliases. Registry only, no network call. */
-export async function resolveBrand(label: string, brandGuess: string | null): Promise<{ brandId: string } | null> {
+/** Texte comparable : minuscules, sans accents, ponctuation → espaces. */
+const brandText = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ");
+
+/**
+ * Marque du registre lue dans le libellé (et/ou une marque supposée). Comparaison par mots, la correspondance la plus
+ * longue gagne : « NOTCOCA » donne NotCoca, pas Coca-Cola (« coca » n'est pas au début d'un mot de « notcoca »).
+ * - nom de marque : mot(s) entier(s) (« Lu » ne trouve pas « lucky ») ;
+ * - alias : début de mot (« pringl » trouve « pringles ») ; un alias écrit avec une espace finale (« lu ») = mot entier.
+ * Registre seulement, aucun appel réseau.
+ */
+export async function resolveBrand(label: string, brandGuess: string | null): Promise<{ brandId: string; name: string } | null> {
   const db = createAdminClient();
   const { data: brands, error } = await db.from("brands").select("id, name, aliases");
   if (error) throw error;
 
-  const haystack = `${brandGuess ?? ""} ${label}`.toLowerCase();
-  const match = brands.find(
-    (b) => haystack.includes(b.name.toLowerCase()) || b.aliases.some((a) => a && haystack.includes(a.toLowerCase())),
-  );
-  return match ? { brandId: match.id } : null;
+  const hay = ` ${brandText(`${brandGuess ?? ""} ${label}`).trim()} `;
+  let best: { brandId: string; name: string; length: number } | null = null;
+  for (const b of brands) {
+    const options = [{ text: b.name, wholeWord: true }, ...b.aliases.map((a) => ({ text: a, wholeWord: a.endsWith(" ") }))];
+    for (const o of options) {
+      const t = brandText(o.text ?? "").trim();
+      if (!t || !hay.includes(` ${t}${o.wholeWord ? " " : ""}`)) continue;
+      if (!best || t.length > best.length) best = { brandId: b.id, name: b.name, length: t.length };
+    }
+  }
+  return best ? { brandId: best.brandId, name: best.name } : null;
 }
 
 async function findBrand(input: { brandId: string } | { brandName: string }): Promise<BrandRow | null> {

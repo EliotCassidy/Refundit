@@ -107,7 +107,7 @@ All tables have `id uuid primary key default gen_random_uuid()` and `created_at 
 | confirmed_product | jsonb | `ConfirmedProduct` (§3). **NULL until the user validates.** The only product field the agent may trust |
 
 ### `product_matches` (owner: Dev 1, service role only)
-Shared cache of products confirmed by users: `(store_chain, label_key) → ean`. A confirmed match is ranked first next time; the user still confirms (never auto-confirmed).
+Shared cache of products confirmed by users: `(store_chain, label_key) → ean`. A label with a manual match is answered at once by `/identify` and pre-filled by the receipt page (`knownCandidates`, §5). The seed adds one row for the demo NotCoca line (fictional EAN `2000000000008`, GS1 prefix 20–29 = in-store use, never a real product).
 | column | type | notes |
 |---|---|---|
 | store_chain | text not null default '' | normalized chain printed on the receipt |
@@ -116,6 +116,7 @@ Shared cache of products confirmed by users: `(store_chain, label_key) → ean`.
 | ean | text not null | unique with (store_chain, label_key) |
 | product | jsonb not null | same shape as a confirmed `confirmed_product` |
 | confirmations | integer default 1 | |
+| last_confirmed_at | timestamptz | |
 | manual_confirmations | integer not null default 0 | explicit user choices only (click on a candidate, typed barcode). Automatic validations never write here. The "already known" shortcut and the +30 bonus use only rows with `manual_confirmations ≥ 1` |
 
 ### `lookup_cache` (owner: Dev 1, service role only)
@@ -127,7 +128,7 @@ Persistent cache of product lookups in production (Vercel has no disk): OFF / OB
 | empty | boolean not null default false | "not found" / empty result: expires after 24 h |
 | created_at | timestamptz | refreshed on each upsert |
 Only real answers are stored (200, or 404): never an error, a 429/5xx or a timeout.
-| last_confirmed_at | timestamptz | |
+Also holds the last full `/identify` result per label: key `identify:v1|<normalized chain>|<normalized raw_label>` → `ProductCandidates` (photos included), read by `knownCandidates` (§5).
 
 ### `claims` (insert: Dev 1 as `draft` · every later update: Dev 2)
 | column | type | written by |
@@ -282,7 +283,9 @@ export type BrandContact = {
 
 ```ts
 // lib/brands/index.ts (resolveBrand: Dev 1 · getBrandContact: Dev 2)
-export async function resolveBrand(label: string, brandGuess: string | null): Promise<{ brandId: string } | null>;
+/** Registry brand read in the label: whole words for brand names, word start for aliases (an alias ending with a space
+ *  = whole word), longest match wins ("NOTCOCA" → NotCoca, not Coca-Cola). Registry only, no network call. */
+export async function resolveBrand(label: string, brandGuess: string | null): Promise<{ brandId: string; name: string } | null>;
 /** (Dev 2) Registry entry; if unknown or without contact_url/contact_email and never checked, runs ONE Linkup lookup
  *  (lib/brands/discover.ts) and caches it in brands (source='linkup', verified=false, last_checked_at=now). */
 export async function getBrandContact(input: { brandId: string } | { brandName: string }): Promise<BrandContact>;
@@ -304,8 +307,8 @@ All endpoints use JSON unless noted. Errors return `{ "error": { "code": string,
 |---|---|---|---|
 | POST | `/api/receipts` | multipart: `image` (jpeg/png/webp/heic **≤ 4.5 MB**: Vercel's body limit, the page downsizes the photo first) | `201 { receiptId, status: "parsed" \| "failed", items: LineItemRow[] }` (synchronous parse, `maxDuration=120`) · `413 image_too_large` · `402 scan_limit_reached` (monthly free quota used, checked before upload; bypassed for emails listed in `SCAN_QUOTA_EXEMPT_EMAILS`) |
 | POST | `/api/profile` | `{ first_name, last_name, phone, address_line1, address_line2?, postal_code, city, country? }` (zod-validated, French error messages; `country` defaults to `FR`) | `200 { profile }` (creates or updates the signed-in user's `profiles` row, `id` = `auth.users.id`, via RLS) · `400 invalid_profile` · `401` |
-| POST | `/api/receipts/:id/identify` | `{ lineItemId, ean?, query?, full? }` (**one item per call**; the page runs 3 at a time). If a product was already confirmed by hand for this label at this chain, it is returned at once (`source: confirmed_match`, `confident`, no LLM/OFF call) unless `full: true` ("Chercher d'autres produits"). Fallbacks when the product isn't proposed: `ean` = barcode typed or scanned by the user (exact OFF/OBF product), `query` = product name typed by the user | `200 { lineItemId, productCandidates: ProductCandidates }`, also saved in `line_items.product_candidates` (`maxDuration=60`) · `400 invalid_ean` · `404 ean_unknown` |
-| POST | `/api/receipts/:id/confirm` | `{ lineItemId, ean: string \| null, manual?: { name, brand?, quantity? }, auto? }` (`auto: true` = validated automatically by the page: sets `confirmed_product` but never writes `product_matches`): `ean` must be a proposed candidate; `null` = "je ne trouve pas mon produit" (`not_found`); `null` + `manual` = product typed by the user (`confirmed`, source `user`, no EAN) | `200 { lineItemId, confirmedProduct: ConfirmedProduct }`; updates `ean`, `product_name`, `brand_name_guess`, `brand_id` and, for explicit choices of DB products only, `product_matches` (`manual_confirmations + 1`) |
+| POST | `/api/receipts/:id/identify` | `{ lineItemId, ean?, query?, full? }` (**one item per call**; the page runs 3 at a time). Without `ean`/`query`/`full`, `knownCandidates(chain, raw_label)` answers at once when the label is known, in this order: 1) products confirmed by hand for this label at this chain (`product_matches`, `manual_confirmations ≥ 1`, `source: confirmed_match`), 2) the last full result for this label (`lookup_cache`); otherwise the full search runs and its result is cached per label. `full: true` ("Chercher d'autres produits") skips both. The receipt page (`/receipts/[id]`) calls the same `knownCandidates` on load for items without candidates and saves them in `product_candidates`, so known photos show without any `/identify` call. **Brand guard:** if the label matches a registry brand (`resolveBrand`) and the 1st candidate is another brand, `confident` is false (never auto-validated). Fallbacks when the product isn't proposed: `ean` = barcode typed or scanned by the user (exact OFF/OBF product), `query` = product name typed by the user | `200 { lineItemId, productCandidates: ProductCandidates }`, also saved in `line_items.product_candidates` (`maxDuration=60`) · `400 invalid_ean` · `404 ean_unknown` |
+| POST | `/api/receipts/:id/confirm` | `{ lineItemId, ean: string \| null, manual?: { name, brand?, quantity? }, auto? }` (`auto: true` = validated automatically by the page: sets `confirmed_product` but never writes `product_matches`, and keeps the registry brand read in the label when there is one; an explicit choice keeps the chosen product's brand): `ean` must be a proposed candidate; `null` = "je ne trouve pas mon produit" (`not_found`); `null` + `manual` = product typed by the user (`confirmed`, source `user`, no EAN) | `200 { lineItemId, confirmedProduct: ConfirmedProduct }`; updates `ean`, `product_name`, `brand_name_guess`, `brand_id` and, for explicit choices of DB products only, `product_matches` (`manual_confirmations + 1`) |
 | POST | `/api/claims` | `{ receiptId, items: [{ lineItemId, issueType, issueDescription?, issuePhotoPath? }] }` | `201 { claimIds: string[] }`. Inserts `draft` claims, then calls submit for each. `400 product_not_confirmed` if an item has `confirmed_product = null` |
 
 **Product identity in claims (Dev 2 reads, Dev 1 guarantees).** Read the product from `line_items.confirmed_product`:

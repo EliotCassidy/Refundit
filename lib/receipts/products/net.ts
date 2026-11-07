@@ -99,6 +99,17 @@ async function cacheSet(key: string, value: unknown) {
   if (error) console.error("[lookup_cache] écriture", error.message);
 }
 
+/** Lit une valeur en cache par clé (mêmes règles : vide expiré après 24 h). undefined si absente. */
+export async function readCached<T>(key: string): Promise<T | undefined> {
+  const hit = await cacheGet(createHash("sha1").update(key).digest("hex"));
+  return hit.hit ? (hit.value as T) : undefined;
+}
+
+/** Écrit une vraie réponse en cache par clé (jamais une erreur : l'appelant n'écrit qu'un résultat obtenu). */
+export async function writeCached(key: string, value: unknown): Promise<void> {
+  await cacheSet(createHash("sha1").update(key).digest("hex"), value);
+}
+
 /** Met en cache le résultat d'un calcul coûteux (ex. un appel LLM), par clé. Une erreur (exception) n'est jamais mise en cache. */
 export async function cached<T>(key: string, compute: () => Promise<T>): Promise<T> {
   const k = createHash("sha1").update(key).digest("hex");

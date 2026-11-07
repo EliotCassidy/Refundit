@@ -93,6 +93,7 @@ async function main() {
         chain,
         unitPriceCents: Math.round(it.price_cents / it.qty),
         excludeProofId: known.proof_id,
+        full: true, // l'éval ne lit jamais le cache par libellé (ni les choix manuels)
       }, debug).catch((err) => {
         console.error(`  [${id}] ${it.raw_label} : ${err}`);
         return null;

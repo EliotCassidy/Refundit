@@ -99,7 +99,11 @@ export async function POST(request: Request, ctx: RouteContext<"/api/receipts/[i
     source: candidate.source,
   });
   const confirmedProduct: ConfirmedProduct = { status: "confirmed", ...product };
-  const brand = await resolveBrand(`${product.brand ?? ""} ${product.name}`, product.brand);
+  const productBrand = await resolveBrand(`${product.brand ?? ""} ${product.name}`, product.brand);
+  // Validation AUTOMATIQUE : la marque du registre lue sur le ticket (ex. « NOTCOCA ») prime sur celle du produit proposé,
+  // pour que la réclamation ne parte jamais chez une autre marque. Un choix manuel garde la marque du produit choisi.
+  const labelBrand = body.data.auto ? await resolveBrand(item.raw_label, null) : null;
+  const brandId = labelBrand && labelBrand.brandId !== productBrand?.brandId ? labelBrand.brandId : (productBrand?.brandId ?? null);
   const displayName = product.quantity && !product.name.includes(product.quantity) ? `${product.name} ${product.quantity}` : product.name;
 
   const { error } = await supabase
@@ -109,7 +113,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/receipts/[i
       ean: product.ean,
       product_name: displayName,
       brand_name_guess: product.brand,
-      brand_id: brand?.brandId ?? null,
+      brand_id: brandId,
     })
     .eq("id", item.id);
   if (error) return apiError(500, "db_error", error.message);

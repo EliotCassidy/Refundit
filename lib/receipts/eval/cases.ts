@@ -3,7 +3,7 @@
 import { interpret, parseDate, parseTime, toPurchasedAt, parseCents, type Transcription } from "../interpret";
 import { runChecks } from "../checks";
 import { isValidEan, parseSizes, sizesMatch } from "../products/ean";
-import { rank, privateLabel, type Candidate } from "../products/rank";
+import { rank, privateLabel, brandConflict, type Candidate } from "../products/rank";
 import { quantityVariants } from "../products/off";
 import { getJson, isEmptyResult, isFresh } from "../products/net";
 
@@ -301,6 +301,27 @@ eq("19 vide", [isEmptyResult(null), isEmptyResult([]), isEmptyResult({ hits: [] 
   const now = Date.now();
   eq("19 frais", [isFresh({ empty: false, at: 0 }, now), isFresh({ empty: true, at: now - 3_600_000 }, now), isFresh({ empty: true, at: now - 25 * 3_600_000 }, now)],
     [true, true, false]);
+}
+
+// --- 20. Garde-fou marque (validation auto seulement) : un produit d'une autre marque que celle du registre lue sur
+// le ticket n'est jamais validé automatiquement (ex. le vrai Coca-Cola sur la ligne NOTCOCA de la démo).
+eq("20 conflit de marque",
+  [brandConflict("NotCoca", "Coca-Cola"), brandConflict("Coca-Cola", "Coca-Cola"), brandConflict("Coca-Cola", "Coca-Cola Europacific Partners"),
+    brandConflict(null, "Coca-Cola"), brandConflict("Lu", null), brandConflict("Bonne Maman", "Bonne maman")],
+  [true, false, false, false, true, false]);
+{
+  const coca: Candidate = { ean: "5449000267412", name: "Coca-Cola goût original", brand: "Coca-Cola", quantity: "1,75 L", image_url: null,
+    source: "off", reference: { cents: 245, scope: "chain", n: 5 } };
+  const guess = {
+    words: [{ raw: "COCA", expanded: "coca" }, { raw: "COLA", expanded: "cola" }],
+    brand: "Coca-Cola", brand_raw: "COCA COLA", product_type: "cola", product_type_raw: "COCA COLA",
+    variant: null, size: "1.75L", full_name: "Coca-Cola 1,75 L", category: "food" as const,
+  };
+  const input = { rawLabel: "COCA COLA 1.75L", guess, chain: "Carrefour Market", unitPriceCents: 245 };
+  const base = rank([coca], input).confident;
+  eq("20 même marque au registre : confiance inchangée", rank([coca], { ...input, registryBrand: "Coca-Cola" }).confident, base);
+  eq("20 autre marque au registre : jamais validé auto", rank([coca], { ...input, registryBrand: "NotCoca" }).confident, false);
+  console.log("     → confiance sans registre :", base);
 }
 
 async function asyncCases() {

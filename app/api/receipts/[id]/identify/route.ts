@@ -10,6 +10,7 @@ import { identifyProduct } from "@/lib/receipts/products";
 import { isValidEan } from "@/lib/receipts/products/ean";
 import { obfProduct, offDocument } from "@/lib/receipts/products/off";
 import type { ProductCandidates } from "@/lib/shared/types";
+import { resolveBrand } from "@/lib/brands";
 
 // 1 appel LLM court + 2 à 4 recherches + jusqu'à 6 prix Open Prices (débit limité) ≈ 2-15 s
 export const maxDuration = 60;
@@ -71,6 +72,8 @@ export async function POST(request: Request, ctx: RouteContext<"/api/receipts/[i
       unitPriceCents,
       userQuery: body.data.query,
       full: body.data.full,
+      // marque du registre lue sur le ticket (ex. NotCoca) : jamais de validation auto d'une autre marque
+      registryBrand: (await resolveBrand(item.raw_label, null).catch(() => null))?.name ?? null,
     });
   }
 
