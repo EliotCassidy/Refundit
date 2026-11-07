@@ -1,12 +1,13 @@
 // OWNER: Dev 2. Claim submission (ARCHITECTURE.md §4.3, §5).
-// Channel order: brand web form via the H agent → email fallback (Resend) → needs_manual.
+// Channel order: brand web form via the H agent → email fallback (Gmail) → needs_manual.
 // SDK: `hai-agents` (verified against node_modules/hai-agents/dist/index.d.ts v1.3.2).
 import "server-only";
 import { randomBytes } from "node:crypto";
 import { HaiAgentsClient } from "hai-agents";
 import { getBrandContact } from "@/lib/brands";
 import { transitionClaim } from "@/lib/claims/transition";
-import { emailSendingConfigured, sendComplaintEmail } from "@/lib/email/send";
+import { newAlias, plusAddress } from "@/lib/email/address";
+import { emailSendingConfigured, sendEmail } from "@/lib/email/send";
 import { env, flags } from "@/lib/shared/env";
 import { createAdminClient } from "@/lib/shared/supabase/admin";
 import { AgentAnswerSchema, ConfirmedProductSchema, type BrandContact, type ClaimRow } from "@/lib/shared/types";
@@ -22,11 +23,12 @@ function h() {
   return client;
 }
 
+/** The email given to brands: the claim's Gmail plus address (never the user's real email). */
 export function inboundAddress(alias: string): string {
-  const domain = process.env.INBOUND_DOMAIN;
-  if (domain) return `${alias}@${domain}`;
+  const address = plusAddress(alias);
+  if (address) return address;
   if (flags.agentDryRun()) return `${alias}@inbound.invalid`; // dry run never sends anything
-  throw new Error("INBOUND_DOMAIN is required for real (non dry-run) submissions");
+  throw new Error("GMAIL_USER is required for real (non dry-run) submissions");
 }
 
 async function loadReceiptFile(imagePath: string) {
@@ -74,7 +76,7 @@ async function buildContext(claim: ClaimRow, contactOverride?: BrandContact) {
         ? await getBrandContact({ brandName })
         : null);
 
-  const alias = claim.inbound_alias ?? `claim-${randomBytes(4).toString("hex")}`;
+  const alias = claim.inbound_alias ?? newAlias(randomBytes(4).toString("hex"));
   const file = await loadReceiptFile(receipt.image_path);
   const displayBrand = product.identified ? product.brand || contact?.name || null : null;
   const complaintText = buildComplaintText({
@@ -90,6 +92,7 @@ async function buildContext(claim: ClaimRow, contactOverride?: BrandContact) {
     issueDescription: claim.issue_description,
     hasReceiptAttachment: Boolean(file),
     extraDetails: userAnswers(claim),
+    reference: alias,
   });
   return { item, receipt, profile, contact, alias, file, product, displayBrand, complaintText };
 }
@@ -116,12 +119,11 @@ async function submitByEmail(claim: ClaimRow, ctx: ClaimContext, extra: Record<s
     return "needs_manual" as const;
   }
   try {
-    const { id } = await sendComplaintEmail({
+    const { id } = await sendEmail({
       to,
       fromName: `${ctx.profile.first_name} ${ctx.profile.last_name}`,
       alias: ctx.alias,
-      replyTo: inboundAddress(ctx.alias),
-      subject: ctx.product.identified ? `Réclamation produit : ${ctx.product.name}` : "Réclamation produit",
+      subject: `${ctx.product.identified ? `Réclamation produit : ${ctx.product.name}` : "Réclamation produit"} [${ctx.alias}]`,
       text: ctx.complaintText,
       attachment: ctx.file ? { filename: ctx.file.name, base64: ctx.file.source, contentType: ctx.file.mediaType } : null,
     });

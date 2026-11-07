@@ -68,7 +68,7 @@ All tables have `id uuid primary key default gen_random_uuid()` and `created_at 
 | manufacturer | text | e.g. "Kellanova" |
 | aliases | text[] default '{}' | lowercase receipt spellings, e.g. `{pringles,pringl}` |
 | contact_url | text | customer-service form URL (→ H agent) |
-| contact_email | text | customer-service email (→ email fallback via Resend) |
+| contact_email | text | customer-service email (→ email fallback via Gmail) |
 | agent_hints | text | free text for the agent prompt ("choose 'Réclamation produit' in the subject dropdown") |
 | requires_receipt_upload | boolean default false | |
 | captcha_observed | boolean default false | |
@@ -129,7 +129,7 @@ Shared cache of products confirmed by users: `(store_chain, label_key) → ean`.
 | issue_description | text | Dev 1 (user free text) |
 | issue_photo_path | text | Dev 1 (optional Storage path) |
 | status | claim_status not null default 'draft' | Dev 2 (after draft) |
-| inbound_alias | text unique | Dev 2, e.g. `claim-8f3k2a` |
+| inbound_alias | text unique | Dev 2, e.g. `claim-8f3e2a1b` |
 | complaint_text | text | Dev 2 |
 | h_session_id | text | Dev 2 |
 | h_agent_view_url | text | Dev 2 |
@@ -258,7 +258,7 @@ export type BrandContact = {
   brandId: string;
   name: string;
   contactUrl: string | null;   // web form → H agent
-  contactEmail: string | null; // fallback: no form, or agent blocked → email via Resend
+  contactEmail: string | null; // fallback: no form, or agent blocked → email via Gmail
   agentHints: string | null;
   requiresReceiptUpload: boolean;
   verified: boolean;
@@ -308,7 +308,7 @@ Reads (receipt, items, profile) go directly through the Supabase client with RLS
 | POST | `/api/claims/:id/answers` | `{ answers: { "<field label>": "<value>" } }` (only `missing_fields` keys are kept) | `200 { status: "waiting_input", remaining: string[] }` while fields are missing · then resubmits: `202 { status: "submitting", agentViewUrl }` · `409` if not `waiting_input` |
 | POST | `/api/claims/:id/sync` | none | `200 { status }`. Polls H if `submitting`; the claim page calls it every 5s |
 | POST | `/api/webhooks/h` | H webhook payload `{type,id,created_at,data:{session_id,status,previous_status}}` | `200` (idempotent on `X-H-Webhook-Delivery`) |
-| POST | `/api/webhooks/resend` | Resend `email.received` event (Svix-signed) | `200` |
+| POST | `/api/email/poll` | none (user session or `x-internal-key`) | `200 { scanned, stored, skipped }` or `{ skipped: "throttled" }`. Reads brand replies from the Gmail inbox (IMAP), at most once a minute; called by the dashboard |
 
 `/submit` and `/cancel` accept either the user's session (the owner of the claim) or the header `x-internal-key: $INTERNAL_API_KEY` for server-to-server calls from `/api/claims`.
 

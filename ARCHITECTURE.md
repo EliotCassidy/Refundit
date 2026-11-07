@@ -50,7 +50,7 @@
  parsing     lookup         fills brand form
                                    │ brand replies to claim alias
                                    ▼
-                             Resend Inbound ──webhook──► /api/webhooks/resend
+                             Gmail inbox ──IMAP poll──► /api/email/poll (on dashboard open)
 ```
 
 It's one Next.js app with no separate backend, no queue and no worker. The long-running work (the agent) runs on H's infrastructure. We create a session and react to webhooks.
@@ -65,7 +65,7 @@ It's one Next.js app with no separate backend, no queue and no worker. The long-
 | C4 | Brand registry + resolution + Linkup | Dev 1 | `lib/brands/**`, `supabase/seed/brands.*` |
 | C5 | Claim submission / H agent | Dev 2 | `lib/agent/**`, `app/api/claims/[id]/{submit,cancel,sync}` |
 | C6 | Claim state machine | Dev 2 | `lib/claims/**` |
-| C7 | Inbound email + classification | Dev 2 | `lib/email/**`, `app/api/webhooks/resend` |
+| C7 | Email (Gmail): fallback sending, reply polling + classification | Dev 2 | `lib/email/**`, `app/api/email/poll` |
 | C8 | Claims dashboard + claim detail | Dev 2 | `app/(app)/claims/**` |
 | S | Shared: types, Supabase clients, LLM helper, UI kit | Both | `lib/shared/**`, `components/ui/**` |
 
@@ -90,11 +90,11 @@ It's one Next.js app with no separate backend, no queue and no worker. The long-
 `POST /api/claims/{id}/submit`:
 1. Load the claim, line item, receipt, profile and brand.
 2. **Brand contact:** call `getBrandContact(brandId | brandNameGuess)`. It returns the registry entry or runs a Linkup lookup and saves the result.
-   - **Channel order:** `contact_url` → H agent (web form). No form but a `contact_email` → **email fallback** (Resend, sent from the claim alias, Reply-To = inbound address). Neither → `needs_manual`.
+   - **Channel order:** `contact_url` → H agent (web form). No form but a `contact_email` → **email fallback** (Gmail SMTP from the dedicated account, Reply-To = the claim's plus address). Neither → `needs_manual`.
    - If the agent ends blocked (`captcha`, `login_required`, `no_contact_form`, …) and the brand has a `contact_email`, `syncClaim` falls back to email instead of `needs_manual`.
-   - In dry run, the email is not sent (claim → `submitted` + `dry_run`). Without `RESEND_FROM_DOMAIN` (a domain verified for sending), a real run → `needs_manual` "email_not_configured".
+   - In dry run, the email is not sent (claim → `submitted` + `dry_run`). Without `GMAIL_USER` / `GMAIL_APP_PASSWORD`, a real run → `needs_manual` "email_not_configured".
    - If there's no contact URL, move to `needs_manual` with reason `no_contact_form`.
-3. Generate `inbound_alias` (for example `claim-8f3k2a`) and the inbound address.
+3. Generate `inbound_alias` (for example `claim-8f3e2a1b`) and the inbound address.
 4. **Complaint text:** a deterministic French template (`lib/agent/complaint.ts`, no LLM, so nothing can be invented) builds a short, polite complaint from facts only:
    - product
    - purchase date and store
@@ -113,11 +113,11 @@ It's one Next.js app with no separate backend, no queue and no worker. The long-
 - **Fallback:** `POST /api/claims/{id}/sync` polls `GET /api/v2/sessions/{id}`. The claim page calls it every 5s while the claim is `submitting`. This is required in local dev, where H can't reach localhost (H rejects private hosts).
 
 ### 4.5 Brand reply (Dev 2)
-1. The brand emails `claim-8f3k2a@<id>.resend.app`.
-2. Resend posts `email.received` to `/api/webhooks/resend`. Verify the Svix signature.
-3. The webhook only carries metadata, so **fetch the body via Resend's Receiving API**.
-4. Match the claim by recipient local part → `claims.inbound_alias`. If nothing matches, store the email with `claim_id=null` and log it.
-5. Store a `claim_emails` row, then classify the email with the LLM (§6) and transition the claim's status.
+One dedicated Gmail account (free, no domain). Each claim gets a **plus address**: `refundit.reclamations+claim-8f3e2a1b@gmail.com` (Gmail delivers it to the main inbox). It is the only email given to brands (forms and emails). Because some forms reject "+", the complaint text also ends with `Référence de ma demande : claim-8f3e2a1b`.
+1. Gmail has no webhook: `POST /api/email/poll` reads unread inbox messages of the last 14 days over IMAP. The dashboard calls it when it opens (throttled to once a minute).
+2. The claim is matched by the plus tag in To/Cc/Delivered-To, else by `claim-xxxxxxxx` in the subject/body. Other messages are left unread and ignored.
+3. A `claim_emails` row is stored (idempotent on Message-ID), the LLM classifies it (§6), the claim status changes, the message is marked read.
+4. If the brand **asks for information** (`waiting_input` with `missing_fields` from the classification), the dashboard asks the user; `/answers` then **replies to the brand's email** (In-Reply-To) instead of refiling the form, and the claim goes back to `submitted`.
 
 ### 4.6 Dashboard (Dev 2)
 The pages read `claims`, `claim_events` and `claim_emails` through the Supabase client with RLS. The claim page shows:
@@ -198,7 +198,7 @@ The `brands` table is the "cache" of known contact forms and support emails.
 
 ## 8. Security and privacy (hackathon level)
 - Supabase RLS: users can read and write only their own `profiles`, `receipts`, `line_items` and `claims` (draft inserts). `claim_events` and `claim_emails` are read-only for users. Server writes use the service role.
-- Webhook signatures are verified (H HMAC, Resend/Svix). Reject anything unsigned.
+- The H webhook signature is verified (HMAC). Reject anything unsigned. The Gmail app password stays server-side.
 - Profile data is sent to H inside the agent instruction. That's acceptable for the hackathon and is disclosed at onboarding. IBAN is only included if a form requires it (P2).
 - The storage bucket `receipts` is private. Server code reads it to base64-encode files for H.
 
@@ -208,7 +208,7 @@ NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_K
 LLM_API_KEY (+ LLM_MODEL)                         # provider chosen by Dev 1
 HAI_API_KEY, H_WEBHOOK_SECRET, AGENT_DRY_RUN=true, AGENT_MOCK=false, AGENT_ID=h/web-surfer-flash
 INTERNAL_API_KEY                                  # server-to-server call /api/claims → /submit
-RESEND_API_KEY, RESEND_WEBHOOK_SECRET, INBOUND_DOMAIN=<id>.resend.app
+GMAIL_USER, GMAIL_APP_PASSWORD                    # dedicated Gmail account (2-Step Verification + app password)
 LINKUP_API_KEY
 GLADIA_API_KEY                                    # P2
 APP_URL                                           # public URL for webhooks
@@ -222,5 +222,5 @@ Keep `.env.example` in the repo. Real values live in Vercel and `.env.local`, wh
 | CAPTCHA (H says it solves ~70%, unverified) | Pick demo brands where it passes. Others → `needs_manual`. |
 | Agent slow or flaky on stage | Pre-recorded Agent View replay of a successful run, plus one claim already in `accepted`. |
 | Brands don't reply during the weekend | Submit real, genuine claims on Saturday morning. If nothing arrives, show a clearly labeled simulated reply. |
-| Resend managed-domain inbound limits on the free plan | Check at H+1. Fallback: Postmark inbound. |
+| Gmail: ~500 recipients/24 h, no webhook, some forms reject "+" addresses | Enough for a demo; poll on dashboard open; claim reference in the text as a second matching key. |
 | Webhooks unreachable locally | `/sync` polling fallback. Test webhooks on the deployed Vercel URL. |

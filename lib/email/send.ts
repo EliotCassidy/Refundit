@@ -1,37 +1,50 @@
-// OWNER: Dev 2. Email fallback: send the complaint to the brand's support email via Resend.
-// From = the claim alias on RESEND_FROM_DOMAIN (must be a domain verified for SENDING in Resend),
-// Reply-To = the claim's inbound address, so the brand's answer lands in the claim timeline.
+// OWNER: Dev 2. Outgoing email through the dedicated Gmail account (SMTP + app password).
+// Gmail: 2-Step Verification + a 16-character app password; ~500 recipients / 24 h.
+// From = the Gmail account (display name = customer), Reply-To = the claim's plus address,
+// so the brand's answer lands in the same mailbox and is matched to the claim.
 import "server-only";
-import { Resend } from "resend";
+import nodemailer, { type Transporter } from "nodemailer";
+import { plusAddress } from "./address";
 
-export type ComplaintEmail = {
+export function emailSendingConfigured(): boolean {
+  return Boolean(process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD);
+}
+
+let transport: Transporter | undefined;
+function smtp() {
+  transport ??= nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD },
+  });
+  return transport;
+}
+
+export type OutgoingEmail = {
   to: string;
   fromName: string;
   alias: string;
-  replyTo: string;
   subject: string;
   text: string;
-  attachment: { filename: string; base64: string; contentType: string } | null;
+  attachment?: { filename: string; base64: string; contentType: string } | null;
+  inReplyTo?: string | null; // Message-ID of the brand's email when answering it
 };
 
-export function emailSendingConfigured(): boolean {
-  return Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM_DOMAIN);
-}
-
-export async function sendComplaintEmail(m: ComplaintEmail): Promise<{ id: string }> {
-  if (!emailSendingConfigured()) throw new Error("RESEND_API_KEY / RESEND_FROM_DOMAIN not set");
-  const resend = new Resend(process.env.RESEND_API_KEY);
-  const safeName = m.fromName.replace(/[<>"]/g, "");
-  const { data, error } = await resend.emails.send({
-    from: `${safeName} <${m.alias}@${process.env.RESEND_FROM_DOMAIN}>`,
+export async function sendEmail(m: OutgoingEmail): Promise<{ id: string }> {
+  if (!emailSendingConfigured()) throw new Error("GMAIL_USER / GMAIL_APP_PASSWORD not set");
+  const replyTo = plusAddress(m.alias)!;
+  const info = await smtp().sendMail({
+    from: { name: m.fromName.replace(/[<>"]/g, ""), address: process.env.GMAIL_USER! },
     to: m.to,
-    replyTo: m.replyTo,
+    replyTo,
     subject: m.subject,
     text: m.text,
+    inReplyTo: m.inReplyTo ?? undefined,
+    references: m.inReplyTo ?? undefined,
     attachments: m.attachment
-      ? [{ filename: m.attachment.filename, content: m.attachment.base64, contentType: m.attachment.contentType }]
+      ? [{ filename: m.attachment.filename, content: Buffer.from(m.attachment.base64, "base64"), contentType: m.attachment.contentType }]
       : undefined,
   });
-  if (error || !data) throw new Error(`Resend: ${error?.message ?? "no data"}`);
-  return { id: data.id };
+  return { id: info.messageId };
 }

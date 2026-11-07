@@ -132,7 +132,7 @@ export type BrandContact = {
   brandId: string;
   name: string;
   contactUrl: string | null; // web form → H agent
-  contactEmail: string | null; // fallback when no form / agent blocked → email via Resend
+  contactEmail: string | null; // fallback when no form / agent blocked → email via Gmail
   agentHints: string | null;
   requiresReceiptUpload: boolean;
   verified: boolean;

@@ -17,7 +17,7 @@ Hackathon project: 2 devs, 1 weekend. **Working end-to-end demo > completeness.*
 - **Demo brands (Dev 2 spike):** Coca-Cola and Lu work through the web form; Evian goes through the email fallback; Bonne Maman goes through the missing-info flow; Pringles is not automatable (`needs_manual`).
 
 ## Stack
-Next.js (App Router) + TypeScript (strict) · Supabase (Postgres, Auth, Storage) · Vercel · H Company Agents API (`hai-agents` TS SDK) · Resend Inbound · Linkup (unknown-brand lookup) · one LLM provider behind `lib/shared/llm.ts`: the H Models API (OpenAI-compatible, `LLM_URL` / `LLM_MODEL` / `LLM_API_KEY`, default `holo4-35b-a3b`). Change the model in the env, never in code. Thinking is turned off with `chat_template_kwargs.enable_thinking=false` (`holo4-35b-a3b` ignores `reasoning_effort`).
+Next.js (App Router) + TypeScript (strict) · Supabase (Postgres, Auth, Storage) · Vercel · H Company Agents API (`hai-agents` TS SDK) · Gmail (SMTP + IMAP, one dedicated account, per-claim plus addresses) · Linkup (unknown-brand lookup) · one LLM provider behind `lib/shared/llm.ts`: the H Models API (OpenAI-compatible, `LLM_URL` / `LLM_MODEL` / `LLM_API_KEY`, default `holo4-35b-a3b`). Change the model in the env, never in code. Thinking is turned off with `chat_template_kwargs.enable_thinking=false` (`holo4-35b-a3b` ignores `reasoning_effort`).
 
 ## Non-negotiable rules
 1. **Honest claims only.** The complaint text may only contain facts the user provided (product, issue, description, receipt data). Never invent defects, quantities, dates or details. The agent prompt must forbid making up any field.
@@ -25,7 +25,7 @@ Next.js (App Router) + TypeScript (strict) · Supabase (Postgres, Auth, Storage)
 3. **Ownership.** Stay inside your folders (see TEAM.md). Shared files (`lib/shared/**`, `supabase/migrations/**`, `package.json`) get small, single-purpose commits.
 4. **Only Dev 2's code changes `claims.status` after `draft`.** Use `lib/claims/transition.ts`; never update the status directly.
 5. **`AGENT_DRY_RUN=true` by default in dev.** The agent stops before the final submit. Only set it to false for verified demo runs. Don't spam real brands.
-6. **Don't invent external API behavior.** For H, Resend, Linkup, Gladia and the LLM, check the official docs before using an endpoint or field. If something is unverified, say so in a code comment.
+6. **Don't invent external API behavior.** For H, Gmail, Linkup, Gladia and the LLM, check the official docs before using an endpoint or field. If something is unverified, say so in a code comment.
 7. No new infrastructure (queues, extra services, ORMs) without both devs agreeing. Supabase JS client + generated types only.
 8. **Product identity comes only from `line_items.confirmed_product`** (API_CONTRACTS §2, §5). It is NULL until the user validates a product.
    - `status: "confirmed"`: use its `name`, `brand`, `ean` (mirrored in `product_name`, `brand_name_guess`, `ean`).

@@ -16,6 +16,7 @@ export type ComplaintFacts = {
   issueDescription: string | null;
   hasReceiptAttachment: boolean; // kept for callers; the text no longer depends on it
   extraDetails?: Record<string, string>; // user's answers to fields the brand asked for
+  reference?: string; // claim alias, so replies can be matched even if a form rejects "+" emails
 };
 
 const ISSUE_SENTENCES: Record<IssueType, string> = {
@@ -68,5 +69,6 @@ export function buildComplaintText(f: ComplaintFacts): string {
     "Cordialement,",
     `${f.firstName} ${f.lastName}`,
   );
+  if (f.reference) lines.push("", `Référence de ma demande : ${f.reference}`);
   return lines.join("\n");
 }

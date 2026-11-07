@@ -2,6 +2,8 @@
 // required (claims.missing_fields). Once every field is answered, the claim is resubmitted.
 import type { NextRequest } from "next/server";
 import { submitClaim } from "@/lib/agent";
+import { sendEmail } from "@/lib/email/send";
+import { transitionClaim } from "@/lib/claims/transition";
 import { mockSubmit } from "@/lib/agent/mock";
 import { loadClaimForRequest } from "@/lib/claims/access";
 import { flags } from "@/lib/shared/env";
@@ -45,6 +47,54 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/claims/
   if (error) return apiError(500, "db_error", error.message);
 
   if (remaining.length) return Response.json({ status: "waiting_input", remaining });
+
+  // If the BRAND asked for these details by email, answer that email instead of refiling the form.
+  const { data: askEvent } = await db
+    .from("claim_events")
+    .select("payload")
+    .eq("claim_id", claim.id)
+    .eq("to_status", "waiting_input")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const askedByEmail = (askEvent?.payload as { source?: string } | null)?.source === "email";
+  if (askedByEmail) {
+    const { data: brandEmail } = await db
+      .from("claim_emails")
+      .select("*")
+      .eq("claim_id", claim.id)
+      .eq("classification", "waiting_input")
+      .order("received_at", { ascending: false })
+      .limit(1)
+      .single();
+    const { data: profile } = await db.from("profiles").select("first_name, last_name").eq("id", claim.user_id).single();
+    try {
+      const name = `${profile?.first_name ?? ""} ${profile?.last_name ?? ""}`.trim();
+      const { id: emailId } = await sendEmail({
+        to: brandEmail!.from_address,
+        fromName: name,
+        alias: claim.inbound_alias!,
+        subject: brandEmail!.subject?.startsWith("Re:") ? brandEmail!.subject : `Re: ${brandEmail!.subject ?? "Réclamation"}`,
+        text: [
+          "Bonjour,",
+          "",
+          "Voici les informations demandées :",
+          ...Object.entries(answers).map(([k, v]) => `${k} : ${v}`),
+          "",
+          "Cordialement,",
+          name,
+          "",
+          `Référence de ma demande : ${claim.inbound_alias}`,
+        ].join("\n"),
+        inReplyTo: brandEmail!.provider_message_id,
+      });
+      await transitionClaim(claim.id, "submitted", { payload: { channel: "email", reply_to_brand: emailId } });
+      return Response.json({ status: "submitted" });
+    } catch (err) {
+      console.error("[answers:email]", err);
+      return apiError(502, "email_failed", err instanceof Error ? err.message : "Unknown error");
+    }
+  }
 
   try {
     if (flags.agentMock()) {

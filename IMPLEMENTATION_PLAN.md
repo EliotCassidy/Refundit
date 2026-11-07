@@ -55,7 +55,7 @@ Priorities:
     - Forms often have no upload field → the complaint text no longer says "en pièce jointe".
 
     Open product question: some forms ask "do you still have the product?", the DLC/DDM or the batch number. The agent must not guess these, so the item selection should optionally ask for them (Dev 1 UI + contract change).
-- [ ] **Resend spike:** create the account, check that arbitrary addresses on `<id>.resend.app` arrive at a webhook on the free plan, and that the Receiving API returns the body. If not, switch to Postmark.
+- [x] ~~Resend spike~~ → replaced by one dedicated Gmail account (free, no domain): SMTP + IMAP + plus addressing.
 - [x] Ship the `AGENT_MOCK` stub for `/submit` + `/sync` (unblocks Dev 1).
 
 **Sync H+3:** spike results → pick the **demo brands** (the ones that pass end-to-end).
@@ -75,7 +75,7 @@ Priorities:
 - [x] P0 `/sync` polling + outcome mapping (ARCHITECTURE §5.3).
 - [x] P0 Claims list + claim detail page (status, complaint text, Agent View link/iframe, Cancel).
 - [x] P1 Linkup lookup in `getBrandContact` (form URL + support email, anti-hallucination check). Needs `LINKUP_API_KEY`.
-- [x] P1 Email fallback (no form, or agent blocked) via Resend. Needs `RESEND_API_KEY` + `RESEND_FROM_DOMAIN` for real sends.
+- [x] P1 Email fallback (no form, or agent blocked) via Gmail SMTP. Needs `GMAIL_USER` + `GMAIL_APP_PASSWORD`.
 - [ ] P1 `/api/webhooks/h`: code done (verifyWebhook + idempotent sync). TODO: register the webhook on the deployed Vercel URL and set H_WEBHOOK_SECRET.
 
 ## Phase 3: Integration (Saturday evening). **Milestone: the full path on the deployed URL**
@@ -85,7 +85,7 @@ Priorities:
 
 ## Phase 4: Email loop + UX (Sunday morning)
 **Dev 2**
-- [ ] P1 `/api/webhooks/resend` → store `claim_emails` → classify → transition. Timeline on the claim detail page.
+- [x] P1 Gmail IMAP polling (`/api/email/poll`, on dashboard open) → `claim_emails` → classify → transition; brand info requests answered by email from the dashboard. Timeline on the claim detail page.
 - [ ] P1 Retry button for `agent_failed` / `needs_manual`.
 
 **Dev 1**

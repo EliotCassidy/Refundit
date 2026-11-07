@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/shared/supabase/server";
 import { ISSUE_LABELS_FR, type ClaimStatus } from "@/lib/shared/types";
 import { AutoRefresh } from "./auto-refresh";
+import { InboxPoller } from "./inbox-poller";
 import { StatusBadge } from "./status-badge";
 
 const GROUPS: { label: string; statuses: ClaimStatus[] }[] = [
@@ -86,6 +87,7 @@ export default async function ClaimsPage() {
       )}
 
       <AutoRefresh syncClaimIds={submittingIds} />
+      <InboxPoller />
     </div>
   );
 }

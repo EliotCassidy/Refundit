@@ -32,16 +32,16 @@ tickets/**               (test receipts for the parser evals)
 - complaint text generation
 - H session creation, H webhook + `/sync`, outcome mapping
 - the claim state machine
-- Resend inbound webhook, reply classification
+- brand replies: Gmail IMAP polling (`/api/email/poll`), reply classification
 - `AGENT_MOCK` stub
-- the H and Resend spikes
+- the H spikes
 - brand contact discovery: `getBrandContact` + Linkup (`lib/brands/discover.ts`)
-- email fallback (Resend sending, `lib/email/send.ts`)
+- email fallback and replies to brands (Gmail SMTP, `lib/email/send.ts`)
 
 **Owns:**
 ```
 app/(app)/claims/**                  app/api/claims/[id]/**
-app/api/webhooks/**                  lib/agent/**                 scripts/agent-spike.ts
+app/api/webhooks/**  app/api/email/**  lib/agent/**                 scripts/agent-spike.ts
 lib/claims/**                        lib/email/**
 lib/brands/discover.ts               lib/brands/index.ts (getBrandContact)
 ```
