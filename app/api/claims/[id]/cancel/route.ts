@@ -1,5 +1,6 @@
 // OWNER: Dev 2. POST /api/claims/:id/cancel.
 import type { NextRequest } from "next/server";
+import { cancelClaimSession } from "@/lib/agent";
 import { loadClaimForRequest } from "@/lib/claims/access";
 import { canTransition, transitionClaim } from "@/lib/claims/transition";
 import { apiError } from "@/lib/shared/http";
@@ -14,7 +15,8 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/claims/
     return apiError(409, "invalid_status", `Cannot cancel a claim in status ${claim.status}`);
   }
 
-  // TODO(dev2): if a real H session is running, DELETE it first (ARCHITECTURE.md §5).
+  // Mark cancelled first so the "interrupted" webhook that follows is ignored.
   await transitionClaim(claim.id, "cancelled", { payload: { by: "user" } });
+  await cancelClaimSession(claim);
   return Response.json({ status: "cancelled" });
 }

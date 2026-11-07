@@ -33,9 +33,10 @@ Next.js (App Router) + TypeScript (strict) · Supabase (Postgres, Auth, Storage)
 ## Commands
 - `npm run dev`: local app
 - `npm run lint && npm run typecheck`: run before every push
-- `npx supabase db push`: apply migrations to the hackathon project
+- `npm run db:push`: apply migrations to the hackathon project (`--remote`; CLI v3 defaults to local Docker)
 - `npm run seed`: seed brands + demo data
 - `npm run db:types`: regenerate `lib/shared/database.types.ts` after a migration
+- `npm run spike -- <contact_url> [--brand X] [--agent h/web-surfer-pro] [--receipt file.jpg]`: dry-run the H agent on a brand form (never submits)
 
 ## Next.js 16 notes
 - This Next version differs from older training data. Read `node_modules/next/dist/docs/` before using a Next API (see AGENTS.md).

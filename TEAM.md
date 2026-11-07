@@ -38,7 +38,7 @@ components/ui/**         app/layout.tsx, app/(app)/layout.tsx, proxy.ts
 **Owns:**
 ```
 app/(app)/claims/**                  app/api/claims/[id]/**
-app/api/webhooks/**                  lib/agent/**
+app/api/webhooks/**                  lib/agent/**                 scripts/agent-spike.ts
 lib/claims/**                        lib/email/**
 ```
 

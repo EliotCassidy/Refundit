@@ -9,7 +9,9 @@
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
     "seed": "tsx supabase/seed/seed.ts",
-    "db:types": "supabase gen types typescript --linked > lib/shared/database.types.ts"
+    "db:types": "supabase gen types typescript --remote > lib/shared/database.types.ts.tmp && mv lib/shared/database.types.ts.tmp lib/shared/database.types.ts",
+    "db:push": "supabase db push --remote",
+    "spike": "tsx scripts/agent-spike.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

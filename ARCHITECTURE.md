@@ -91,7 +91,7 @@ It's one Next.js app with no separate backend, no queue and no worker. The long-
 2. **Brand contact:** call `getBrandContact(brandId | brandNameGuess)` (C4, Dev 1's function). It returns the registry entry or runs a Linkup lookup and saves the result.
    - If there's no contact URL, move to `needs_manual` with reason `no_contact_form`.
 3. Generate `inbound_alias` (for example `claim-8f3k2a`) and the inbound address.
-4. **Complaint text:** the LLM writes a short, polite French complaint from facts only:
+4. **Complaint text:** a deterministic French template (`lib/agent/complaint.ts`, no LLM, so nothing can be invented) builds a short, polite complaint from facts only:
    - product
    - purchase date and store
    - issue type
@@ -175,7 +175,6 @@ There's one provider for the whole app (Dev 1 picks it while building the receip
 | Task | Owner | Output |
 |---|---|---|
 | Receipt image → `ParsedReceipt` (items, normalized names, brand guess) | Dev 1 | JSON (zod) |
-| Complaint text generation (FR, facts only) | Dev 2 | string, ≤ 1200 chars |
 | Brand reply classification | Dev 2 | `{classification, reason, needs_user_action}` |
 
 Reply classification:

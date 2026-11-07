@@ -11,8 +11,8 @@ Start with [CLAUDE.md](CLAUDE.md), then [ARCHITECTURE.md](ARCHITECTURE.md), [API
 4. Link the project and apply the schema:
    ```bash
    npx supabase login
-   npx supabase link --project-ref <ref>
-   npx supabase db push
+   npx supabase link --project-ref dukngydcfsfditjvehae
+   npm run db:push       # = supabase db push --remote (CLI v3 targets local Docker by default)
    npm run db:types      # regenerates lib/shared/database.types.ts
    npm run seed
    ```

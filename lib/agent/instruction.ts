@@ -1,0 +1,70 @@
+// OWNER: Dev 2. Agent instruction (ARCHITECTURE.md §5.2). Pure module so scripts can import it.
+
+export type InstructionInput = {
+  contactUrl: string;
+  agentHints: string | null;
+  dryRun: boolean;
+  customer: {
+    firstName: string;
+    lastName: string;
+    addressLine1: string;
+    addressLine2: string | null;
+    postalCode: string;
+    city: string;
+    country: string;
+    phone: string | null;
+    email: string; // ALWAYS the claim's inbound address, never the user's real email
+  };
+  product: {
+    name: string;
+    brand: string | null;
+    ean: string | null;
+    purchasedAt: string | null;
+    storeName: string | null;
+    priceCents: number | null;
+  };
+  complaintText: string;
+  receiptFileName: string | null; // file attached to the session (lands in ~/Downloads)
+};
+
+export function buildInstruction(i: InstructionInput): string {
+  const c = i.customer;
+  const address = [c.addressLine1, c.addressLine2, `${c.postalCode} ${c.city}`, c.country].filter(Boolean).join(", ");
+  const price = i.product.priceCents != null ? `${(i.product.priceCents / 100).toFixed(2)} EUR` : "unknown";
+  const finalStep = i.dryRun
+    ? `7. TEST MODE: do NOT click the final submit/send button. Once every field is filled, stop just before submitting and answer with submitted=false, blocker=null, notes="dry_run_ready".`
+    : `7. Submit the form. Then read the confirmation page/message and report any confirmation or ticket number.`;
+
+  return `You are filing a genuine product complaint on behalf of a customer, on the brand's official customer-service contact form. The website is in French.
+
+Start URL: ${i.contactUrl}
+${i.agentHints ? `Hints about this website: ${i.agentHints}\n` : ""}
+Steps:
+1. Find the contact form for a product complaint / "réclamation produit" / "un problème avec un produit" (not marketing, not job offers, not press). Accept or dismiss cookie banners if needed.
+2. Fill the fields ONLY with the data below. NEVER invent a value. If a REQUIRED field asks for information that is not provided below (for example a batch number or best-before date), stop and answer with blocker="missing_info" and the field name in notes. Optional fields without data must be left empty.
+3. For the message / description field, paste the complaint text below EXACTLY as given.
+4. ${i.receiptFileName ? `If there is a file-upload field (proof of purchase / ticket de caisse / pièce jointe), upload the file "${i.receiptFileName}" from the Downloads folder. If the upload fails and it is required, answer with blocker="upload_failed".` : "Do not upload any file."}
+5. Do not create an account. If logging in or creating an account is required, answer with blocker="login_required".
+6. If a CAPTCHA blocks you and you cannot solve it, answer with blocker="captcha". If no contact form exists (only phone or postal mail), answer with blocker="no_contact_form".
+${finalStep}
+
+Customer data:
+- First name: ${c.firstName}
+- Last name: ${c.lastName}
+- Email: ${c.email}
+- Phone: ${c.phone ?? "not provided"}
+- Postal address: ${address}
+
+Product:
+- Product: ${i.product.name}${i.product.brand ? ` (brand: ${i.product.brand})` : ""}
+- Bought on: ${i.product.purchasedAt ? i.product.purchasedAt.slice(0, 10) : "unknown"} at ${i.product.storeName ?? "unknown store"}
+- Price paid: ${price}
+- EAN / barcode: ${i.product.ean ?? "not provided"}
+
+Complaint text (paste exactly):
+"""
+${i.complaintText}
+"""
+
+Answer with: submitted (true only if the form was actually sent), confirmation_number (or null), form_url (URL of the form you used, or null), blocker (null if none), notes (one short sentence).`;
+}

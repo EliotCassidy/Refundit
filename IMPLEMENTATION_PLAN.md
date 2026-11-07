@@ -42,7 +42,7 @@ Priorities:
 
   → fills `brands` seed rows (`verified`, `agent_hints`, `captcha_observed`, `requires_receipt_upload`).
 - [ ] **Resend spike:** create the account, check that arbitrary addresses on `<id>.resend.app` arrive at a webhook on the free plan, and that the Receiving API returns the body. If not, switch to Postmark.
-- [ ] Ship the `AGENT_MOCK` stub for `/submit` + `/sync` (unblocks Dev 1).
+- [x] Ship the `AGENT_MOCK` stub for `/submit` + `/sync` (unblocks Dev 1).
 
 **Sync H+3:** spike results → pick the **demo brands** (the ones that pass end-to-end).
 
@@ -56,12 +56,12 @@ Priorities:
 - [ ] P1 Optional damaged-product photo upload.
 
 **Dev 2**
-- [ ] P0 `transitionClaim` + `claim_events`.
-- [ ] P0 Complaint text generation (French, facts only) via `lib/shared/llm.ts`.
-- [ ] P0 Real `/submit`: build the instruction, attach the receipt file, `answerSchema`, store the session id + agent view URL.
-- [ ] P0 `/sync` polling + outcome mapping (ARCHITECTURE §5.3).
-- [ ] P0 Claims list + claim detail page (status, complaint text, Agent View link/iframe, Cancel).
-- [ ] P1 `/api/webhooks/h` with signature check + idempotency (test it on the deployed Vercel URL).
+- [x] P0 `transitionClaim` + `claim_events`.
+- [x] P0 Complaint text (French, facts only): deterministic template in `lib/agent/complaint.ts`.
+- [x] P0 Real `/submit`: build the instruction, attach the receipt file, `answerSchema`, store the session id + agent view URL.
+- [x] P0 `/sync` polling + outcome mapping (ARCHITECTURE §5.3).
+- [x] P0 Claims list + claim detail page (status, complaint text, Agent View link/iframe, Cancel).
+- [ ] P1 `/api/webhooks/h`: code done (verifyWebhook + idempotent sync). TODO: register the webhook on the deployed Vercel URL and set H_WEBHOOK_SECRET.
 
 ## Phase 3: Integration (Saturday evening). **Milestone: the full path on the deployed URL**
 - [ ] Real receipt → items → select 2 → submit → agent runs (dry run) on demo brands → `submitted`.

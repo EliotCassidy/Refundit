@@ -1,10 +1,13 @@
 // OWNER: Dev 2. POST /api/claims/:id/submit (API_CONTRACTS §5).
 import type { NextRequest } from "next/server";
+import { submitClaim } from "@/lib/agent";
 import { mockSubmit } from "@/lib/agent/mock";
 import { loadClaimForRequest } from "@/lib/claims/access";
-import { canTransition } from "@/lib/claims/transition";
+import { canTransition, IllegalTransitionError } from "@/lib/claims/transition";
 import { flags } from "@/lib/shared/env";
-import { apiError, notImplemented } from "@/lib/shared/http";
+import { apiError } from "@/lib/shared/http";
+
+export const maxDuration = 60;
 
 export async function POST(request: NextRequest, ctx: RouteContext<"/api/claims/[id]/submit">) {
   const { id } = await ctx.params;
@@ -21,8 +24,17 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/claims/
     return Response.json({ status: "submitting", agentViewUrl: null }, { status: 202 });
   }
 
-  // TODO(dev2): real flow (ARCHITECTURE.md §4.3):
-  // getBrandContact → needs_manual if no contactUrl → inbound alias → complaint text
-  // → H session (lib/agent) → transitionClaim(submitting) → 202 { status, agentViewUrl }
-  return notImplemented("Real agent submission (set AGENT_MOCK=true meanwhile)");
+  try {
+    const result = await submitClaim(claim);
+    if (result.status === "submitting") {
+      return Response.json({ status: result.status, agentViewUrl: result.agentViewUrl }, { status: 202 });
+    }
+    return Response.json({ status: result.status, reason: result.reason ?? null });
+  } catch (err) {
+    if (err instanceof IllegalTransitionError) {
+      return apiError(409, "invalid_status", "Claim was submitted concurrently");
+    }
+    console.error("[submit]", err);
+    return apiError(500, "submit_failed", err instanceof Error ? err.message : "Unknown error");
+  }
 }
