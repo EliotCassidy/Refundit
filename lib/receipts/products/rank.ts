@@ -1,8 +1,15 @@
 // Classement des candidats. Fonction pure.
 // Le libellé du ticket est la seule vraie preuve : c'est lui qui pèse le plus. L'hypothèse du LLM (guess)
-// aide seulement à comprendre les abréviations et à repérer la marque / le type ÉCRITS sur le ticket.
+// aide à comprendre les abréviations ; elle ne devient jamais un résultat.
+// Barème repris du prototype Python (~/Documents/hackaton/resolve.py), sur 100 :
+//   mots du libellé retrouvés (30) + nom proche du « type + variante » du LLM (20)
+//   + marque lue sur le ticket (20) ou supposée : marque du LLM / de l'enseigne (15)
+//   + format identique (15), inconnu (7), différent (0)
+//   + prix de référence à 10 % près (15), à 25 % (8), inconnu (5), plus loin (0)
+//   − 15 si le type de produit écrit sur le ticket n'est pas dans le nom du candidat
+//   + 30 si d'autres clients ont déjà confirmé ce produit pour ce libellé (cache product_matches).
 import type { Product, ProductCandidates } from "@/lib/shared/types";
-import { normalize, sameWord, tokens } from "../text";
+import { editDistance, labelSimilarity, normalize, sameWord, tokens } from "../text";
 import { parseSizes, sizesMatch } from "./ean";
 import type { Guess } from "./expand";
 import type { ReferencePrice } from "./prices";
@@ -32,137 +39,137 @@ export const isSizeToken = (t: string) => /^\d+([.,]\d+)?(G|GR|KG|CL|ML|L|X\d+)?
 const singular = (w: string) => w.replace(/S$/, "");
 const euros = (c: number) => `${(c / 100).toFixed(2).replace(".", ",")} €`;
 
-/** La marque du candidat est-elle écrite sur le ticket (en entier, mot par mot, collée ou en initiales) ? */
-function brandWrittenIn(brand: string | null, labelTokens: string[]): boolean {
-  if (!brand) return false;
-  const words = tokens(brand);
-  if (!words.length) return false;
-  const glued = words.join(""); // "SAUPIQUET", "U", "LEPETITMARSEILLAIS"
-  const initials = words.length >= 2 ? words.map((w) => w[0]).join("") : null; // "LPM"
-  if (labelTokens.some((t) => t === glued || t === initials)) return true;
-  const long = words.filter((w) => w.length >= 3); // chaque mot de la marque, en entier ou abrégé
-  return long.length > 0 && long.every((w) => labelTokens.some((t) => sameWord(t, w)));
+/** Mots utiles du libellé : sans formats (190G, 6X25CL), nombres ni lettres seules. */
+export function labelWords(rawLabel: string): string[] {
+  return tokens(rawLabel).filter((t) => t.length >= 2 && !/^\d/.test(t) && !isSizeToken(t));
 }
 
-type Scored = Candidate & { score: number; reasons: string[]; flags: Set<string> };
+/** Le mot du libellé (souvent tronqué : TRADITIO) se retrouve-t-il ? Préfixe, pluriel, ou très proche (≥ 85 %). */
+export function wordHit(t: string, words: string[]): boolean {
+  return words.some((w) => {
+    if (sameWord(t, w) || singular(t) === singular(w)) return true;
+    return t.length >= 4 && 1 - editDistance(t, w) / Math.max(t.length, w.length) >= 0.85;
+  });
+}
+
+const initials = (brand: string) => {
+  const words = tokens(brand);
+  return words.length >= 2 ? words.map((w) => w[0]).join("") : null;
+};
+
+/** La marque est-elle écrite sur le ticket : collée (SAUPIQUET), en initiales (LPM) ou chaque mot ≥ 4 lettres retrouvé ? */
+function brandWrittenIn(brand: string | null, rawLabel: string): boolean {
+  if (!brand) return false;
+  const all = tokens(rawLabel);
+  const long = labelWords(rawLabel).filter((t) => t.length >= 4);
+  return brand.split(",").some((b) => {
+    const words = tokens(b);
+    if (!words.length) return false;
+    if (all.includes(words.join("")) || all.includes(initials(b) ?? "\0")) return true;
+    const significant = words.filter((w) => w.length >= 4);
+    return significant.length > 0 && significant.every((w) => long.some((t) => wordHit(t, [w])));
+  });
+}
+
+type Scored = Candidate & { score: number; reasons: string[]; flags: Set<string>; gap: number | null };
 
 function score(c: Candidate, input: RankInput): Scored {
   const reasons: string[] = [];
   const flags = new Set<string>();
-  const labelTokens = tokens(input.rawLabel);
-  const words = labelTokens.filter((t) => t.length >= 2 && !isSizeToken(t));
-  const candidateWords = tokens(`${c.name} ${c.brand ?? ""} ${c.quantity ?? ""}`);
-  const found = (w: string) => candidateWords.some((cw) => sameWord(w, cw) || singular(w) === singular(cw));
-  let s = 0;
+  const brandName = `${c.brand ?? ""} ${c.name}`;
 
-  // 1) Mots du libellé retrouvés dans le candidat (le libellé brut d'abord, sinon son développement)
-  if (words.length) {
-    let matched = 0;
-    for (const w of words) {
-      if (found(w)) matched += 1;
-      else {
-        const expanded = input.guess?.words.find((x) => normalize(x.raw) === w)?.expanded;
-        if (expanded && tokens(expanded).some((e) => e.length >= 3 && found(e))) matched += 0.8;
-      }
-    }
-    s += 50 * (matched / words.length);
-    reasons.push(`${Math.round((100 * matched) / words.length)} % des mots du ticket retrouvés`);
-  }
+  // 1) Mots du libellé retrouvés dans la marque (ou ses initiales) + le nom (30)
+  const words = labelWords(input.rawLabel);
+  const candidateWords = tokens(brandName);
+  const brandInitials = (c.brand ?? "").split(",").map(initials).filter(Boolean);
+  const covered = words.filter((t) => wordHit(t, candidateWords) || brandInitials.includes(t)).length;
+  const coverage = words.length ? covered / words.length : 0;
+  reasons.push(`${Math.round(100 * coverage)} % des mots du ticket retrouvés`);
 
-  // 2) Marque : lue sur le ticket plutôt que supposée
-  const brandRaw = input.guess?.brand_raw ? normalize(input.guess.brand_raw) : null;
-  const ticketHasBrand = brandRaw !== null && labelTokens.includes(brandRaw.split(" ")[0]);
+  // 2) Nom proche de l'interprétation du LLM : type + variante (20)
+  const want = [input.guess?.product_type, input.guess?.variant].filter(Boolean).join(" ");
+  const llmSim = want ? labelSimilarity(want, c.name) : 0;
+
+  // 3) Marque : lue sur le ticket (20), sinon supposée (15) : marque du LLM ou de l'enseigne
   const mdd = privateLabel(input.chain);
-  if (brandWrittenIn(c.brand, labelTokens)) {
-    s += 15;
-    reasons.push(`marque ${c.brand} lue sur le ticket`);
-  } else if (ticketHasBrand) {
-    s -= 15;
-    reasons.push(`marque différente de celle du ticket (${input.guess?.brand})`);
-    flags.add("marque différente");
-  } else if (mdd && c.brand && normalize(c.brand).startsWith(normalize(mdd))) {
-    s += 5;
-    reasons.push(`marque de l'enseigne (${c.brand}), supposée`);
+  const read = brandWrittenIn(c.brand, input.rawLabel);
+  const guessed =
+    !read &&
+    [input.guess?.brand, mdd].some((b) => b && c.brand && (normalize(c.brand).includes(normalize(b)) || labelSimilarity(b, c.brand) >= 0.8));
+  const brandPts = read ? 20 : guessed ? 15 : 0;
+  if (read) reasons.push(`marque ${c.brand} lue sur le ticket`);
+  else if (guessed) {
+    reasons.push(`marque ${c.brand} supposée (absente du ticket)`);
     flags.add("marque supposée");
-  } else {
-    flags.add("marque non lue sur le ticket");
-  }
+  } else flags.add("marque différente ou inconnue");
 
-  // 3) Format (190G, 6X25CL…)
+  // 4) Format (15 identique, 7 inconnu, 0 différent)
   const labelSizes = parseSizes(input.rawLabel);
   const candidateSizes = parseSizes(`${c.quantity ?? ""} ${c.name}`);
+  let fmt = 7;
   if (labelSizes.length && candidateSizes.length) {
-    if (sizesMatch(labelSizes, candidateSizes)) {
-      s += 15;
-      reasons.push(`même format (${c.quantity ?? "nom"})`);
-    } else {
-      s -= 15;
+    fmt = sizesMatch(labelSizes, candidateSizes) ? 15 : 0;
+    if (fmt) reasons.push(`même format (${c.quantity ?? "nom"})`);
+    else {
       reasons.push(`format différent (${c.quantity ?? "?"})`);
       flags.add("format différent");
     }
   }
 
-  // 4) Prix payé comparé au prix de référence Open Prices
+  // 5) Prix payé comparé au prix de référence Open Prices (15 / 8 / 5 inconnu / 0)
+  let pricePts = 5;
+  let gap: number | null = null;
   if (c.reference && input.unitPriceCents) {
-    const gap = Math.abs(input.unitPriceCents - c.reference.cents) / c.reference.cents;
+    gap = Math.abs(c.reference.cents - input.unitPriceCents) / input.unitPriceCents;
+    pricePts = gap <= 0.1 ? 15 : gap <= 0.25 ? 8 : 0;
+    if (gap > 0.25) flags.add("prix éloigné");
     const where = c.reference.scope === "chain" ? "chez l'enseigne" : "partout";
-    if (gap <= 0.1) s += 15;
-    else if (gap <= 0.25) s += 7;
-    else if (gap > 0.5) {
-      s -= 10;
-      flags.add("prix éloigné");
-    }
-    reasons.push(`prix de référence ${euros(c.reference.cents)} ${where} (${c.reference.n} relevé${c.reference.n > 1 ? "s" : ""})`);
+    reasons.push(`prix de référence ${euros(c.reference.cents)} ${where}`);
   }
 
-  // 5) Pénalité si le type de produit écrit sur le ticket n'est pas dans le nom
-  const typeRaw = input.guess?.product_type_raw ? normalize(input.guess.product_type_raw) : null;
-  if (typeRaw && labelTokens.includes(typeRaw.split(" ")[0])) {
-    const nameWords = tokens(c.name);
-    const typeWords = [typeRaw, ...tokens(input.guess?.product_type ?? "")].filter((w) => w.length >= 3);
-    const ok = typeWords.some((t) => nameWords.some((n) => sameWord(t, n) || singular(t) === singular(n)));
-    if (!ok) {
-      s -= 20;
-      reasons.push(`type « ${input.guess?.product_type ?? typeRaw} » absent du nom`);
-    }
-  }
+  // 6) Type de produit écrit sur le ticket (confirmé par le libellé) absent du nom : −15
+  const typeWords = tokens(input.guess?.product_type ?? "").filter((w) => w.length >= 4 && words.some((t) => t.length >= 4 && wordHit(t, [w])));
+  const typeOk = !typeWords.length || typeWords.some((w) => wordHit(w, tokens(c.name)));
+  if (!typeOk) reasons.push(`type « ${input.guess?.product_type} » absent du nom`);
 
-  // 6) Déjà confirmé par d'autres clients pour ce libellé, chez cette enseigne
-  if (c.confirmations) {
-    s += 30;
-    reasons.push(`déjà confirmé ${c.confirmations} fois pour ce libellé`);
-  }
+  // 7) Déjà confirmé par d'autres clients pour ce libellé, chez cette enseigne
+  const confirmedPts = c.confirmations ? 30 : 0;
+  if (c.confirmations) reasons.push(`déjà confirmé ${c.confirmations} fois pour ce libellé`);
 
-  return { ...c, score: Math.round(s), reasons, flags };
+  const s = 30 * coverage + 20 * llmSim + brandPts + fmt + pricePts - (typeOk ? 0 : 15) + confirmedPts;
+  return { ...c, score: Math.round(s), reasons, flags, gap };
 }
 
-/** Score sans les prix (pour choisir les candidats dont on va chercher le prix de référence). */
-export const preScore = (c: Candidate, input: RankInput) => score({ ...c, reference: undefined }, input).score;
+/** Premier tri, avant de chercher les prix de référence (les prix déjà connus comptent). */
+export const preScore = (c: Candidate, input: RankInput) => score(c, input).score; // avec le prix seulement s'il est déjà connu
+
+/** Deux fiches du même produit : mêmes mots dans le nom, hors nombres (AMBREE ≠ CERISE). */
+function sameProduct(a: Candidate, b: Candidate) {
+  const words = (c: Candidate) => new Set(tokens(c.name).filter((w) => w.length >= 3 && !/\d/.test(w)));
+  const wa = words(a), wb = words(b);
+  return wa.size === wb.size && [...wa].every((w) => wb.has(w));
+}
 
 export function rank(candidates: Candidate[], input: RankInput): Omit<ProductCandidates, "searched_at"> {
-  const scored = candidates.map((c) => score(c, input)).sort((a, b) => b.score - a.score).slice(0, 5);
-  const [top, second] = scored;
+  const scored = candidates
+    .map((c) => score(c, input))
+    .sort((a, b) => b.score - a.score || (a.gap ?? 9) - (b.gap ?? 9))
+    .slice(0, 5);
+  const [top] = scored;
   const uncertain_reasons: string[] = [];
   if (!top) uncertain_reasons.push("aucun produit trouvé");
   else {
-    if (top.score < 50) uncertain_reasons.push("score faible");
-    if (second && top.score - second.score < 5) uncertain_reasons.push("plusieurs produits à égalité");
-    for (const f of ["marque différente", "marque supposée", "marque non lue sur le ticket", "format différent", "prix éloigné"]) {
+    if (top.score < 70) uncertain_reasons.push("score faible");
+    for (const f of ["marque différente ou inconnue", "marque supposée", "format différent", "prix éloigné"]) {
       if (top.flags.has(f)) uncertain_reasons.push(f);
     }
+    if (scored.slice(1).some((c) => top.score - c.score < 3 && !sameProduct(top, c))) uncertain_reasons.push("plusieurs produits à égalité");
   }
   return {
     llm_guess: input.guess?.full_name ?? null,
     candidates: scored.map((c) => ({
-      ean: c.ean,
-      brand: c.brand,
-      name: c.name,
-      quantity: c.quantity,
-      image_url: c.image_url,
-      source: c.source,
-      score: c.score,
-      reference_price_cents: c.reference?.cents ?? null,
-      reasons: c.reasons,
+      ean: c.ean, brand: c.brand, name: c.name, quantity: c.quantity, image_url: c.image_url, source: c.source,
+      score: c.score, reference_price_cents: c.reference?.cents ?? null, reasons: c.reasons,
     })),
     uncertain: uncertain_reasons.length > 0,
     uncertain_reasons,

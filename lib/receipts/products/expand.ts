@@ -3,7 +3,8 @@
 // mais n'est JAMAIS utilisée comme résultat (CLAUDE.md règle 8).
 import "server-only";
 import { z } from "zod";
-import { generateObject } from "@/lib/shared/llm";
+import { generateObject, llmModel } from "@/lib/shared/llm";
+import { cached } from "./net";
 
 export const GuessSchema = z.object({
   words: z.array(z.object({ raw: z.string(), expanded: z.string() })), // chaque mot du libellé, développé
@@ -18,24 +19,41 @@ export const GuessSchema = z.object({
 });
 export type Guess = z.infer<typeof GuessSchema>;
 
-const prompt = (label: string, chain: string | null, section: string | null) => `Libellé abrégé d'un ticket de caisse français : « ${label} »
-Enseigne : ${chain ?? "inconnue"}. Rayon imprimé : ${section ?? "aucun"}.
+const prompt = (label: string, chain: string | null, section: string | null, unitPriceCents: number | null) => `Libellé d'un article sur un ticket de caisse ${chain ?? "de supermarché"} (France) : « ${label} »
+(rayon : ${section ?? "inconnu"}, prix : ${unitPriceCents ? (unitPriceCents / 100).toFixed(2).replace(".", ",") + " €" : "inconnu"}).
+Les libellés sont abrégés et tronqués à environ 18 caractères. Retrouve le produit réel : c'est une hypothèse
+qui sert seulement à lancer une recherche. Réponds uniquement en JSON.
 
-Développe ce libellé mot par mot. Ce n'est qu'une hypothèse pour lancer une recherche de produit.
-Développe vraiment chaque abréviation ; ne recopie un mot tel quel que si tu ne le comprends pas du tout.
-Exemples (d'autres produits) :
-- « CR.FRAICHE EP.30% 20CL » → crème fraîche épaisse 30 % 20 cl
-- « YAO.NAT.BIO 4X125G » → yaourt nature bio 4 x 125 g
-- « JB DD SUP X4 » → jambon découenné dégraissé supérieur x4
-- « LPM GEL DCHE 250ML » → gel douche Le Petit Marseillais 250 ml (brand "Le Petit Marseillais", brand_raw "LPM")
-- "brand" : la marque UNIQUEMENT si elle est écrite dans le libellé (en entier, abrégée ou en initiales, ex. "LPM" = Le Petit Marseillais). Sinon null. Ne devine pas une marque absente du libellé.
+- "words" : CHAQUE mot ou abréviation du libellé et ce qu'il signifie (marque, type de produit, gamme, parfum,
+  origine, format…). Aucun mot ne doit être ignoré. Développe vraiment les abréviations ; ne recopie un mot tel quel
+  que si tu ne le comprends pas du tout.
+- "brand" : la marque si elle est écrite dans le libellé (en entier, abrégée ou en initiales, ex. "LPM" = Le Petit
+  Marseillais), sinon null. Un nom propre du libellé (ex. "HEINEKEN", "DANONE") est en général la marque.
+  Ne devine pas une marque absente du libellé.
 - "brand_raw" et "product_type_raw" : le mot exact du libellé, tel qu'imprimé, ou null.
-- Si un mot est illisible ou incompréhensible, recopie-le tel quel dans "expanded".
-Réponds uniquement en JSON.`;
+- "product_type" : le type de produit précis en français, en reprenant le mot du libellé quand il y en a un
+  (ex. "YAOURT" → "yaourt", pas "produit laitier" ; "SH" → "shampooing").
+- "variant" : la gamme, la variété, le parfum ou l'origine lus dans le libellé, sinon null.
+- "size" : seulement si un format (nombre + unité) est écrit dans le libellé, sinon null.
+- "full_name" : le nom complet du produit, tel qu'il serait écrit sur l'emballage.
+- "category" : "food", "beauty_hygiene", "household" ou "other".
 
-export async function expandLabel(label: string, chain: string | null, section: string | null): Promise<Guess | null> {
+Exemples (d'autres produits) :
+- « CR.FRAICHE EP.30% 20CL » → crème fraîche épaisse 30 % 20 cl (type "crème fraîche", variant "épaisse 30 %")
+- « YAO.NAT.BIO 4X125G » → yaourt nature bio 4 x 125 g (type "yaourt", variant "nature bio")
+- « JB DD SUP X4 » → jambon découenné dégraissé supérieur x4 (type "jambon")
+- « LPM GEL DCHE 250ML » → gel douche Le Petit Marseillais 250 ml (brand "Le Petit Marseillais", brand_raw "LPM", type "gel douche")`;
+
+export async function expandLabel(
+  label: string,
+  chain: string | null,
+  section: string | null,
+  unitPriceCents: number | null,
+): Promise<Guess | null> {
   try {
-    return await generateObject(GuessSchema, prompt(label, chain, section));
+    // Mise en cache par (modèle, prompt) : un même libellé n'est payé qu'une fois.
+    const text = prompt(label, chain, section, unitPriceCents);
+    return await cached(`llm:${llmModel()}:${text}`, () => generateObject(GuessSchema, text));
   } catch (err) {
     console.error("[expandLabel]", label, err);
     return null; // sans hypothèse, on cherche avec le libellé brut

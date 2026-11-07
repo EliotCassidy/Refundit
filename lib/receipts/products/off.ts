@@ -53,14 +53,14 @@ export function quantityVariants(size: Size): string[] {
 export async function searchOff(text: string, brand?: string | null, quantities: string[] = []): Promise<Hit[]> {
   const sizeFilter = quantities.length ? `(${quantities.map((v) => `quantity:${quote(v)}`).join(" OR ")}) ` : "";
   const q = `${brand ? `brands:${quote(brand)} ` : ""}${sizeFilter}${text}`.trim();
-  const url = `https://search.openfoodfacts.org/search?${new URLSearchParams({ q, langs: "fr", page_size: "15", fields: FIELDS })}`;
+  const url = `https://search.openfoodfacts.org/search?${new URLSearchParams({ q, langs: "fr", page_size: "20", fields: FIELDS })}`;
   const res = await getJson<{ hits?: OffDoc[] }>(url);
   return (res?.hits ?? []).map((d) => toHit(d, "off")).filter((h): h is Hit => h !== null);
 }
 
 /** Recherche plein texte Open Beauty Facts. */
 export async function searchObf(text: string): Promise<Hit[]> {
-  const url = `https://world.openbeautyfacts.org/cgi/search.pl?${new URLSearchParams({ search_terms: text, json: "1", page_size: "15", fields: FIELDS })}`;
+  const url = `https://world.openbeautyfacts.org/cgi/search.pl?${new URLSearchParams({ search_terms: text, search_simple: "1", json: "1", page_size: "20", fields: FIELDS })}`;
   const res = await getJson<{ products?: OffDoc[] }>(url);
   return (res?.products ?? []).map((d) => toHit(d, "obf")).filter((h): h is Hit => h !== null);
 }

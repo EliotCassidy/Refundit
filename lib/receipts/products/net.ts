@@ -10,12 +10,13 @@ export const USER_AGENT = "Refundit/0.1 (hackathon H Company x 42AI; +https://gi
 
 // Intervalle minimal entre deux appels au même site.
 // Doc OFF (openfoodfacts.github.io/openfoodfacts-server/api) : 10 recherches/min, 15 lectures produit/min.
-// Search-a-licious et Open Prices : pas de limite publiée → prudence, 1 appel/s.
+// Search-a-licious et Open Prices : pas de limite publiée ; 0,5 s et 0,2 s ont tenu sans 429 sur des centaines
+// d'appels dans le prototype Python (~/Documents/hackaton/resolve.py).
 const MIN_INTERVAL_MS: Record<string, number> = {
   "world.openbeautyfacts.org": 6_000, // supposé identique à OFF (non documenté pour OBF)
   "world.openfoodfacts.org": 4_000,
-  "search.openfoodfacts.org": 1_000,
-  "prices.openfoodfacts.org": 1_000,
+  "search.openfoodfacts.org": 500,
+  "prices.openfoodfacts.org": 200,
 };
 
 const ON_VERCEL = Boolean(process.env.VERCEL);
@@ -42,6 +43,16 @@ async function cacheSet(key: string, value: unknown) {
   if (ON_VERCEL) return;
   await mkdir(CACHE_DIR, { recursive: true });
   await writeFile(join(CACHE_DIR, `${key}.json`), JSON.stringify({ value }));
+}
+
+/** Met en cache le résultat d'un calcul coûteux (ex. un appel LLM), par clé. Les erreurs ne sont pas mises en cache. */
+export async function cached<T>(key: string, compute: () => Promise<T>): Promise<T> {
+  const k = createHash("sha1").update(key).digest("hex");
+  const hit = await cacheGet(k);
+  if (hit.hit) return hit.value as T;
+  const value = await compute();
+  await cacheSet(k, value);
+  return value;
 }
 
 /** Attend son tour pour ce site (les appels simultanés sont mis en file). */
