@@ -1,0 +1,100 @@
+{
+  "proof_id": 143335,
+  "source": "https://prices.openfoodfacts.org/proofs/143335",
+  "license": "image CC BY-SA 4.0, data ODbL — Open Prices / Open Food Facts",
+  "date": "2026-11-02",
+  "currency": "EUR",
+  "store": {
+    "chain": "Naturalia",
+    "name": "Naturalia",
+    "city": "Paris"
+  },
+  "receipt_price_total": null,
+  "receipt_price_count": null,
+  "prices": [
+    {
+      "ean": "3700036909021",
+      "price": 8.9,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": "Muesli aux pepites de chocolat noir",
+      "brands": "Naturalia",
+      "quantity": "",
+      "image_url": "https://images.openfoodfacts.org/images/products/370/003/690/9021/front_fr.3.400.jpg"
+    },
+    {
+      "ean": "4012359010056",
+      "price": 3.75,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": "Tofu fumé Amandes-Sésame",
+      "brands": "Taifun",
+      "quantity": "200g",
+      "image_url": "https://images.openfoodfacts.org/images/products/401/235/901/0056/front_fr.24.400.jpg"
+    },
+    {
+      "ean": "3700036906303",
+      "price": 2.09,
+      "price_is_discounted": true,
+      "price_without_discount": null,
+      "discount_type": "EXPIRES_SOON",
+      "receipt_quantity": 1,
+      "product_name": "Salade de quinoa, chou et graines de lin",
+      "brands": "Naturalia",
+      "quantity": "200 g",
+      "image_url": "https://images.openfoodfacts.org/images/products/370/003/690/6303/front_fr.17.400.jpg"
+    },
+    {
+      "ean": "3267460032027",
+      "price": 2.07,
+      "price_is_discounted": true,
+      "price_without_discount": null,
+      "discount_type": "EXPIRES_SOON",
+      "receipt_quantity": 1,
+      "product_name": "Tagliatelles aux cèpes",
+      "brands": "Lazzaretti",
+      "quantity": "70g",
+      "image_url": "https://images.openfoodfacts.org/images/products/326/746/003/2027/front_fr.5.400.jpg"
+    },
+    {
+      "ean": "3700036907140",
+      "price": 1.6,
+      "price_is_discounted": true,
+      "price_without_discount": null,
+      "discount_type": "EXPIRES_SOON",
+      "receipt_quantity": 1,
+      "product_name": "Carottes râpées et persillées",
+      "brands": "Naturalia",
+      "quantity": "200g",
+      "image_url": "https://images.openfoodfacts.org/images/products/370/003/690/7140/front_fr.8.400.jpg"
+    },
+    {
+      "ean": "3380380114113",
+      "price": 3.79,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": "Choucroute",
+      "brands": "Priméal",
+      "quantity": "680g net, 650 net égoutté",
+      "image_url": "https://images.openfoodfacts.org/images/products/338/038/011/4113/front_fr.3.400.jpg"
+    },
+    {
+      "ean": null,
+      "price": 5.99,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": null,
+      "brands": null,
+      "quantity": null,
+      "image_url": null
+    }
+  ]
+}

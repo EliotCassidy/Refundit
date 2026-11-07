@@ -1,0 +1,76 @@
+{
+  "proof_id": 143495,
+  "source": "https://prices.openfoodfacts.org/proofs/143495",
+  "license": "image CC BY-SA 4.0, data ODbL — Open Prices / Open Food Facts",
+  "date": "2026-11-03",
+  "currency": "EUR",
+  "store": {
+    "chain": "Carrefour Market",
+    "name": "Carrefour Market",
+    "city": "Paris"
+  },
+  "receipt_price_total": null,
+  "receipt_price_count": null,
+  "prices": [
+    {
+      "ean": "3270190128717",
+      "price": 0.89,
+      "price_is_discounted": true,
+      "price_without_discount": 0.99,
+      "discount_type": "QUANTITY",
+      "receipt_quantity": 1,
+      "product_name": "SOJA Sans sucres ajoutés",
+      "brands": "Carrefour BIO, Carrefour, Groupe Carrefour",
+      "quantity": "1 L",
+      "image_url": "https://images.openfoodfacts.org/images/products/327/019/012/8717/front_fr.107.400.jpg"
+    },
+    {
+      "ean": "3560071150617",
+      "price": 2.45,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": "Cerneaux de noix",
+      "brands": "Carrefour BIO, Carrefour",
+      "quantity": "90 g",
+      "image_url": "https://images.openfoodfacts.org/images/products/356/007/115/0617/front_es.76.400.jpg"
+    },
+    {
+      "ean": "3270190023524",
+      "price": 1.38,
+      "price_is_discounted": true,
+      "price_without_discount": 1.85,
+      "discount_type": "EXPIRES_SOON",
+      "receipt_quantity": 1,
+      "product_name": "Fromage Blanc nature",
+      "brands": "Carrefour",
+      "quantity": "800 g(8 x 100 g)",
+      "image_url": "https://images.openfoodfacts.org/images/products/327/019/002/3524/front_fr.58.400.jpg"
+    },
+    {
+      "ean": "3270190174349",
+      "price": 3.45,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": "Ravioli vegetariens",
+      "brands": "Carrefour BIO, Carrefour",
+      "quantity": "650 g",
+      "image_url": "https://images.openfoodfacts.org/images/products/327/019/017/4349/front_fr.46.400.jpg"
+    },
+    {
+      "ean": "3560070590728",
+      "price": 3.59,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": "PIZZA Chèvre Cuite au feu de bois",
+      "brands": "Carrefour BIO, CARREFOUR FRANCE, Carrefour",
+      "quantity": "360 g",
+      "image_url": "https://images.openfoodfacts.org/images/products/356/007/059/0728/front_fr.61.400.jpg"
+    }
+  ]
+}

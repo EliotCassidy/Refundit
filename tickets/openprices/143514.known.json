@@ -1,0 +1,88 @@
+{
+  "proof_id": 143514,
+  "source": "https://prices.openfoodfacts.org/proofs/143514",
+  "license": "image CC BY-SA 4.0, data ODbL — Open Prices / Open Food Facts",
+  "date": "2026-11-03",
+  "currency": "EUR",
+  "store": {
+    "chain": "E.Leclerc",
+    "name": "E.Leclerc Levallois",
+    "city": "Levallois-Perret"
+  },
+  "receipt_price_total": null,
+  "receipt_price_count": null,
+  "prices": [
+    {
+      "ean": "0202012023613",
+      "price": 3.6,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": "Tartelettes abricots",
+      "brands": "Leclerc",
+      "quantity": "200g",
+      "image_url": "https://images.openfoodfacts.org/images/products/020/201/202/3613/front_en.3.400.jpg"
+    },
+    {
+      "ean": "3023290002780",
+      "price": 1.7,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": "Velours de Crème Chocolat au lait, Caramel beurre salé au sel de Guérande",
+      "brands": "Nestlé, La Laitière",
+      "quantity": "340g (4x85g)",
+      "image_url": "https://images.openfoodfacts.org/images/products/302/329/000/2780/front_fr.88.400.jpg"
+    },
+    {
+      "ean": "7622202028199",
+      "price": 2,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": "Mikado Chocolat Noir",
+      "brands": "Glico, LU, Mikado, Mondelez",
+      "quantity": "100 g",
+      "image_url": "https://images.openfoodfacts.org/images/products/762/220/202/8199/front_fr.49.400.jpg"
+    },
+    {
+      "ean": "3564700021385",
+      "price": 1.07,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": "Goûter Pépites de chocolat",
+      "brands": "Marque Repère, P'tit Déli",
+      "quantity": "150 g",
+      "image_url": "https://images.openfoodfacts.org/images/products/356/470/002/1385/front_fr.36.400.jpg"
+    },
+    {
+      "ean": "3248830862987",
+      "price": 3.25,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": "Merlu blanc compotée à la provençale, linguine au safran",
+      "brands": "Marie",
+      "quantity": "300 g",
+      "image_url": "https://images.openfoodfacts.org/images/products/324/883/086/2987/front_fr.68.400.jpg"
+    },
+    {
+      "ean": "3664320911537",
+      "price": 2.85,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": "Eau minérale naturelle",
+      "brands": "Quézac",
+      "quantity": "6 x 50 cl",
+      "image_url": "https://images.openfoodfacts.org/images/products/366/432/091/1537/front_fr.37.400.jpg"
+    }
+  ]
+}

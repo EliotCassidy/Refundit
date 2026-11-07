@@ -22,6 +22,7 @@ app/(app)/page.tsx       app/(app)/receipts/**
 app/api/receipts/**      app/api/claims/route.ts
 lib/receipts/**          lib/brands/index.ts (resolveBrand)   supabase/seed/**
 components/ui/**         app/layout.tsx, app/(app)/layout.tsx, proxy.ts
+tickets/**               (test receipts for the parser evals)
 ```
 
 ## Dev 2: Agent, claim lifecycle, email & tracking

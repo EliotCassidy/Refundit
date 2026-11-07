@@ -1,0 +1,88 @@
+{
+  "proof_id": 144015,
+  "source": "https://prices.openfoodfacts.org/proofs/144015",
+  "license": "image CC BY-SA 4.0, data ODbL — Open Prices / Open Food Facts",
+  "date": "2026-11-02",
+  "currency": "EUR",
+  "store": {
+    "chain": null,
+    "name": "Miyam",
+    "city": "Montreuil"
+  },
+  "receipt_price_total": null,
+  "receipt_price_count": null,
+  "prices": [
+    {
+      "ean": null,
+      "price": 6.6,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 0.396,
+      "product_name": "Epinards (famille)",
+      "brands": null,
+      "quantity": null,
+      "image_url": null
+    },
+    {
+      "ean": null,
+      "price": 0.72,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 4,
+      "product_name": "Oignon botte (famille)",
+      "brands": null,
+      "quantity": null,
+      "image_url": null
+    },
+    {
+      "ean": null,
+      "price": 6.25,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 0.336,
+      "product_name": "Tomate ancienne (famille)",
+      "brands": null,
+      "quantity": null,
+      "image_url": null
+    },
+    {
+      "ean": null,
+      "price": 2.95,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 0.572,
+      "product_name": "Oignons jaunes (famille)",
+      "brands": null,
+      "quantity": null,
+      "image_url": null
+    },
+    {
+      "ean": null,
+      "price": 5.95,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 0.562,
+      "product_name": "Raisin noir (famille)",
+      "brands": null,
+      "quantity": null,
+      "image_url": null
+    },
+    {
+      "ean": null,
+      "price": 3.95,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 0.106,
+      "product_name": "Citron",
+      "brands": null,
+      "quantity": null,
+      "image_url": null
+    }
+  ]
+}

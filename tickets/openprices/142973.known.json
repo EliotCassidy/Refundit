@@ -1,0 +1,160 @@
+{
+  "proof_id": 142973,
+  "source": "https://prices.openfoodfacts.org/proofs/142973",
+  "license": "image CC BY-SA 4.0, data ODbL — Open Prices / Open Food Facts",
+  "date": "2026-10-07",
+  "currency": "EUR",
+  "store": {
+    "chain": "Auchan",
+    "name": "Auchan",
+    "city": "Caluire-et-Cuire"
+  },
+  "receipt_price_total": 100.52,
+  "receipt_price_count": null,
+  "prices": [
+    {
+      "ean": "3596710494118",
+      "price": 1.74,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": "Flocons d'Avoine",
+      "brands": "Auchan, Auchan Bio",
+      "quantity": "0.5 kg",
+      "image_url": "https://images.openfoodfacts.org/images/products/359/671/049/4118/front_fr.73.400.jpg"
+    },
+    {
+      "ean": "3596710540457",
+      "price": 1.97,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": "Yaourt nature",
+      "brands": "Auchan",
+      "quantity": "1 kg",
+      "image_url": "https://images.openfoodfacts.org/images/products/359/671/054/0457/front_fr.39.400.jpg"
+    },
+    {
+      "ean": "3165950222036",
+      "price": 6.79,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": "Thon entier nature 3 x 112 g",
+      "brands": "Saupiquet",
+      "quantity": "336 g",
+      "image_url": "https://images.openfoodfacts.org/images/products/316/595/022/2036/front_fr.26.400.jpg"
+    },
+    {
+      "ean": "3596710565450",
+      "price": 1.85,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": "Fromage blanc 0% de matières grasses",
+      "brands": "Auchan",
+      "quantity": "1 kg",
+      "image_url": "https://images.openfoodfacts.org/images/products/359/671/056/5450/front_fr.20.400.jpg"
+    },
+    {
+      "ean": "3596710524945",
+      "price": 3.4,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": "Plein Air x 12",
+      "brands": "Auchan",
+      "quantity": null,
+      "image_url": "https://images.openfoodfacts.org/images/products/359/671/052/4945/front_fr.56.400.jpg"
+    },
+    {
+      "ean": "3254563020631",
+      "price": 12.5,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": "Filets de poulet blanc",
+      "brands": "Auchan",
+      "quantity": "720 g",
+      "image_url": "https://images.openfoodfacts.org/images/products/325/456/302/0631/front_fr.7.400.jpg"
+    },
+    {
+      "ean": null,
+      "price": 4.05,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": "TOMATE COTELEE JAUNE",
+      "brands": null,
+      "quantity": null,
+      "image_url": null
+    },
+    {
+      "ean": "3165950222036",
+      "price": 2.72,
+      "price_is_discounted": true,
+      "price_without_discount": 6.79,
+      "discount_type": "OTHER",
+      "receipt_quantity": 1,
+      "product_name": "Thon entier nature 3 x 112 g",
+      "brands": "Saupiquet",
+      "quantity": "336 g",
+      "image_url": "https://images.openfoodfacts.org/images/products/316/595/022/2036/front_fr.26.400.jpg"
+    },
+    {
+      "ean": "8720389000317",
+      "price": 15.99,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": "AQUA CLEAN CA..",
+      "brands": null,
+      "quantity": null,
+      "image_url": null
+    },
+    {
+      "ean": "3445731106046",
+      "price": 4.97,
+      "price_is_discounted": true,
+      "price_without_discount": 7.53,
+      "discount_type": "OTHER",
+      "receipt_quantity": 2,
+      "product_name": "Miel de Provence IGP",
+      "brands": "Les Compagnons du Miel",
+      "quantity": "375 g",
+      "image_url": "https://images.openfoodfacts.org/images/products/344/573/110/6046/front_en.3.400.jpg"
+    },
+    {
+      "ean": "7613033136351",
+      "price": 10.93,
+      "price_is_discounted": true,
+      "price_without_discount": 14.58,
+      "discount_type": "OTHER",
+      "receipt_quantity": 1,
+      "product_name": "Purina One",
+      "brands": "Purina",
+      "quantity": "3kg",
+      "image_url": "https://images.openpetfoodfacts.org/images/products/761/303/313/6351/front_fr.29.400.jpg"
+    },
+    {
+      "ean": null,
+      "price": 15.46,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": "VIANDE BOVINE RUMS..",
+      "brands": null,
+      "quantity": null,
+      "image_url": null
+    }
+  ]
+}

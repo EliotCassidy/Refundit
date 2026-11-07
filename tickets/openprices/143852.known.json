@@ -1,0 +1,76 @@
+{
+  "proof_id": 143852,
+  "source": "https://prices.openfoodfacts.org/proofs/143852",
+  "license": "image CC BY-SA 4.0, data ODbL — Open Prices / Open Food Facts",
+  "date": "2026-11-05",
+  "currency": "EUR",
+  "store": {
+    "chain": "Monoprix",
+    "name": "Monoprix",
+    "city": "Paris"
+  },
+  "receipt_price_total": null,
+  "receipt_price_count": null,
+  "prices": [
+    {
+      "ean": "3350030221676",
+      "price": 2.39,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": "Jeunes pousses",
+      "brands": "Monoprix, Monoprix Bio",
+      "quantity": "100 g",
+      "image_url": "https://images.openfoodfacts.org/images/products/335/003/022/1676/front_fr.21.400.jpg"
+    },
+    {
+      "ean": "3350034033176",
+      "price": 3.99,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": "Mûres",
+      "brands": "Monoprix",
+      "quantity": "125 g",
+      "image_url": "https://images.openfoodfacts.org/images/products/335/003/403/3176/front_fr.3.400.jpg"
+    },
+    {
+      "ean": "3350030186258",
+      "price": 3.43,
+      "price_is_discounted": true,
+      "price_without_discount": 4.29,
+      "discount_type": "QUANTITY",
+      "receipt_quantity": 1,
+      "product_name": "Feta affinée en fût",
+      "brands": "Monoprix, Monoprix Gourmet",
+      "quantity": "200 g (environ 6 portions)",
+      "image_url": "https://images.openfoodfacts.org/images/products/335/003/018/6258/front_fr.27.400.jpg"
+    },
+    {
+      "ean": null,
+      "price": 1.99,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": null,
+      "brands": null,
+      "quantity": null,
+      "image_url": null
+    },
+    {
+      "ean": null,
+      "price": 0.67,
+      "price_is_discounted": true,
+      "price_without_discount": 0.99,
+      "discount_type": "QUANTITY",
+      "receipt_quantity": 1,
+      "product_name": null,
+      "brands": null,
+      "quantity": null,
+      "image_url": null
+    }
+  ]
+}

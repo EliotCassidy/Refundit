@@ -1,0 +1,100 @@
+{
+  "proof_id": 143497,
+  "source": "https://prices.openfoodfacts.org/proofs/143497",
+  "license": "image CC BY-SA 4.0, data ODbL — Open Prices / Open Food Facts",
+  "date": "2026-10-30",
+  "currency": "EUR",
+  "store": {
+    "chain": "Aldi",
+    "name": "Aldi",
+    "city": "Marcigny"
+  },
+  "receipt_price_total": 20.39,
+  "receipt_price_count": null,
+  "prices": [
+    {
+      "ean": "4068262036249",
+      "price": 4.99,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": "Châtaigne entières pelées",
+      "brands": "Aldi, Gourmet Finest Cuisine",
+      "quantity": "420g",
+      "image_url": "https://images.openfoodfacts.org/images/products/406/826/203/6249/front_fr.21.400.jpg"
+    },
+    {
+      "ean": "26050195",
+      "price": 1.79,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": "Fromage blanc nature 0% MG",
+      "brands": "Milsani",
+      "quantity": "1 kg",
+      "image_url": "https://images.openfoodfacts.org/images/products/000/002/605/0195/front_fr.92.400.jpg"
+    },
+    {
+      "ean": "2006050193790",
+      "price": 1.39,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 3,
+      "product_name": "Riz de Camargue IGP",
+      "brands": "Aldi, Pays Gourmand",
+      "quantity": "500 g",
+      "image_url": "https://images.openfoodfacts.org/images/products/200/605/019/3790/front_fr.13.400.jpg"
+    },
+    {
+      "ean": "2006050065448",
+      "price": 0.89,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": "Graines & céréales",
+      "brands": "Aldi",
+      "quantity": "230 g",
+      "image_url": "https://images.openfoodfacts.org/images/products/200/605/006/5448/front_fr.40.400.jpg"
+    },
+    {
+      "ean": "2006050252862",
+      "price": 1.69,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 2,
+      "product_name": "ASST PATES PROTEINES",
+      "brands": null,
+      "quantity": null,
+      "image_url": null
+    },
+    {
+      "ean": null,
+      "price": 0.99,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": "OIGNON JAUNE 1,5KG",
+      "brands": null,
+      "quantity": null,
+      "image_url": null
+    },
+    {
+      "ean": null,
+      "price": 1.49,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 0.838,
+      "product_name": "BANANES BIO FT",
+      "brands": null,
+      "quantity": null,
+      "image_url": null
+    }
+  ]
+}

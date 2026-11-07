@@ -44,3 +44,7 @@ next-env.d.ts
 # claude code local settings
 .claude/settings.local.json
 *.tmp
+
+# test receipts: personal ones stay local (personal data), Open Prices ones are committed
+/tickets/*
+!/tickets/openprices/

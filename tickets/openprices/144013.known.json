@@ -1,0 +1,88 @@
+{
+  "proof_id": 144013,
+  "source": "https://prices.openfoodfacts.org/proofs/144013",
+  "license": "image CC BY-SA 4.0, data ODbL — Open Prices / Open Food Facts",
+  "date": "2026-11-04",
+  "currency": "EUR",
+  "store": {
+    "chain": null,
+    "name": "Miyam",
+    "city": "Montreuil"
+  },
+  "receipt_price_total": null,
+  "receipt_price_count": null,
+  "prices": [
+    {
+      "ean": null,
+      "price": 2.95,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 0.314,
+      "product_name": "Pamplemousse",
+      "brands": null,
+      "quantity": null,
+      "image_url": null
+    },
+    {
+      "ean": null,
+      "price": 3.95,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 0.158,
+      "product_name": "Citron",
+      "brands": null,
+      "quantity": null,
+      "image_url": null
+    },
+    {
+      "ean": null,
+      "price": 3.95,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 0.47,
+      "product_name": "Topinambour (famille)",
+      "brands": null,
+      "quantity": null,
+      "image_url": null
+    },
+    {
+      "ean": null,
+      "price": 6.6,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 0.45,
+      "product_name": "Chou kale (famille)",
+      "brands": null,
+      "quantity": null,
+      "image_url": null
+    },
+    {
+      "ean": null,
+      "price": 15.9,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 0.11,
+      "product_name": "Figues vrac (famille)",
+      "brands": null,
+      "quantity": null,
+      "image_url": null
+    },
+    {
+      "ean": null,
+      "price": 5.95,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 0.39,
+      "product_name": "Clémentine CORSE",
+      "brands": null,
+      "quantity": null,
+      "image_url": null
+    }
+  ]
+}

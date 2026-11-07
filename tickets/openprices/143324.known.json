@@ -1,0 +1,76 @@
+{
+  "proof_id": 143324,
+  "source": "https://prices.openfoodfacts.org/proofs/143324",
+  "license": "image CC BY-SA 4.0, data ODbL — Open Prices / Open Food Facts",
+  "date": "2026-11-02",
+  "currency": "EUR",
+  "store": {
+    "chain": "Carrefour City",
+    "name": "Carrefour City",
+    "city": "Grenoble"
+  },
+  "receipt_price_total": 8.84,
+  "receipt_price_count": 5,
+  "prices": [
+    {
+      "ean": "3560071584603",
+      "price": 1.47,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": "Mais",
+      "brands": "Carrefour",
+      "quantity": null,
+      "image_url": "https://images.openfoodfacts.org/images/products/356/007/158/4603/front_fr.41.400.jpg"
+    },
+    {
+      "ean": "3560070690916",
+      "price": 1.6,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": "Salsifis",
+      "brands": "Carrefour",
+      "quantity": "400 g",
+      "image_url": "https://images.openfoodfacts.org/images/products/356/007/069/0916/front_fr.48.400.jpg"
+    },
+    {
+      "ean": "3560071515577",
+      "price": 1.79,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": "Petits pois tres-fins à l'étuvée",
+      "brands": "Carrefour",
+      "quantity": "800 g",
+      "image_url": "https://images.openfoodfacts.org/images/products/356/007/151/5577/front_fr.3.400.jpg"
+    },
+    {
+      "ean": "3523680438224",
+      "price": 1.99,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": "Bio et équitable",
+      "brands": "Carrefour BIO",
+      "quantity": "5 pièces",
+      "image_url": "https://images.openfoodfacts.org/images/products/352/368/043/8224/front_fr.105.400.jpg"
+    },
+    {
+      "ean": "3760095950129",
+      "price": 1.99,
+      "price_is_discounted": false,
+      "price_without_discount": null,
+      "discount_type": null,
+      "receipt_quantity": 1,
+      "product_name": "Endives",
+      "brands": "Perle-du-nord",
+      "quantity": "500 g",
+      "image_url": "https://images.openfoodfacts.org/images/products/376/009/595/0129/front_fr.49.400.jpg"
+    }
+  ]
+}
