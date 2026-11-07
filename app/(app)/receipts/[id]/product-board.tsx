@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { group } from "@/components/ui/list";
+import { useDemoRaw } from "@/components/demo/demo-state";
 import { StoreBanner } from "@/components/ui/store-logo";
 import { findStore } from "@/lib/stores";
 
@@ -289,6 +290,9 @@ function ProductCard({ it, s, patch, identify, confirm }: {
 }) {
   const info = cardInfo(it, s);
   const active = s.mode !== "idle";
+  // Jury demo: no "Changer" (the demo product is recognised automatically, and the product picker's menus would sit
+  // outside the tour's spotlight).
+  const demo = useDemoRaw() !== null;
   // « Oui » = l'utilisateur est en train de réclamer ce produit (panneau ouvert, même pendant un « Changer »).
   const hasIssue = s.mode === "issue" || (s.mode === "product" && s.returnTo === "issue");
   // High confidence: product confirmed, or the 1st candidate is reliable enough to auto-validate.
@@ -352,7 +356,7 @@ function ProductCard({ it, s, patch, identify, confirm }: {
                 {sure ? "Identifié" : "À vérifier"}
               </span>
               {info.note && <span className={info.noteTone}>{info.note}</span>}
-              {s.mode === "idle" && (
+              {s.mode === "idle" && !demo && (
                 <>
                   <span className="text-muted/50">·</span>
                   <button type="button" onClick={enterProduct} className="font-medium text-muted underline-offset-2 transition hover:text-ink hover:underline">
@@ -412,7 +416,9 @@ function ProductCard({ it, s, patch, identify, confirm }: {
                     </>
                   ) : "Produit non identifié : la réclamation citera le libellé du ticket"}
                 </span>
-                <button type="button" onClick={enterProduct} className="shrink-0 font-medium text-muted underline-offset-2 hover:text-ink hover:underline">Changer</button>
+                {!demo && (
+                  <button type="button" onClick={enterProduct} className="shrink-0 font-medium text-muted underline-offset-2 hover:text-ink hover:underline">Changer</button>
+                )}
               </div>
             ) : (
               <div className="flex flex-col gap-2">
@@ -456,6 +462,7 @@ function ProductPicker({ state: s, onPick, onRetry, onSearch, onManual }: {
   onSearch: (extra: Extra) => void; onManual: (m: Manual) => void;
 }) {
   const [manual, setManual] = useState(false);
+  const demo = useDemoRaw() !== null; // jury demo: no secondary menu (see ProductCard)
   const [showAll, setShowAll] = useState(false);
   const [byHand, setByHand] = useState<Manual>({ name: "" });
   const [ean, setEan] = useState("");
@@ -516,6 +523,7 @@ function ProductPicker({ state: s, onPick, onRetry, onSearch, onManual }: {
             + {s.candidates!.candidates.length - 3} autres
           </button>
         )}
+        {!demo && (
         <Dropdown.Root>
           <Dropdown.Trigger className="ml-auto inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[13px] font-medium text-muted outline-none transition hover:bg-black/[0.04] hover:text-ink data-[state=open]:bg-black/[0.05]">
             Autres options <ChevronDown className="size-3.5" aria-hidden />
@@ -536,6 +544,7 @@ function ProductPicker({ state: s, onPick, onRetry, onSearch, onManual }: {
             </Dropdown.Content>
           </Dropdown.Portal>
         </Dropdown.Root>
+        )}
       </div>
 
       {/* Secours : le produit n'est pas dans la liste */}
