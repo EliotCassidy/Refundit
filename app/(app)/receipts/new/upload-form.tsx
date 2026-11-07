@@ -90,19 +90,39 @@ export function UploadForm() {
         ) : (
           <motion.div key="actions" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex w-full max-w-sm flex-col gap-2.5">
             {demo && (
-              <div id="demo-ticket" className="mb-2 flex items-center gap-3.5 rounded-[20px] bg-white/85 p-3 shadow-[0_12px_32px_-18px_rgba(17,23,20,0.3)] ring-1 ring-black/[0.06]">
-                <button type="button" onClick={() => setZoom(true)} aria-label="Agrandir le ticket de démo" className="group relative shrink-0 overflow-hidden rounded-[6px] ring-1 ring-black/10">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- static demo image */}
-                  <img src={DEMO_TICKET} alt="" className="h-20 w-12 object-cover object-top transition group-hover:scale-105" />
-                  <span className="absolute inset-0 grid place-items-center bg-black/0 transition group-hover:bg-black/35">
-                    <Maximize2 className="size-4 text-white opacity-80 drop-shadow transition group-hover:opacity-100" aria-hidden />
+              <div
+                id="demo-ticket"
+                data-zoom-open={zoom ? "" : undefined}
+                className="mb-2 flex flex-col gap-3 rounded-[20px] bg-white/85 p-3 shadow-[0_12px_32px_-18px_rgba(17,23,20,0.3)] ring-1 ring-black/[0.06]"
+              >
+                <div className="flex items-center gap-3.5">
+                  <button type="button" onClick={() => setZoom(true)} aria-label="Voir le ticket de démo en grand" className="group relative shrink-0 overflow-hidden rounded-[6px] ring-1 ring-black/10">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- static demo image */}
+                    <img src={DEMO_TICKET} alt="" className="h-20 w-12 object-cover object-top transition group-hover:scale-105" />
+                  </button>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[15px] font-semibold">Ticket de démo</span>
+                    <span className="block text-[13px] text-muted">Carrefour Bastille · ticket fictif avec NotCoca</span>
                   </span>
-                </button>
-                <button type="button" data-demo-use onClick={pickDemoTicket} className="min-w-0 flex-1 text-left transition active:scale-[0.98]">
-                  <span className="block text-[15px] font-semibold">Utiliser le ticket de démo</span>
-                  <span className="block text-[13px] text-muted">Carrefour Bastille · ticket fictif avec NotCoca</span>
-                  <span className="mt-1 block text-[12px] font-medium text-muted">Touche l&apos;image pour l&apos;agrandir</span>
-                </button>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    data-demo-zoom
+                    onClick={() => setZoom(true)}
+                    className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full bg-white text-[14px] font-semibold text-ink ring-1 ring-black/[0.1] transition hover:bg-black/[0.03] active:scale-[0.98]"
+                  >
+                    <Maximize2 className="size-4" aria-hidden /> Voir le ticket
+                  </button>
+                  <button
+                    type="button"
+                    data-demo-use
+                    onClick={pickDemoTicket}
+                    className="inline-flex h-10 items-center justify-center rounded-full bg-ink text-[14px] font-semibold text-surface transition hover:bg-ink/90 active:scale-[0.98]"
+                  >
+                    Utiliser ce ticket
+                  </button>
+                </div>
               </div>
             )}
             <label className="inline-flex h-[52px] cursor-pointer items-center justify-center gap-2 rounded-full bg-ink px-5 text-[15px] font-semibold text-surface transition hover:bg-ink/90 active:scale-[0.98]">

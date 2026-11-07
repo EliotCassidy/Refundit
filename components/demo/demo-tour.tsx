@@ -69,6 +69,7 @@ export function DemoTour() {
   const firstRequest = useDomValue(() => document.querySelector("[data-demo-first-status]")?.getAttribute("data-demo-first-status") ?? null);
   const received = useDomValue(() => document.querySelector("#demo-balance")?.getAttribute("data-received") ?? null);
   const ready = useDomValue(() => (document.querySelector("li[data-demo-ready]") ? "1" : null));
+  const zoomOpen = useDomValue(() => (document.querySelector("[data-zoom-open]") ? "1" : null));
   const drv = useRef<Driver | null>(null);
 
   const step = state?.step ?? null;
@@ -80,7 +81,7 @@ export function DemoTour() {
   useEffect(() => () => {
     drv.current?.destroy();
     drv.current = null;
-  }, [pathname, step, status, firstRequest, ready, seenKey]);
+  }, [pathname, step, status, firstRequest, ready, seenKey, zoomOpen]);
 
   // Step transitions driven by navigation.
   useEffect(() => {
@@ -140,19 +141,30 @@ export function DemoTour() {
         return;
       }
 
-      // 2) Scan page: the fictional receipt.
+      // 2) Scan page: first look at the fictional receipt (required), then use it. While the zoom is open there
+      //    is NO spotlight: driver.js would swallow the clicks in the zoom window.
       if (step === "scan" && pathname === "/receipts/new") {
-        const el = await waitFor(() => document.querySelector("#demo-ticket"));
-        if (!el) return;
-        spot(
-          {
+        if (zoomOpen) return;
+        if (!seen("ticket-viewed")) {
+          const el = await waitFor(() => document.querySelector("[data-demo-zoom]"));
+          if (!el) return;
+          spot({
             element: el,
             disableActiveInteraction: false,
-            popover: { title: "Un ticket de démo", description: "Un ticket Carrefour fictif avec deux boissons NotCoca, notre marque de démo. Touche l'image pour le voir en grand, puis utilise-le : il est lu comme une vraie photo.", side: "top", align: "center", showButtons: [] },
-            // Only "use this ticket" moves on (the thumbnail opens a zoom of the ticket).
-            onHighlighted: (e) => e?.querySelectorAll("[data-demo-use]").forEach((b) => b.addEventListener("click", () => drv.current?.destroy(), { once: true })),
-          },
-        );
+            popover: { title: "D'abord, regarde le ticket", description: "Un ticket Carrefour fictif avec deux boissons NotCoca, notre marque de démo. Touche « Voir le ticket » pour l'ouvrir en grand.", side: "top", align: "center", showButtons: [] },
+            onHighlighted: (e) =>
+              e?.addEventListener("click", () => { drv.current?.destroy(); markSeen("ticket-viewed"); }, { once: true }),
+          });
+          return;
+        }
+        const el = await waitFor(() => document.querySelector("[data-demo-use]"));
+        if (!el) return;
+        spot({
+          element: el,
+          disableActiveInteraction: false,
+          popover: { title: "Maintenant, envoie-le", description: "Touche « Utiliser ce ticket » : il est lu comme une vraie photo, ligne par ligne.", side: "top", align: "center", showButtons: [] },
+          onHighlighted: (e) => e?.addEventListener("click", () => drv.current?.destroy(), { once: true }),
+        });
         return;
       }
 
@@ -395,7 +407,7 @@ export function DemoTour() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run on page / step / page-state changes only
-  }, [step, pathname, status, firstRequest, received, ready, seenKey]);
+  }, [step, pathname, status, firstRequest, received, ready, seenKey, zoomOpen]);
 
   // While the agent works (1st run, then again after the missing info), keep its screen open.
   const forceAgent = step === "agent" && status === "submitting" && seen("agent-live");
