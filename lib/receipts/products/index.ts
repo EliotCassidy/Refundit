@@ -35,6 +35,14 @@ const clean = (s: string | null | undefined) =>
 
 const eanKey = (ean: string) => ean.replace(/^0+/, "");
 
+// Linkup : preuve des produits proposés après le 1er (le 1er vaut 1).
+const WEB_LATER = 0.7;
+/** Marque renvoyée par Linkup, nettoyée : sans ®/™ ni précisions entre parenthèses ; null si ce n'est pas une marque. */
+const webBrand = (b: string | null) => {
+  const s = (b ?? "").replace(/[®™©]/g, "").replace(/\([^)]*\)/g, "").trim();
+  return s && s !== "?" && s.length <= 40 ? s : null;
+};
+
 // Dernier résultat d'identification pour ce libellé chez cette enseigne (lookup_cache), avec ses photos.
 const identifyKey = (chain: string | null, rawLabel: string) => `identify:v1|${chainKey(chain)}|${labelKey(rawLabel)}`;
 
@@ -78,8 +86,16 @@ export async function knownCandidates(chain: string | null, rawLabel: string, re
   return null;
 }
 
-/** debug (évals) : rempli avec les EAN trouvés par les recherches (pool) et ceux qui ont reçu un prix (shortlist). */
-export async function identifyProduct(input: IdentifyInput, debug?: { pool?: string[]; shortlist?: string[] }): Promise<ProductCandidates> {
+/** Ce que l'éval peut lire : EAN trouvés par les recherches (pool), ceux qui ont reçu un prix (shortlist), et si la ligne
+ *  est assez faible pour appeler Linkup (weak, même quand Linkup est coupé : sert à compter les appels avant de payer). */
+export type IdentifyDebug = {
+  pool?: string[];
+  shortlist?: string[];
+  weak?: boolean;
+  web?: { name: string; brand: string | null; ean: string | null; hits: string[] }[]; // réponses Linkup → EAN gardés
+};
+
+export async function identifyProduct(input: IdentifyInput, debug?: IdentifyDebug): Promise<ProductCandidates> {
   const t0 = Date.now();
   const times: Record<string, number> = {};
   const lap = (name: string, since: number) => (times[name] = Date.now() - since);
@@ -172,26 +188,52 @@ export async function identifyProduct(input: IdentifyInput, debug?: { pool?: str
   let ranked = rank(shortlist, rankInput);
 
   // Secours web (Linkup, payant) : seulement si Open Food Facts n'a rien trouvé de bon. Un appel, jamais relancé.
-  if (linkupEnabled() && (!ranked.candidates.length || ranked.candidates[0].score < LINKUP_BELOW)) {
+  const weak = !ranked.candidates.length || ranked.candidates[0].score < LINKUP_BELOW;
+  if (debug) debug.weak = weak;
+  if (linkupEnabled() && weak) {
     since = Date.now();
+    const inShortlist = new Set(shortlist.map((c) => eanKey(c.ean)));
     const extra: Candidate[] = [];
-    for (const w of await webProducts(input.rawLabel, input.chain, input.unitPriceCents)) {
-      // EAN lu dans une source → sa fiche ; sinon on relance Open Food Facts avec le vrai nom trouvé sur le web
-      const hits = w.ean
-        ? [await offDocument(w.ean).catch(() => null)].filter((h): h is Hit => h !== null)
-        : (await searchOff(clean(w.name), w.brand).catch(() => [] as Hit[]))
-            .filter((h) => labelSimilarity(`${w.brand ?? ""} ${w.name}`, `${h.brand ?? ""} ${h.name}`) >= 0.5)
-            .slice(0, 3);
+    let named = false;
+    if (debug) debug.web = [];
+    const answers = await webProducts(input.rawLabel, input.chain, input.unitPriceCents);
+    for (const [i, w] of answers.entries()) {
+      const brand = webBrand(w.brand);
+      let hits: Omit<Candidate, "source">[];
+      if (w.ean) {
+        // EAN écrit tel quel dans une source (vérifié dans linkup.ts) → sa fiche OFF ; absent d'OFF, le produit est
+        // proposé tel que la source le décrit (sans photo). L'utilisateur le choisit lui-même : jamais validé tout seul.
+        const doc = await offDocument(w.ean).catch(() => null);
+        hits = [doc ?? { ean: w.ean, brand, name: w.name, quantity: w.quantity, image_url: null }];
+      } else {
+        // Sinon on relance Open Food Facts avec le vrai nom trouvé sur le web : dans la marque, puis sans filtre de marque
+        // (« MILSANI® », « Bio Bleud » ≠ marques écrites dans OFF ; ~0,5 s de plus, seulement sur les lignes difficiles).
+        const text = clean(w.name);
+        let found = text ? await searchOff(text, brand).catch(() => [] as Hit[]) : [];
+        if (!found.length && brand) found = await searchOff(clean(`${brand} ${w.name}`)).catch(() => [] as Hit[]);
+        hits = found.filter((h) => labelSimilarity(`${brand ?? ""} ${w.name}`, `${h.brand ?? ""} ${h.name}`) >= 0.5).slice(0, 3);
+      }
+      debug?.web?.push({ name: w.name, brand: w.brand, ean: w.ean, hits: hits.map((h) => eanKey(h.ean)) });
+      // Force de la preuve web : le 1er produit proposé par Linkup compte plus que les suivants (même avec un EAN lu
+      // dans une source : pour « ENDIVE », Linkup liste 5 endives avec leur EAN, ce ne sont que des possibilités).
+      const strength = i === 0 ? 1 : WEB_LATER;
       for (const h of hits) {
-        if (byEan.has(eanKey(h.ean))) continue;
-        const c: Candidate = { ...h, source: "linkup" };
-        byEan.set(eanKey(h.ean), c);
-        extra.push(c);
+        const key = eanKey(h.ean);
+        let c = byEan.get(key);
+        if (!c) {
+          c = { ...h, source: "linkup" };
+          byEan.set(key, c);
+        }
+        c.web = Math.max(c.web ?? 0, strength); // un candidat déjà trouvé par OFF et nommé par le web est renforcé
+        named = true;
+        if (!inShortlist.has(key) && !extra.includes(c)) extra.push(c);
       }
     }
-    await Promise.all(extra.map(async (c) => (c.reference = await referencePrice(c.ean, input.chain, input.excludeProofId).catch(() => null))));
+    await Promise.all(extra.map(async (c) => {
+      if (c.reference === undefined) c.reference = await referencePrice(c.ean, input.chain, input.excludeProofId).catch(() => null);
+    }));
     if (debug) debug.pool = [...byEan.keys()];
-    if (extra.length) ranked = rank([...shortlist, ...extra], rankInput);
+    if (named) ranked = rank([...shortlist, ...extra], rankInput);
     lap("linkup_ms", since);
   }
 

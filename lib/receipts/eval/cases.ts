@@ -3,7 +3,7 @@
 import { interpret, parseDate, parseTime, toPurchasedAt, parseCents, type Transcription } from "../interpret";
 import { runChecks } from "../checks";
 import { isValidEan, parseSizes, sizesMatch } from "../products/ean";
-import { rank, privateLabel, brandConflict, type Candidate } from "../products/rank";
+import { rank, privateLabel, brandConflict, WEB_REASON, type Candidate } from "../products/rank";
 import { quantityVariants } from "../products/off";
 import { getJson, isEmptyResult, isFresh } from "../products/net";
 
@@ -322,6 +322,13 @@ eq("20 conflit de marque",
   eq("20 même marque au registre : confiance inchangée", rank([coca], { ...input, registryBrand: "Coca-Cola" }).confident, base);
   eq("20 autre marque au registre : jamais validé auto", rank([coca], { ...input, registryBrand: "NotCoca" }).confident, false);
   console.log("     → confiance sans registre :", base);
+
+  // --- 21. Preuve web (Linkup) : +15 et raison affichée, mais jamais de validation automatique sur cette preuve
+  const plain = rank([coca], input).candidates[0];
+  const named = rank([{ ...coca, web: 1 }], input);
+  eq("21 bonus web", [named.candidates[0].score - plain.score, named.candidates[0].reasons.includes(WEB_REASON)], [15, true]);
+  eq("21 bonus web réduit pour les réponses suivantes", rank([{ ...coca, web: 0.7 }], input).candidates[0].score - plain.score, 11);
+  eq("21 jamais validé auto sur une preuve web", named.confident, false);
 }
 
 async function asyncCases() {

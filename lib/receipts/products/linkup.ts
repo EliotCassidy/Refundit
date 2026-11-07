@@ -8,7 +8,7 @@
 // structuredOutputSchema en chaîne JSON, includeSources → { data, sources }). Prix : 0,005-0,006 $ par appel (linkup.so/pricing).
 import "server-only";
 import { z } from "zod";
-import { cached } from "./net";
+import { cached, readCached } from "./net";
 import { isValidEan } from "./ean";
 
 const LINKUP_URL = "https://api.linkup.so/v1/search";
@@ -53,6 +53,9 @@ export async function webProducts(rawLabel: string, chain: string | null, unitPr
     `Sur un ticket de caisse ${chain ?? "de supermarché"} (France), la ligne « ${rawLabel} »${price} désigne un produit. ` +
     `Les libellés de ticket sont abrégés et tronqués vers 18 caractères. Quels produits vendus ${where} peuvent correspondre ? ` +
     `Pour chacun : marque, nom complet, format, et code EAN seulement s'il est écrit dans une source.`;
+
+  // Évals : LINKUP_CACHE_ONLY=true relit seulement les réponses déjà payées (aucun appel), pour itérer gratuitement.
+  if (process.env.LINKUP_CACHE_ONLY === "true") return (await readCached<WebProduct[]>(`linkup:${q}`)) ?? [];
 
   try {
     return await cached(`linkup:${q}`, async () => {

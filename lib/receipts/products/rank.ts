@@ -14,7 +14,8 @@ import { parseSizes, sizesMatch } from "./ean";
 import type { Guess } from "./expand";
 import type { ReferencePrice } from "./prices";
 
-export type Candidate = Product & { reference?: ReferencePrice; confirmations?: number };
+/** web : force (0-1) de la preuve web, quand la recherche Linkup a nommé ce produit pour ce libellé. */
+export type Candidate = Product & { reference?: ReferencePrice; confirmations?: number; web?: number };
 
 export type RankInput = {
   rawLabel: string;
@@ -72,6 +73,10 @@ function brandWrittenIn(brand: string | null, rawLabel: string): boolean {
   });
 }
 
+// +15 : réglé sur npm run eval:identify -- --linkup-cached (2026-11-07 : 10 → top 5 57,9 %, 15 → 59,2 %, 20 → 59,2 % mais 1er 38,2 %).
+const WEB_BONUS = 15;
+export const WEB_REASON = "nommé par la recherche web pour ce libellé";
+
 type Scored = Candidate & { score: number; reasons: string[]; flags: Set<string>; gap: number | null };
 
 function score(c: Candidate, input: RankInput): Scored {
@@ -96,12 +101,12 @@ function score(c: Candidate, input: RankInput): Scored {
   const read = brandWrittenIn(c.brand, input.rawLabel);
   const guessed =
     !read &&
-    (c.source === "linkup" || // vu sur le web pour ce libellé chez l'enseigne (comme dans le prototype Python)
+    (Boolean(c.web) || // nommé sur le web pour ce libellé chez l'enseigne (comme dans le prototype Python)
       [input.guess?.brand, mdd].some((b) => b && c.brand && (normalize(c.brand).includes(normalize(b)) || labelSimilarity(b, c.brand) >= 0.8)));
   const brandPts = read ? 20 : guessed ? 15 : 0;
   if (read) reasons.push(`marque ${c.brand} lue sur le ticket`);
   else if (guessed) {
-    reasons.push(c.source === "linkup" ? `${c.brand ?? "produit"} trouvé sur le web pour ce libellé` : `marque ${c.brand} supposée (absente du ticket)`);
+    reasons.push(c.web ? `marque ${c.brand ?? "?"} trouvée sur le web pour ce libellé` : `marque ${c.brand} supposée (absente du ticket)`);
     flags.add("marque supposée");
   } else flags.add("marque différente ou inconnue");
 
@@ -138,7 +143,11 @@ function score(c: Candidate, input: RankInput): Scored {
   const confirmedPts = c.confirmations ? 30 : 0;
   if (c.confirmations) reasons.push(`déjà confirmé ${c.confirmations} fois pour ce libellé`);
 
-  const s = 30 * coverage + 20 * llmSim + brandPts + fmt + pricePts - (typeOk ? 0 : 15) + confirmedPts;
+  // 8) Nommé par la recherche web (Linkup) pour ce libellé : le web a lu le vrai nom, le libellé abrégé ne suffit pas
+  const webPts = Math.round(WEB_BONUS * (c.web ?? 0));
+  if (webPts) reasons.push(WEB_REASON);
+
+  const s = 30 * coverage + 20 * llmSim + brandPts + fmt + pricePts - (typeOk ? 0 : 15) + confirmedPts + webPts;
   return { ...c, score: Math.round(s), reasons, flags, gap };
 }
 
@@ -187,9 +196,10 @@ const CONFIDENT_SCORE = 90;
 const CONFIDENT_MIN_SCORE = 60;
 const CONFIDENT_GAP = 20;
 
-function isConfident(scored: { score: number; brand: string | null }[], registryBrand?: string | null): boolean {
+function isConfident(scored: { score: number; brand: string | null; web?: number }[], registryBrand?: string | null): boolean {
   const [top, second] = scored;
-  if (!top || brandConflict(registryBrand, top.brand)) return false;
+  // Pas de validation auto sur une preuve web : les seuils ont été calibrés sans Linkup.
+  if (!top || top.web || brandConflict(registryBrand, top.brand)) return false;
   return top.score >= CONFIDENT_SCORE || (top.score >= CONFIDENT_MIN_SCORE && top.score - (second?.score ?? 0) >= CONFIDENT_GAP);
 }
 
