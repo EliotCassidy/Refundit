@@ -6,6 +6,7 @@
 // NotCoca back-office (refund) → back on the dashboard (email + balance) → end.
 import "driver.js/dist/driver.css";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { driver, type Config, type DriveStep, type Driver } from "driver.js";
@@ -340,11 +341,16 @@ export function DemoTour() {
   return (
     <>
       <DemoChip />
-      <AnimatePresence>
-        {step === "agent" && status === "submitting" && seen("agent-live") && <CancelNote key="note" />}
-        {step === "agent" && status === "submitting" && seen("agent-live") && <FunFacts key="facts" />}
-        {step === "done" && <EndCard key="end" />}
-      </AnimatePresence>
+      {/* Portal: same stacking level as the agent's lightbox (also portaled), so these cards sit above it. */}
+      {typeof document !== "undefined" &&
+        createPortal(
+          <AnimatePresence>
+            {step === "agent" && status === "submitting" && seen("agent-live") && <CancelNote key="note" />}
+            {step === "agent" && status === "submitting" && seen("agent-live") && <FunFacts key="facts" />}
+            {step === "done" && <EndCard key="end" />}
+          </AnimatePresence>,
+          document.body,
+        )}
     </>
   );
 }
