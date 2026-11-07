@@ -6,6 +6,7 @@ import { createClient } from "@/lib/shared/supabase/server";
 import { CLAIM_STATUS_LABELS_FR, ISSUE_LABELS_FR } from "@/lib/shared/types";
 import { AutoRefresh } from "../auto-refresh";
 import { StatusBadge } from "../status-badge";
+import { AgentView } from "./agent-view";
 import { ClaimActions } from "./claim-actions";
 import { MissingInfoForm } from "./missing-info-form";
 
@@ -71,15 +72,8 @@ export default async function ClaimPage({ params }: PageProps<"/claims/[id]">) {
         )}
       </header>
 
-      {claim.h_agent_view_url && (
-        <a
-          href={claim.h_agent_view_url}
-          target="_blank"
-          rel="noreferrer"
-          className="rounded-xl bg-black px-4 py-3 text-center font-medium text-white"
-        >
-          {claim.status === "submitting" ? "Regarder l'agent en direct" : "Revoir l'agent (replay)"}
-        </a>
+      {claim.h_session_id && !claim.h_session_id.startsWith("mock-") && (
+        <AgentView claimId={claim.id} live={claim.status === "submitting"} />
       )}
 
       {claim.status === "waiting_input" && claim.missing_fields.length > 0 && (
