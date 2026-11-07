@@ -26,7 +26,7 @@ export function IbanReminder() {
   }
 
   return (
-    <motion.section layout className="overflow-hidden rounded-[20px] border border-line bg-raised/90 backdrop-blur">
+    <motion.section layout className="overflow-hidden rounded-[20px] border border-white/70 bg-white/60 shadow-[0_12px_32px_-12px_rgba(17,23,20,0.1)] backdrop-blur-xl">
       <div className="flex items-center gap-3.5 px-4 py-3.5">
         <span className="grid size-10 shrink-0 place-items-center rounded-full bg-info-soft text-info"><Landmark className="size-5" aria-hidden /></span>
         <div className="min-w-0 flex-1">

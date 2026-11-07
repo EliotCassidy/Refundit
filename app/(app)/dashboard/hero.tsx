@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { BellRing, CreditCard, ScanLine, User } from "lucide-react";
 import { StripeBadge } from "@/components/ui/brand";
+import { glass } from "@/components/ui/aurora";
 import { AnimatedMoney } from "@/components/ui/motion";
 
 type Props = { firstName: string; received: number; pending: number; openCount: number; needsCount: number };
@@ -17,7 +18,7 @@ export function DashboardHero({ firstName, received, pending, openCount, needsCo
   ];
 
   return (
-    <section className="relative overflow-hidden rounded-[28px] border border-line bg-raised px-5 pb-6 pt-7 md:px-8 md:pt-9">
+    <section className={`${glass} relative overflow-hidden px-5 pb-6 pt-7 md:px-8 md:pt-9`}>
       <div className="pointer-events-none absolute inset-x-0 -top-24 mx-auto h-56 w-[80%] rounded-full bg-brand/15 blur-3xl" aria-hidden />
       <div className="relative flex flex-col items-center gap-2 text-center">
         <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-sm font-medium text-muted">
@@ -43,7 +44,7 @@ export function DashboardHero({ firstName, received, pending, openCount, needsCo
                 whileHover={{ y: -2 }}
                 whileTap={{ scale: 0.92 }}
                 className={`relative grid size-14 place-items-center rounded-full transition-colors ${
-                  primary ? "bg-brand text-on-brand shadow-[0_6px_18px_rgba(21,128,61,0.28)]" : "bg-sunken text-ink group-hover:bg-line"
+                  primary ? "bg-brand text-on-brand shadow-[0_6px_18px_rgba(21,128,61,0.28)]" : "border border-white/80 bg-white/70 text-ink shadow-[0_2px_8px_rgba(17,23,20,0.06)] group-hover:bg-white"
                 }`}
               >
                 <Icon className="size-[22px]" strokeWidth={2} aria-hidden />

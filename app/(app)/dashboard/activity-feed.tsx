@@ -81,7 +81,7 @@ export function ActivityFeed({ claims }: { claims: FeedClaim[] }) {
           value={sort}
           onChange={(e) => setSort(e.target.value as Sort)}
           aria-label="Trier"
-          className="rounded-full bg-sunken px-3 py-1.5 text-sm font-medium text-ink outline-none"
+          className="rounded-full border border-white/80 bg-white/60 px-3 py-1.5 text-sm font-medium text-ink outline-none backdrop-blur"
         >
           <option value="recent">Plus récentes</option>
           <option value="amount">Montant</option>
@@ -90,7 +90,7 @@ export function ActivityFeed({ claims }: { claims: FeedClaim[] }) {
 
       {/* Segmented control with a sliding pill */}
       <div className="-mx-4 overflow-x-auto px-4 md:mx-0 md:px-0">
-        <div className="inline-flex gap-1 rounded-full bg-sunken p-1" role="tablist" aria-label="Filtrer">
+        <div className="inline-flex gap-1 rounded-full border border-white/70 bg-white/45 p-1 backdrop-blur-xl" role="tablist" aria-label="Filtrer">
           {FILTERS.map(({ id, label }) => (
             <button
               key={id}
@@ -120,16 +120,16 @@ export function ActivityFeed({ claims }: { claims: FeedClaim[] }) {
           groups.map((g) => (
             <motion.div key={`${filter}-${sort}-${g.label}`} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col gap-1.5">
               <h3 className="px-1 text-xs font-semibold uppercase tracking-wide text-muted first-letter:uppercase">{g.label}</h3>
-              <ul className="overflow-hidden rounded-[20px] border border-line bg-raised">
+              <ul className="overflow-hidden rounded-[20px] border border-white/70 bg-white/60 shadow-[0_12px_32px_-12px_rgba(17,23,20,0.1)] backdrop-blur-xl backdrop-saturate-150">
                 {g.items.map((c, i) => {
                   const group = STATUS_GROUP[c.status];
                   const refunded = c.refundCents != null;
                   return (
-                    <StaggerItem key={c.id} index={index++} className={i ? "border-t border-line" : ""}>
-                      <Link href={`/claims/${c.id}`} className="flex items-center gap-3.5 px-4 py-3.5 transition-colors hover:bg-sunken/50 active:bg-sunken">
+                    <StaggerItem key={c.id} index={index++} className={i ? "border-t border-black/[0.05]" : ""}>
+                      <Link href={`/claims/${c.id}`} className="flex items-center gap-3.5 px-4 py-3.5 transition-colors hover:bg-white/60 active:bg-white/80">
                         <span className={`relative grid size-11 shrink-0 place-items-center rounded-full text-[15px] font-bold ${AVATAR[group]}`}>
                           {(c.brand ?? c.product).charAt(0).toUpperCase()}
-                          <span className={`absolute -bottom-0.5 -right-0.5 size-3 rounded-full ring-2 ring-raised ${DOT[group]} ${c.status === "submitting" ? "animate-pulse" : ""}`} />
+                          <span className={`absolute -bottom-0.5 -right-0.5 size-3 rounded-full ring-2 ring-white ${DOT[group]} ${c.status === "submitting" ? "animate-pulse" : ""}`} />
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-[15px] font-semibold">{c.product}</span>
