@@ -86,6 +86,16 @@ export async function knownCandidates(chain: string | null, rawLabel: string, re
   return null;
 }
 
+/**
+ * Après un choix explicite de l'utilisateur pour ce libellé : le dernier résultat en cache n'est plus validé tout seul
+ * (le choix manuel passe devant via product_matches ; sans EAN, la carte repasse « à vérifier »).
+ */
+export async function markLabelUnsure(chain: string | null, rawLabel: string): Promise<void> {
+  const key = identifyKey(chain, rawLabel);
+  const saved = ProductCandidatesSchema.safeParse(await readCached(key));
+  if (saved.success && saved.data.confident) await writeCached(key, { ...saved.data, confident: false });
+}
+
 /** Ce que l'éval peut lire : EAN trouvés par les recherches (pool), ceux qui ont reçu un prix (shortlist), et si la ligne
  *  est assez faible pour appeler Linkup (weak, même quand Linkup est coupé : sert à compter les appels avant de payer). */
 export type IdentifyDebug = {

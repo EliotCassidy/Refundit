@@ -4,13 +4,16 @@
 // confirmed_product est le SEUL champ produit que l'agent lit (CLAUDE.md règle 8) ; on le recopie aussi dans
 // ean / product_name / brand_name_guess / brand_id. Seul un choix explicite (auto absent ou false) alimente le cache
 // partagé product_matches : une validation automatique (auto: true) ne compte jamais (pas d'auto-alimentation).
+// Un choix explicite qui CORRIGE le produit validé avant retire un choix manuel à l'ancien, et le résultat en cache
+// pour ce libellé n'est plus validé tout seul : une erreur ne revient pas en vert au ticket suivant.
 import { z } from "zod";
 import { apiError } from "@/lib/shared/http";
 import { createClient, getUser } from "@/lib/shared/supabase/server";
 import type { Json } from "@/lib/shared/database.types";
-import { ProductCandidatesSchema, type ConfirmedProduct, type Product } from "@/lib/shared/types";
+import { ConfirmedProductSchema, ProductCandidatesSchema, type ConfirmedProduct, type Product } from "@/lib/shared/types";
 import type { ReceiptExtraction } from "@/lib/receipts/parse";
-import { recordConfirmation } from "@/lib/receipts/products/matches";
+import { forgetConfirmation, recordConfirmation } from "@/lib/receipts/products/matches";
+import { markLabelUnsure } from "@/lib/receipts/products";
 import { withImage } from "@/lib/receipts/products/off";
 import { resolveBrand } from "@/lib/brands";
 
@@ -38,13 +41,26 @@ export async function POST(request: Request, ctx: RouteContext<"/api/receipts/[i
   const [{ data: item }, { data: receipt }] = await Promise.all([
     supabase
       .from("line_items")
-      .select("id, raw_label, product_candidates")
+      .select("id, raw_label, product_candidates, confirmed_product")
       .eq("id", body.data.lineItemId)
       .eq("receipt_id", id)
       .maybeSingle(),
     supabase.from("receipts").select("store_name, raw_parse").eq("id", id).maybeSingle(),
   ]);
   if (!item || !receipt) return apiError(404, "not_found", "Article ou ticket introuvable");
+
+  const x = receipt.raw_parse as unknown as Partial<ReceiptExtraction> | null;
+  const chain = x?.store?.chain ?? receipt.store_name;
+  const before = ConfirmedProductSchema.safeParse(item.confirmed_product);
+  const previousEan = before.success && before.data.status === "confirmed" ? before.data.ean : null;
+  // Choix EXPLICITE (pas auto) : on apprend aussi de la correction, pour qu'une erreur validée ne revienne pas en vert.
+  const learn = async (newEan: string | null) => {
+    if (body.data.auto) return;
+    if (previousEan && previousEan !== newEan) {
+      await forgetConfirmation(chain, item.raw_label, previousEan).catch((err) => console.error("[product_matches]", err));
+    }
+    await markLabelUnsure(chain, item.raw_label).catch((err) => console.error("[identify cache]", err));
+  };
 
   // Produit saisi à la main : des faits donnés par l'utilisateur (règle 1), sans EAN, hors cache partagé.
   if (body.data.ean === null && body.data.manual) {
@@ -64,6 +80,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/receipts/[i
       })
       .eq("id", item.id);
     if (error) return apiError(500, "db_error", error.message);
+    await learn(null);
     return Response.json({ lineItemId: item.id, confirmedProduct });
   }
 
@@ -82,6 +99,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/receipts/[i
       })
       .eq("id", item.id);
     if (error) return apiError(500, "db_error", error.message);
+    await learn(null);
     return Response.json({ lineItemId: item.id, confirmedProduct });
   }
 
@@ -119,10 +137,8 @@ export async function POST(request: Request, ctx: RouteContext<"/api/receipts/[i
   if (error) return apiError(500, "db_error", error.message);
 
   // Cache partagé (enseigne, libellé) → EAN. Un échec ici ne doit pas bloquer l'utilisateur.
-  const x = receipt.raw_parse as unknown as Partial<ReceiptExtraction> | null;
-  if (!body.data.auto) await recordConfirmation(x?.store?.chain ?? receipt.store_name, item.raw_label, product).catch((err) =>
-    console.error("[product_matches]", err),
-  );
+  if (!body.data.auto) await recordConfirmation(chain, item.raw_label, product).catch((err) => console.error("[product_matches]", err));
+  await learn(product.ean);
 
   return Response.json({ lineItemId: item.id, confirmedProduct });
 }

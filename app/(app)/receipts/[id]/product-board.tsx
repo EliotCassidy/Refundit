@@ -421,25 +421,27 @@ function ProductPicker({ state: s, onPick, onRetry, onSearch, onManual }: {
   // Testé seulement une fois le panneau ouvert (donc dans le navigateur) : pas d'écart avec le rendu serveur.
   const canScan = manual && Boolean(barcodeDetector());
 
-  if (s.confirmed) {
-    return (
-      <div className="flex items-center justify-between gap-2 rounded-[14px] border border-brand/50 bg-brand-soft p-2 text-sm">
-        <span>
-          {s.confirmed.status === "confirmed" ? (
-            <>
-              {s.auto && <span className="block text-xs text-brand-strong">Reconnu automatiquement</span>}
-              {s.confirmed.source === "user" && <span className="block text-xs text-muted">Saisi par vous</span>}
-              ✓ {s.confirmed.name}{s.confirmed.brand ? ` · ${s.confirmed.brand}` : ""}{s.confirmed.quantity ? ` · ${s.confirmed.quantity}` : ""}
-            </>
-          ) : "Produit non identifié : la réclamation citera le libellé du ticket"}
-        </span>
-      </div>
-    );
-  }
   if (s.searching) return <p className="text-sm text-muted">Recherche du produit… (quelques secondes)</p>;
+
+  // Un produit déjà validé (même en vert, même automatiquement) se corrige ici : on choisit simplement un autre produit.
+  const current = s.confirmed;
+  const currentEan = current?.status === "confirmed" ? current.ean : null;
+  const currentListed = Boolean(currentEan && s.candidates?.candidates.some((c) => c.ean === currentEan));
 
   return (
     <div className="flex flex-col gap-2">
+      {current && !currentListed && (
+        <div className="flex items-center gap-2 rounded-[14px] border border-brand/50 bg-brand-soft p-2 text-sm">
+          <CircleCheck className="size-4 shrink-0 text-brand-strong" aria-hidden />
+          <span className="min-w-0">
+            <span className="block text-xs text-muted">Produit actuel</span>
+            {current.status === "confirmed"
+              ? `${current.name}${current.brand ? ` · ${current.brand}` : ""}${current.quantity ? ` · ${current.quantity}` : ""}`
+              : "Produit non identifié"}
+          </span>
+        </div>
+      )}
+      {current && <p className="text-xs text-muted">Pas le bon ? Choisissez le bon produit ci-dessous.</p>}
       {s.searchError && (
         <p className="text-sm text-on-danger-soft">
           {s.searchMessage ?? "Recherche impossible."} <button type="button" onClick={onRetry} className="underline">Réessayer</button>
@@ -450,8 +452,8 @@ function ProductPicker({ state: s, onPick, onRetry, onSearch, onManual }: {
       )}
       {s.candidates && !s.candidates.candidates.length && <p className="text-sm text-muted">Aucun produit trouvé.</p>}
       {s.candidates?.candidates.slice(0, showAll ? 5 : 3).map((c) => (
-        <button key={c.ean} type="button" disabled={s.confirming} onClick={() => onPick(c.ean)}
-          className="flex items-center gap-3 rounded-[14px] border border-line-strong/50 p-2 text-left disabled:opacity-50">
+        <button key={c.ean} type="button" disabled={s.confirming} onClick={() => onPick(c.ean)} aria-pressed={c.ean === currentEan}
+          className={`flex items-center gap-3 rounded-[14px] border p-2 text-left disabled:opacity-50 ${c.ean === currentEan ? "border-brand bg-brand-soft" : "border-line-strong/50"}`}>
           {c.image_url
             // eslint-disable-next-line @next/next/no-img-element -- images Open Food Facts, domaine externe
             ? <img src={small(c.image_url) ?? undefined} alt="" className="size-12 shrink-0 rounded object-contain" onError={(e) => (e.currentTarget.style.display = "none")} />
@@ -460,6 +462,7 @@ function ProductPicker({ state: s, onPick, onRetry, onSearch, onManual }: {
             <span className="block truncate text-sm font-medium">{c.name}</span>
             <span className="block truncate text-xs text-muted">{[c.brand, c.quantity].filter(Boolean).join(" · ")}</span>
           </span>
+          {c.ean === currentEan && <CircleCheck className="size-5 shrink-0 text-brand-strong" aria-label="Produit actuel" />}
         </button>
       ))}
 
@@ -469,7 +472,8 @@ function ProductPicker({ state: s, onPick, onRetry, onSearch, onManual }: {
         </button>
       )}
 
-      {s.candidates && s.candidates.candidates.length > 0 && s.candidates.candidates.every((c) => c.source === "confirmed_match") && (
+      {/* Recherche complète (les propositions peuvent venir d'un choix d'un autre client ou du cache) */}
+      {s.candidates && s.candidates.candidates.length > 0 && (s.confirmed || s.candidates.candidates.every((c) => c.source === "confirmed_match")) && (
         <button type="button" disabled={s.searching} onClick={() => onSearch({ full: true })} className="text-left text-sm underline">
           Chercher d&apos;autres produits
         </button>
