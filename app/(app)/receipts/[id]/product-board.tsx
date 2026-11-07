@@ -11,7 +11,11 @@ import {
 } from "@/lib/shared/types";
 import { euros } from "@/lib/receipts/format";
 import { AnimatePresence, motion } from "motion/react";
-import { Check, CircleCheck, CircleHelp, Package, Send } from "lucide-react";
+import * as Dropdown from "@radix-ui/react-dropdown-menu";
+import {
+  Bug, CalendarX, Check, ChevronDown, CircleCheck, CircleHelp, GlassWater, MessageSquareMore, Package, PackageX, Plus, Scale, ScanBarcode, Search,
+  Send, UtensilsCrossed, type LucideIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { group } from "@/components/ui/list";
 import { StoreBanner } from "@/components/ui/store-logo";
@@ -313,8 +317,8 @@ function ProductCard({ it, s, patch, identify, confirm }: {
       }`}
     >
      <div className={`overflow-hidden rounded-[16.5px] ${active ? "bg-white" : "bg-raised"}`}>
-      <div className="flex items-center gap-3 p-3">
-        <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-[16px] bg-black/[0.03]">
+      <div className="flex items-center gap-3 px-3 pb-2.5 pt-3">
+        <div className="flex size-[52px] shrink-0 items-center justify-center overflow-hidden rounded-[14px] bg-black/[0.03]">
           {s.searching ? (
             <div className="size-8 animate-spin rounded-full border-2 border-line-strong/50 border-t-foreground" />
           ) : (
@@ -335,21 +339,29 @@ function ProductCard({ it, s, patch, identify, confirm }: {
             {info.name}
           </p>
           {info.meta && <p className="mt-0.5 truncate text-xs text-muted">{info.meta}</p>}
-          {!s.searching && (
-            <span className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${sure ? "bg-brand-soft text-on-brand-soft" : "bg-warning-soft text-on-warning-soft"}`}>
-              {sure ? <CircleCheck className="size-3" aria-hidden /> : <CircleHelp className="size-3" aria-hidden />}
-              {sure ? "Identifié" : "À vérifier"}
-            </span>
-          )}
           {s.searching ? (
-            <p className="mt-0.5 text-xs text-muted">Recherche du produit…</p>
+            <p className="mt-1 text-xs text-muted">Recherche du produit…</p>
           ) : s.searchError && !s.candidates ? (
-            <button type="button" onClick={() => void identify()} className="mt-0.5 text-xs text-on-danger-soft underline">
+            <button type="button" onClick={() => void identify()} className="mt-1 text-xs text-on-danger-soft underline">
               Recherche impossible — réessayer
             </button>
-          ) : info.note ? (
-            <p className={`mt-0.5 text-xs ${info.noteTone}`}>{info.note}</p>
-          ) : null}
+          ) : (
+            <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs">
+              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${sure ? "bg-brand-soft text-on-brand-soft" : "bg-warning-soft text-on-warning-soft"}`}>
+                {sure ? <CircleCheck className="size-3" aria-hidden /> : <CircleHelp className="size-3" aria-hidden />}
+                {sure ? "Identifié" : "À vérifier"}
+              </span>
+              {info.note && <span className={info.noteTone}>{info.note}</span>}
+              {s.mode === "idle" && (
+                <>
+                  <span className="text-muted/50">·</span>
+                  <button type="button" onClick={enterProduct} className="font-medium text-muted underline-offset-2 transition hover:text-ink hover:underline">
+                    Changer
+                  </button>
+                </>
+              )}
+            </p>
+          )}
         </div>
         <div className="shrink-0 text-right">
           <p className="money text-[15px] font-semibold">{euros(it.total_price_cents)}</p>
@@ -359,9 +371,9 @@ function ProductCard({ it, s, patch, identify, confirm }: {
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 border-t border-dashed border-line p-3">
+      <div className="flex flex-col gap-3 border-t border-dashed border-line px-3 py-2.5">
         <div className="flex items-center gap-2">
-          <p className="flex-1 text-[14px] text-muted">Ce produit a-t-il un problème&nbsp;?</p>
+          <p className="flex-1 text-[14px] text-muted">Un problème&nbsp;?</p>
           <div className="inline-flex rounded-full bg-black/[0.05] p-0.5">
             {([false, true] as const).map((yes) => {
               const on = yes === hasIssue;
@@ -379,47 +391,32 @@ function ProductCard({ it, s, patch, identify, confirm }: {
           </div>
         </div>
 
-        {s.mode === "idle" && (
-          <button type="button" onClick={enterProduct} className="self-start text-[13px] font-medium text-muted transition hover:text-ink">
-            Ce n&apos;est pas le bon produit ?
-          </button>
-        )}
-
         <AnimatePresence initial={false}>
         {s.mode === "issue" && (
           <motion.div key="issue" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }} className="flex flex-col gap-3.5 overflow-hidden">
-            <div className="flex flex-col gap-3">
-              <p className="text-[14px] font-medium">Quel est le problème ?</p>
-              <div className="flex flex-wrap gap-2">
-                {ISSUE_TYPES.map((t) => (
-                  <button key={t} type="button" onClick={() => patch({ issueType: t })}
-                    className={`rounded-full px-3.5 py-1.5 text-[13px] font-medium ring-1 transition ${s.issueType === t ? "bg-ink text-surface ring-ink" : "bg-white text-ink ring-black/[0.08] hover:ring-black/20"}`}>
-                    {ISSUE_LABELS_FR[t]}
-                  </button>
-                ))}
-              </div>
-              <textarea value={s.description} onChange={(e) => patch({ description: e.target.value })} rows={2} maxLength={2000}
-                placeholder={s.issueType === "other" ? "Décrivez le problème (obligatoire pour « Autre »)" : "Précisions (facultatif)"}
-                className="rounded-[14px] bg-black/[0.04] px-3.5 py-2.5 text-[14px] outline-none ring-1 ring-transparent transition placeholder:text-muted/70 focus:bg-white focus:ring-ink/30" />
+            <div className="flex flex-col gap-2">
+              <IssueSelect value={s.issueType} onChange={(t) => patch({ issueType: t })} />
+              <Precision value={s.description} required={s.issueType === "other"} onChange={(v) => patch({ description: v })} />
             </div>
 
             {s.confirmed ? (
-              <div className={`flex items-center justify-between gap-2 rounded-[14px] px-3.5 py-3 text-[14px] ${s.confirmed.status === "confirmed" ? "bg-brand-soft" : "bg-black/[0.04]"}`}>
-                <span className="min-w-0">
+              <div className={`flex items-center gap-2.5 rounded-[14px] px-3 py-2.5 text-[13px] ${s.confirmed.status === "confirmed" ? "bg-brand-soft/70" : "bg-black/[0.04]"}`}>
+                <CircleCheck className={`size-4 shrink-0 ${s.confirmed.status === "confirmed" ? "text-brand-strong" : "text-muted"}`} aria-hidden />
+                <span className="min-w-0 flex-1 truncate">
                   {s.confirmed.status === "confirmed" ? (
                     <>
-                      {s.auto && <span className="block text-xs text-brand-strong">Reconnu automatiquement</span>}
-                      {s.confirmed.source === "user" && <span className="block text-xs text-muted">Saisi par vous</span>}
-                      <span className="font-medium">✓ {s.confirmed.name}{s.confirmed.brand ? ` · ${s.confirmed.brand}` : ""}{s.confirmed.quantity ? ` · ${s.confirmed.quantity}` : ""}</span>
+                      <span className="font-medium">{s.confirmed.name}</span>
+                      <span className="text-muted">{[s.confirmed.brand, s.confirmed.quantity].filter(Boolean).map((x) => ` · ${x}`).join("")}</span>
+                      {s.confirmed.source === "user" && <span className="text-muted"> · saisi par vous</span>}
                     </>
                   ) : "Produit non identifié : la réclamation citera le libellé du ticket"}
                 </span>
-                <button type="button" onClick={enterProduct} className="shrink-0 font-medium underline-offset-2 hover:underline">Changer</button>
+                <button type="button" onClick={enterProduct} className="shrink-0 font-medium text-muted underline-offset-2 hover:text-ink hover:underline">Changer</button>
               </div>
             ) : (
               <div className="flex flex-col gap-2">
-                <p className="text-sm font-medium">Quel est ce produit ?</p>
+                <p className="text-[13px] font-medium text-muted">Quel est ce produit ?</p>
                 <ProductPicker state={s} onPick={(ean) => confirm(ean)} onRetry={() => void identify()} onSearch={(extra) => void identify(extra)} onManual={(m) => confirm(null, { manual: m })} />
               </div>
             )}
@@ -429,11 +426,11 @@ function ProductCard({ it, s, patch, identify, confirm }: {
 
         {s.mode === "product" && (
           <div className="flex flex-col gap-2">
-            <p className="text-sm font-medium">Quel est ce produit ?</p>
+            <div className="flex items-center justify-between">
+              <p className="text-[13px] font-medium text-muted">Quel est ce produit ?</p>
+              <button type="button" onClick={() => patch({ mode: s.returnTo })} className="text-[13px] font-medium text-muted hover:text-ink">Annuler</button>
+            </div>
             <ProductPicker state={s} onPick={(ean) => confirm(ean)} onRetry={() => void identify()} onSearch={(extra) => void identify(extra)} onManual={(m) => confirm(null, { manual: m })} />
-            <button type="button" onClick={() => patch({ mode: s.returnTo })} className="self-start text-[13px] font-medium text-muted hover:text-ink">
-              Annuler
-            </button>
           </div>
         )}
       </div>
@@ -499,11 +496,11 @@ function ProductPicker({ state: s, onPick, onRetry, onSearch, onManual }: {
       {s.candidates && !s.candidates.candidates.length && <p className="text-sm text-muted">Aucun produit trouvé.</p>}
       {s.candidates?.candidates.slice(0, showAll ? 5 : 3).map((c) => (
         <button key={c.ean} type="button" disabled={s.confirming} onClick={() => onPick(c.ean)} aria-pressed={c.ean === currentEan}
-          className={`flex items-center gap-3 rounded-[14px] p-2 pr-3 text-left ring-1 transition disabled:opacity-50 ${c.ean === currentEan ? "bg-brand-soft ring-brand/50" : "bg-white ring-black/[0.06] hover:ring-black/20"}`}>
+          className={`flex items-center gap-3 rounded-[14px] p-1.5 pr-3 text-left ring-1 transition active:scale-[0.99] disabled:opacity-50 ${c.ean === currentEan ? "bg-brand-soft ring-brand/50" : "bg-white ring-black/[0.06] hover:ring-black/20"}`}>
           {c.image_url
             // eslint-disable-next-line @next/next/no-img-element -- images Open Food Facts, domaine externe
-            ? <img src={small(c.image_url) ?? undefined} alt="" className="size-12 shrink-0 rounded object-contain" onError={(e) => (e.currentTarget.style.display = "none")} />
-            : <span className="grid size-12 shrink-0 place-items-center rounded-[10px] bg-black/[0.03]"><Package className="size-5 text-muted/60" strokeWidth={1.6} aria-hidden /></span>}
+            ? <img src={small(c.image_url) ?? undefined} alt="" className="size-10 shrink-0 rounded-[8px] object-contain" onError={(e) => (e.currentTarget.style.display = "none")} />
+            : <span className="grid size-10 shrink-0 place-items-center rounded-[8px] bg-black/[0.03]"><Package className="size-4 text-muted/60" strokeWidth={1.6} aria-hidden /></span>}
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-medium">{c.name}</span>
             <span className="block truncate text-xs text-muted">{[c.brand, c.quantity].filter(Boolean).join(" · ")}</span>
@@ -512,25 +509,37 @@ function ProductPicker({ state: s, onPick, onRetry, onSearch, onManual }: {
         </button>
       ))}
 
-      {!showAll && (s.candidates?.candidates.length ?? 0) > 3 && (
-        <button type="button" onClick={() => setShowAll(true)} className="text-left text-sm text-muted underline">
-          Voir les {s.candidates!.candidates.length - 3} autres propositions
-        </button>
-      )}
-
-      {/* Recherche complète (les propositions peuvent venir d'un choix d'un autre client ou du cache) */}
-      {s.candidates && s.candidates.candidates.length > 0 && (s.confirmed || s.candidates.candidates.every((c) => c.source === "confirmed_match")) && (
-        <button type="button" disabled={s.searching} onClick={() => onSearch({ full: true })} className="text-left text-sm underline">
-          Chercher d&apos;autres produits
-        </button>
-      )}
+      {/* Secondary actions in one menu (instead of a stack of links). */}
+      <div className="flex items-center gap-3 pt-0.5">
+        {!showAll && (s.candidates?.candidates.length ?? 0) > 3 && (
+          <button type="button" onClick={() => setShowAll(true)} className="text-[13px] font-medium text-muted hover:text-ink">
+            + {s.candidates!.candidates.length - 3} autres
+          </button>
+        )}
+        <Dropdown.Root>
+          <Dropdown.Trigger className="ml-auto inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[13px] font-medium text-muted outline-none transition hover:bg-black/[0.04] hover:text-ink data-[state=open]:bg-black/[0.05]">
+            Autres options <ChevronDown className="size-3.5" aria-hidden />
+          </Dropdown.Trigger>
+          <Dropdown.Portal>
+            <Dropdown.Content align="end" sideOffset={6} className={menuCls}>
+              {s.candidates && s.candidates.candidates.length > 0 && (s.confirmed || s.candidates.candidates.every((c) => c.source === "confirmed_match")) && (
+                <Dropdown.Item disabled={s.searching} onSelect={() => onSearch({ full: true })} className={itemCls}>
+                  <Search className="size-4 text-muted" aria-hidden /> Chercher d&apos;autres produits
+                </Dropdown.Item>
+              )}
+              <Dropdown.Item onSelect={() => setManual(true)} className={itemCls}>
+                <ScanBarcode className="size-4 text-muted" aria-hidden /> Code-barres ou nom du produit
+              </Dropdown.Item>
+              <Dropdown.Item disabled={s.confirming} onSelect={() => onPick(null)} className={itemCls}>
+                <CircleHelp className="size-4 text-muted" aria-hidden /> Je ne trouve pas mon produit
+              </Dropdown.Item>
+            </Dropdown.Content>
+          </Dropdown.Portal>
+        </Dropdown.Root>
+      </div>
 
       {/* Secours : le produit n'est pas dans la liste */}
-      {!manual ? (
-        <button type="button" onClick={() => setManual(true)} className="text-left text-sm underline">
-          Ce n&apos;est aucun de ceux-là ?
-        </button>
-      ) : (
+      {manual && (
         <div className="flex flex-col gap-2 rounded-[16px] bg-black/[0.03] p-3">
           <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (ean.trim()) onSearch({ ean: ean.trim() }); }}>
             <input value={ean} onChange={(e) => setEan(e.target.value.replace(/\D/g, ""))} inputMode="numeric" maxLength={14}
@@ -572,10 +581,89 @@ function ProductPicker({ state: s, onPick, onRetry, onSearch, onManual }: {
           </form>
         </div>
       )}
-
-      <button type="button" disabled={s.confirming} onClick={() => onPick(null)} className="text-left text-sm text-muted underline">
-        Je ne trouve pas mon produit
-      </button>
     </div>
+  );
+}
+
+// Radix menus: above the demo tour's dimmed overlay (driver.js, z 10000) so they work in the jury tour too.
+const menuCls =
+  "z-[100001] min-w-[240px] overflow-hidden rounded-[16px] bg-white/95 p-1.5 shadow-[0_18px_40px_rgba(17,23,20,0.18)] ring-1 ring-black/[0.06] backdrop-blur-xl data-[state=open]:animate-[menu-in_140ms_ease-out]";
+const itemCls =
+  "flex cursor-pointer select-none items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-[14px] outline-none data-[disabled]:opacity-40 data-[highlighted]:bg-black/[0.04]";
+
+const ISSUE_ICON: Record<IssueType, LucideIcon> = {
+  damaged: PackageX,
+  missing_quantity: Scale,
+  expired: CalendarX,
+  quality: UtensilsCrossed,
+  foreign_object: Bug,
+  flat_drink: GlassWater,
+  other: MessageSquareMore,
+};
+
+/** The problem, as one dropdown (Radix) instead of a wall of chips. */
+function IssueSelect({ value, onChange }: { value: IssueType | null; onChange: (t: IssueType) => void }) {
+  const Icon = value ? ISSUE_ICON[value] : null;
+  return (
+    <Dropdown.Root>
+      <Dropdown.Trigger
+        className={`flex h-11 w-full items-center gap-2.5 rounded-[14px] px-3.5 text-left text-[14px] outline-none ring-1 transition data-[state=open]:ring-ink/30 ${
+          value ? "bg-white font-medium text-ink ring-black/[0.08]" : "bg-black/[0.04] text-muted ring-transparent hover:bg-black/[0.06]"
+        }`}
+      >
+        {Icon ? <Icon className="size-4 shrink-0 text-ink" aria-hidden /> : <CircleHelp className="size-4 shrink-0" aria-hidden />}
+        <span className="min-w-0 flex-1 truncate">{value ? ISSUE_LABELS_FR[value] : "Quel est le problème ?"}</span>
+        <ChevronDown className="size-4 shrink-0 text-muted" aria-hidden />
+      </Dropdown.Trigger>
+      <Dropdown.Portal>
+        <Dropdown.Content align="start" sideOffset={6} className={`${menuCls} w-[var(--radix-dropdown-menu-trigger-width)]`}>
+          <Dropdown.RadioGroup value={value ?? ""} onValueChange={(v) => onChange(v as IssueType)}>
+            {ISSUE_TYPES.map((t) => {
+              const I = ISSUE_ICON[t];
+              return (
+                <Dropdown.RadioItem key={t} value={t} className={`${itemCls} pr-9 relative data-[state=checked]:font-semibold`}>
+                  <I className="size-4 text-muted" aria-hidden /> {ISSUE_LABELS_FR[t]}
+                  <Dropdown.ItemIndicator className="absolute right-3">
+                    <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="grid size-5 place-items-center rounded-full bg-brand text-on-brand">
+                      <Check className="size-3" strokeWidth={3} aria-hidden />
+                    </motion.span>
+                  </Dropdown.ItemIndicator>
+                </Dropdown.RadioItem>
+              );
+            })}
+          </Dropdown.RadioGroup>
+        </Dropdown.Content>
+      </Dropdown.Portal>
+    </Dropdown.Root>
+  );
+}
+
+/** Optional details, folded behind a small link (always open when required, i.e. "Autre problème"). */
+function Precision({ value, required, onChange }: { value: string; required: boolean; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(Boolean(value));
+  const show = open || required;
+  return (
+    <AnimatePresence initial={false} mode="wait">
+      {show ? (
+        <motion.textarea
+          key="area"
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          exit={{ opacity: 0, height: 0 }}
+          autoFocus={open && !value}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          rows={2}
+          maxLength={2000}
+          placeholder={required ? "Décrivez le problème (obligatoire pour « Autre »)" : "Précisions (facultatif)"}
+          className="rounded-[14px] bg-black/[0.04] px-3.5 py-2.5 text-[14px] outline-none ring-1 ring-transparent transition placeholder:text-muted/70 focus:bg-white focus:ring-ink/30"
+        />
+      ) : (
+        <motion.button key="link" type="button" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setOpen(true)}
+          className="inline-flex items-center gap-1 self-start rounded-full px-1 text-[13px] font-medium text-muted transition hover:text-ink">
+          <Plus className="size-3.5" aria-hidden /> Ajouter une précision
+        </motion.button>
+      )}
+    </AnimatePresence>
   );
 }

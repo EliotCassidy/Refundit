@@ -148,8 +148,9 @@ export function DemoTour() {
           {
             element: el,
             disableActiveInteraction: false,
-            popover: { title: "Un ticket de démo", description: "Un ticket Carrefour fictif avec deux boissons NotCoca, notre marque de démo. Touche-le : il est lu comme une vraie photo.", side: "top", align: "center", showButtons: [] },
-            onHighlighted: (e) => onClick(e, () => drv.current?.destroy()),
+            popover: { title: "Un ticket de démo", description: "Un ticket Carrefour fictif avec deux boissons NotCoca, notre marque de démo. Touche l'image pour le voir en grand, puis utilise-le : il est lu comme une vraie photo.", side: "top", align: "center", showButtons: [] },
+            // Only "use this ticket" moves on (the thumbnail opens a zoom of the ticket).
+            onHighlighted: (e) => e?.querySelectorAll("[data-demo-use]").forEach((b) => b.addEventListener("click", () => drv.current?.destroy(), { once: true })),
           },
         );
         return;
