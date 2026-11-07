@@ -2,7 +2,8 @@
 // { ean } doit être l'un des candidats proposés par /identify ; { ean: null } = « je ne trouve pas mon produit » ;
 // { ean: null, manual: { name, brand?, quantity? } } = produit saisi à la main par l'utilisateur (source "user", sans EAN).
 // confirmed_product est le SEUL champ produit que l'agent lit (CLAUDE.md règle 8) ; on le recopie aussi dans
-// ean / product_name / brand_name_guess / brand_id, et on alimente le cache partagé product_matches.
+// ean / product_name / brand_name_guess / brand_id. Seul un choix explicite (auto absent ou false) alimente le cache
+// partagé product_matches : une validation automatique (auto: true) ne compte jamais (pas d'auto-alimentation).
 import { z } from "zod";
 import { apiError } from "@/lib/shared/http";
 import { createClient, getUser } from "@/lib/shared/supabase/server";
@@ -15,6 +16,7 @@ import { resolveBrand } from "@/lib/brands";
 const BodySchema = z.object({
   lineItemId: z.uuid(),
   ean: z.string().nullable(),
+  auto: z.boolean().optional(), // validation automatique par la page (produit « sûr ») : pas comptée dans product_matches
   manual: z
     .object({
       name: z.string().trim().min(2).max(120),
@@ -113,7 +115,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/receipts/[i
 
   // Cache partagé (enseigne, libellé) → EAN. Un échec ici ne doit pas bloquer l'utilisateur.
   const x = receipt.raw_parse as unknown as Partial<ReceiptExtraction> | null;
-  await recordConfirmation(x?.store?.chain ?? receipt.store_name, item.raw_label, product).catch((err) =>
+  if (!body.data.auto) await recordConfirmation(x?.store?.chain ?? receipt.store_name, item.raw_label, product).catch((err) =>
     console.error("[product_matches]", err),
   );
 

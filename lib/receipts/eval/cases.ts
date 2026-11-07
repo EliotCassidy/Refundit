@@ -5,6 +5,7 @@ import { runChecks } from "../checks";
 import { isValidEan, parseSizes, sizesMatch } from "../products/ean";
 import { rank, privateLabel, type Candidate } from "../products/rank";
 import { quantityVariants } from "../products/off";
+import { getJson, isEmptyResult, isFresh } from "../products/net";
 
 let fails = 0;
 function eq(name: string, got: unknown, want: unknown) {
@@ -293,5 +294,32 @@ eq("17 MDD", [privateLabel("Carrefour Market"), privateLabel("E.Leclerc"), priva
   console.log("     → raisons du 1er :", r.candidates[0].reasons.join(" · "));
 }
 
-console.log(fails ? `\n${fails} échec(s)` : "\nTout passe.");
-process.exit(fails ? 1 : 0);
+// --- 19. Cache des recherches : réponses vides expirées après 24 h, erreurs jamais mises en cache
+eq("19 vide", [isEmptyResult(null), isEmptyResult([]), isEmptyResult({ hits: [] }), isEmptyResult({ items: [1] }), isEmptyResult({ products: [] }), isEmptyResult({ code: "1" })],
+  [true, true, true, false, true, false]);
+{
+  const now = Date.now();
+  eq("19 frais", [isFresh({ empty: false, at: 0 }, now), isFresh({ empty: true, at: now - 3_600_000 }, now), isFresh({ empty: true, at: now - 25 * 3_600_000 }, now)],
+    [true, true, false]);
+}
+
+async function asyncCases() {
+  // Faux fetch : 1er appel 503, 2e appel 200. Si l'erreur était mise en cache, le 2e appel ne partirait pas.
+  const realFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = (async () => {
+    calls++;
+    return calls === 1 ? new Response("", { status: 503 }) : new Response(JSON.stringify({ hits: [{ code: "1" }] }), { status: 200 });
+  }) as typeof fetch;
+  const url = `https://search.openfoodfacts.org/test-cache-${Date.now()}`;
+  const first = await getJson(url, { retries: 0 }).catch((e) => String(e));
+  const second = (await getJson<{ hits: unknown[] }>(url, { retries: 0 }))?.hits.length;
+  const third = (await getJson<{ hits: unknown[] }>(url, { retries: 0 }))?.hits.length; // celui-ci vient du cache
+  globalThis.fetch = realFetch;
+  eq("19 une erreur 503 n'est pas mise en cache, une vraie réponse oui", [String(first).includes("HTTP 503"), second, third, calls], [true, 1, 1, 2]);
+}
+
+asyncCases().then(() => {
+  console.log(fails ? `\n${fails} échec(s)` : "\nTout passe.");
+  process.exit(fails ? 1 : 0);
+});

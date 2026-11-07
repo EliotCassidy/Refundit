@@ -38,6 +38,8 @@ type ItemState = {
 };
 
 type Manual = { name: string; brand?: string; quantity?: string };
+// Secours / recherche : code-barres, nom tapé, ou recherche complète (le produit est déjà connu mais on veut d'autres choix).
+type Extra = { ean?: string; query?: string; full?: boolean };
 
 const parse = <T,>(schema: { safeParse: (v: unknown) => { success: boolean; data?: T } }, v: unknown) => {
   const r = schema.safeParse(v);
@@ -99,7 +101,7 @@ export function ProductBoard({ receiptId, items }: { receiptId: string; items: B
   const patch = (id: string, p: Partial<ItemState>) => setState((s) => ({ ...s, [id]: { ...s[id], ...p } }));
 
   // extra : secours quand le produit n'est pas proposé (code-barres saisi/scanné, ou nom tapé)
-  async function identify(id: string, extra: { ean?: string; query?: string } = {}) {
+  async function identify(id: string, extra: Extra = {}) {
     patch(id, { searching: true, searchError: false, searchMessage: null });
     const res = await fetch(`/api/receipts/${receiptId}/identify`, {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lineItemId: id, ...extra }),
@@ -110,8 +112,9 @@ export function ProductBoard({ receiptId, items }: { receiptId: string; items: B
     }
     const found = body.productCandidates as ProductCandidates;
     patch(id, { searching: false, candidates: found });
-    // Cas sûrs (≥ 90 % de justes sur notre éval) : validé directement, l'utilisateur peut toujours changer.
-    if (found.confident && found.candidates[0]) void confirm(id, found.candidates[0].ean, { auto: true });
+    // Cas sûrs (≥ 90 % de justes sur notre éval, ou déjà confirmé à la main par des clients) : validé directement,
+    // en « auto » (pas compté dans le cache partagé). Un code-barres tapé est un choix explicite de l'utilisateur.
+    if (found.confident && found.candidates[0]) void confirm(id, found.candidates[0].ean, { auto: !extra.ean });
   }
 
   async function confirm(id: string, ean: string | null, opts: { auto?: boolean; manual?: Manual } = {}) {
@@ -119,7 +122,7 @@ export function ProductBoard({ receiptId, items }: { receiptId: string; items: B
     patch(id, { confirming: true });
     const res = await fetch(`/api/receipts/${receiptId}/confirm`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lineItemId: id, ean, manual: opts.manual }),
+      body: JSON.stringify({ lineItemId: id, ean, manual: opts.manual, auto: opts.auto }),
     }).catch(() => null);
     const body = await res?.json().catch(() => null);
     if (!res?.ok || !body?.confirmedProduct) {
@@ -133,16 +136,17 @@ export function ProductBoard({ receiptId, items }: { receiptId: string; items: B
     });
   }
 
-  // Au chargement : identification de chaque produit sans candidats, en parallèle.
+  // Au chargement : identification des produits sans candidats, 3 à la fois (pas de rafale vers Open Food Facts).
   useEffect(() => {
     if (started.current) return;
     started.current = true;
     // Dans un microtask : l'effet ne doit pas déclencher de setState synchrone (react-hooks/set-state-in-effect).
     queueMicrotask(() => {
-      for (const it of items) {
-        const s = state[it.id];
-        if (!s.candidates && !s.confirmed) void identify(it.id);
-      }
+      const todo = items.filter((it) => !state[it.id].candidates && !state[it.id].confirmed).map((it) => it.id);
+      const worker = async () => {
+        for (let id = todo.shift(); id; id = todo.shift()) await identify(id);
+      };
+      for (let i = 0; i < 3; i++) void worker();
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- montage uniquement
   }, []);
@@ -216,7 +220,7 @@ function ProductCard({ it, s, patch, identify, confirm }: {
   it: BoardItem;
   s: ItemState;
   patch: (p: Partial<ItemState>) => void;
-  identify: (extra?: { ean?: string; query?: string }) => Promise<void>;
+  identify: (extra?: Extra) => Promise<void>;
   confirm: (ean: string | null, opts?: { auto?: boolean; manual?: Manual }) => Promise<void>;
 }) {
   const info = cardInfo(it, s);
@@ -356,7 +360,7 @@ async function readBarcode(file: File): Promise<string | null> {
 
 function ProductPicker({ state: s, onPick, onRetry, onSearch, onManual }: {
   state: ItemState; onPick: (ean: string | null) => void; onRetry: () => void;
-  onSearch: (extra: { ean?: string; query?: string }) => void; onManual: (m: Manual) => void;
+  onSearch: (extra: Extra) => void; onManual: (m: Manual) => void;
 }) {
   const [manual, setManual] = useState(false);
   const [showAll, setShowAll] = useState(false);
@@ -412,6 +416,12 @@ function ProductPicker({ state: s, onPick, onRetry, onSearch, onManual }: {
       {!showAll && (s.candidates?.candidates.length ?? 0) > 3 && (
         <button type="button" onClick={() => setShowAll(true)} className="text-left text-sm text-muted underline">
           Voir les {s.candidates!.candidates.length - 3} autres propositions
+        </button>
+      )}
+
+      {s.candidates && s.candidates.candidates.length > 0 && s.candidates.candidates.every((c) => c.source === "confirmed_match") && (
+        <button type="button" disabled={s.searching} onClick={() => onSearch({ full: true })} className="text-left text-sm underline">
+          Chercher d&apos;autres produits
         </button>
       )}
 

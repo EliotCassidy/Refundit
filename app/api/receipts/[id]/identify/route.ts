@@ -18,6 +18,7 @@ const BodySchema = z.object({
   lineItemId: z.uuid(),
   ean: z.string().trim().regex(/^\d{8,14}$/).optional(), // code-barres saisi ou scanné par l'utilisateur
   query: z.string().trim().min(2).max(100).optional(), // nom du produit tapé par l'utilisateur
+  full: z.boolean().optional(), // recherche complète même si le produit est déjà connu
 });
 
 export async function POST(request: Request, ctx: RouteContext<"/api/receipts/[id]/identify">) {
@@ -69,6 +70,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/receipts/[i
       chain: x?.store?.chain ?? receipt.store_name,
       unitPriceCents,
       userQuery: body.data.query,
+      full: body.data.full,
     });
   }
 

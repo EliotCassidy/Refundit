@@ -2,8 +2,8 @@
 // (ex. « MADELEINE TRADITIO » → « Bonne Maman Madeleines Tradition » sur monoprix.fr), puis on relance
 // Open Food Facts avec ce nom pour avoir l'EAN et la photo.
 // - Activé seulement si LINKUP_PRODUCTS=true (et LINKUP_API_KEY).
-// - UN appel par article, JAMAIS relancé (CLAUDE.md règle 9 ; 429 = crédit épuisé). Réponse mise en cache,
-//   échecs compris : un même libellé n'est jamais payé deux fois.
+// - UN appel par article, JAMAIS relancé dans la même requête (CLAUDE.md règle 9 ; 429 = crédit épuisé).
+//   Seules les vraies réponses sont mises en cache (une réponse vide expire en 24 h) : un échec n'est pas figé.
 // API vérifiée le 2026-11-07 (docs.linkup.so : POST /v1/search, depth fast|standard|deep, outputType "structured",
 // structuredOutputSchema en chaîne JSON, includeSources → { data, sources }). Prix : 0,005-0,006 $ par appel (linkup.so/pricing).
 import "server-only";
@@ -54,8 +54,8 @@ export async function webProducts(rawLabel: string, chain: string | null, unitPr
     `Les libellés de ticket sont abrégés et tronqués vers 18 caractères. Quels produits vendus ${where} peuvent correspondre ? ` +
     `Pour chacun : marque, nom complet, format, et code EAN seulement s'il est écrit dans une source.`;
 
-  return cached(`linkup:${q}`, async () => {
-    try {
+  try {
+    return await cached(`linkup:${q}`, async () => {
       const res = await fetch(LINKUP_URL, {
         method: "POST",
         headers: { Authorization: `Bearer ${process.env.LINKUP_API_KEY}`, "Content-Type": "application/json" },
@@ -82,9 +82,9 @@ export async function webProducts(rawLabel: string, chain: string | null, unitPr
           ean: isValidEan(ean) && corpus.includes(ean) ? ean : null,
         };
       });
-    } catch (err) {
-      console.error("[linkup]", rawLabel, err); // jamais relancé : on garde « rien trouvé » en cache
-      return [];
-    }
-  });
+    });
+  } catch (err) {
+    console.error("[linkup]", rawLabel, err); // pas de réessai ici, et rien en cache : un échec n'est pas figé
+    return [];
+  }
 }

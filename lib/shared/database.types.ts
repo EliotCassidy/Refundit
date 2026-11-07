@@ -359,6 +359,27 @@ export type Database = {
           },
         ]
       }
+      lookup_cache: {
+        Row: {
+          created_at: string
+          empty: boolean
+          key: string
+          value: Json | null
+        }
+        Insert: {
+          created_at?: string
+          empty?: boolean
+          key: string
+          value?: Json | null
+        }
+        Update: {
+          created_at?: string
+          empty?: boolean
+          key?: string
+          value?: Json | null
+        }
+        Relationships: []
+      }
       notcoca_requests: {
         Row: {
           address: string | null
@@ -457,6 +478,7 @@ export type Database = {
           id: string
           label_key: string
           last_confirmed_at: string
+          manual_confirmations: number
           product: Json
           raw_label: string
           store_chain: string
@@ -468,6 +490,7 @@ export type Database = {
           id?: string
           label_key: string
           last_confirmed_at?: string
+          manual_confirmations?: number
           product: Json
           raw_label: string
           store_chain?: string
@@ -479,6 +502,7 @@ export type Database = {
           id?: string
           label_key?: string
           last_confirmed_at?: string
+          manual_confirmations?: number
           product?: Json
           raw_label?: string
           store_chain?: string

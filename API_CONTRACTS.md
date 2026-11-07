@@ -116,6 +116,17 @@ Shared cache of products confirmed by users: `(store_chain, label_key) → ean`.
 | ean | text not null | unique with (store_chain, label_key) |
 | product | jsonb not null | same shape as a confirmed `confirmed_product` |
 | confirmations | integer default 1 | |
+| manual_confirmations | integer not null default 0 | explicit user choices only (click on a candidate, typed barcode). Automatic validations never write here. The "already known" shortcut and the +30 bonus use only rows with `manual_confirmations ≥ 1` |
+
+### `lookup_cache` (owner: Dev 1, service role only)
+Persistent cache of product lookups in production (Vercel has no disk): OFF / OBF / Open Prices responses, LLM label expansions, Linkup answers.
+| column | type | notes |
+|---|---|---|
+| key | text primary key | sha1 of the request (URL, LLM prompt, Linkup query); written with upsert |
+| value | jsonb | the answer (null = 404 / not found) |
+| empty | boolean not null default false | "not found" / empty result: expires after 24 h |
+| created_at | timestamptz | refreshed on each upsert |
+Only real answers are stored (200, or 404): never an error, a 429/5xx or a timeout.
 | last_confirmed_at | timestamptz | |
 
 ### `claims` (insert: Dev 1 as `draft` · every later update: Dev 2)
@@ -167,7 +178,7 @@ Shared cache of products confirmed by users: `(store_chain, label_key) → ean`.
 - `claims`: the user can read their own rows and insert their own rows with `status = 'draft'`. Users never update. Updates go through server routes with the service role.
 - `claim_events`, `claim_emails`: the user can read rows whose claim belongs to them. Only the service role writes.
 - `brands`: any authenticated user can read. Only the service role writes.
-- `product_matches`: no user access (RLS on, no policy). Only the service role reads and writes.
+- `product_matches`, `lookup_cache`: no user access (RLS on, no policy). Only the service role reads and writes.
 
 ### Storage
 Bucket `receipts` (private). Paths:
@@ -293,8 +304,8 @@ All endpoints use JSON unless noted. Errors return `{ "error": { "code": string,
 |---|---|---|---|
 | POST | `/api/receipts` | multipart: `image` (jpeg/png/webp/heic **≤ 4.5 MB**: Vercel's body limit, the page downsizes the photo first) | `201 { receiptId, status: "parsed" \| "failed", items: LineItemRow[] }` (synchronous parse, `maxDuration=120`) · `413 image_too_large` · `402 scan_limit_reached` (monthly free quota used, checked before upload; bypassed for emails listed in `SCAN_QUOTA_EXEMPT_EMAILS`) |
 | POST | `/api/profile` | `{ first_name, last_name, phone, address_line1, address_line2?, postal_code, city, country? }` (zod-validated, French error messages; `country` defaults to `FR`) | `200 { profile }` (creates or updates the signed-in user's `profiles` row, `id` = `auth.users.id`, via RLS) · `400 invalid_profile` · `401` |
-| POST | `/api/receipts/:id/identify` | `{ lineItemId, ean?, query? }` (**one item per call**; the page calls them in parallel). Fallbacks when the product isn't proposed: `ean` = barcode typed or scanned by the user (exact OFF/OBF product), `query` = product name typed by the user | `200 { lineItemId, productCandidates: ProductCandidates }`, also saved in `line_items.product_candidates` (`maxDuration=60`) · `400 invalid_ean` · `404 ean_unknown` |
-| POST | `/api/receipts/:id/confirm` | `{ lineItemId, ean: string \| null, manual?: { name, brand?, quantity? } }`: `ean` must be a proposed candidate; `null` = "je ne trouve pas mon produit" (`not_found`); `null` + `manual` = product typed by the user (`confirmed`, source `user`, no EAN) | `200 { lineItemId, confirmedProduct: ConfirmedProduct }`; updates `ean`, `product_name`, `brand_name_guess`, `brand_id` and (DB products only) `product_matches` |
+| POST | `/api/receipts/:id/identify` | `{ lineItemId, ean?, query?, full? }` (**one item per call**; the page runs 3 at a time). If a product was already confirmed by hand for this label at this chain, it is returned at once (`source: confirmed_match`, `confident`, no LLM/OFF call) unless `full: true` ("Chercher d'autres produits"). Fallbacks when the product isn't proposed: `ean` = barcode typed or scanned by the user (exact OFF/OBF product), `query` = product name typed by the user | `200 { lineItemId, productCandidates: ProductCandidates }`, also saved in `line_items.product_candidates` (`maxDuration=60`) · `400 invalid_ean` · `404 ean_unknown` |
+| POST | `/api/receipts/:id/confirm` | `{ lineItemId, ean: string \| null, manual?: { name, brand?, quantity? }, auto? }` (`auto: true` = validated automatically by the page: sets `confirmed_product` but never writes `product_matches`): `ean` must be a proposed candidate; `null` = "je ne trouve pas mon produit" (`not_found`); `null` + `manual` = product typed by the user (`confirmed`, source `user`, no EAN) | `200 { lineItemId, confirmedProduct: ConfirmedProduct }`; updates `ean`, `product_name`, `brand_name_guess`, `brand_id` and, for explicit choices of DB products only, `product_matches` (`manual_confirmations + 1`) |
 | POST | `/api/claims` | `{ receiptId, items: [{ lineItemId, issueType, issueDescription?, issuePhotoPath? }] }` | `201 { claimIds: string[] }`. Inserts `draft` claims, then calls submit for each. `400 product_not_confirmed` if an item has `confirmed_product = null` |
 
 **Product identity in claims (Dev 2 reads, Dev 1 guarantees).** Read the product from `line_items.confirmed_product`:

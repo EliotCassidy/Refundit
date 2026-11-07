@@ -20,6 +20,7 @@ export type IdentifyInput = {
   unitPriceCents: number | null; // prix unitaire payé, avant remise
   excludeProofId?: number; // éval : ignorer les prix Open Prices de ce ticket
   userQuery?: string; // nom du produit tapé par l'utilisateur quand la première recherche n'a rien donné
+  full?: boolean; // recherche complète même si le produit est déjà connu (« Chercher d'autres produits »)
 };
 
 const LINKUP_BELOW = 70; // secours Linkup si le meilleur score est sous ce seuil (ou aucun candidat)
@@ -34,14 +35,32 @@ const eanKey = (ean: string) => ean.replace(/^0+/, "");
 
 /** debug (évals) : rempli avec les EAN trouvés par les recherches (pool) et ceux qui ont reçu un prix (shortlist). */
 export async function identifyProduct(input: IdentifyInput, debug?: { pool?: string[]; shortlist?: string[] }): Promise<ProductCandidates> {
-  const [guess, confirmed] = await Promise.all([
-    // Avec un nom tapé par l'utilisateur, pas besoin de faire deviner le libellé au LLM.
-    input.userQuery ? Promise.resolve(null) : expandLabel(input.rawLabel, input.chain, input.section, input.unitPriceCents),
-    findConfirmedMatches(input.chain, input.rawLabel).catch((err) => {
-      console.error("[product_matches]", err);
-      return [];
-    }),
-  ]);
+  // Produits déjà confirmés À LA MAIN par des clients pour ce libellé chez cette enseigne (requête rapide en base).
+  const confirmed = await findConfirmedMatches(input.chain, input.rawLabel).catch((err) => {
+    console.error("[product_matches]", err);
+    return [];
+  });
+
+  // Raccourci « déjà connu » : réponse immédiate avec la photo, sans LLM ni Open Food Facts ni Open Prices.
+  if (confirmed.length && !input.full && !input.userQuery) {
+    return {
+      llm_guess: null,
+      candidates: confirmed.slice(0, 3).map((m) => ({
+        ...m.product,
+        source: "confirmed_match" as const,
+        score: 100,
+        reference_price_cents: null,
+        reasons: [`confirmé ${m.confirmations} fois par des clients pour ce libellé chez cette enseigne`],
+      })),
+      uncertain: false,
+      uncertain_reasons: [],
+      confident: true,
+      searched_at: new Date().toISOString(),
+    };
+  }
+
+  // Avec un nom tapé par l'utilisateur, pas besoin de faire deviner le libellé au LLM.
+  const guess = input.userQuery ? null : await expandLabel(input.rawLabel, input.chain, input.section, input.unitPriceCents);
 
   const type = guess?.product_type ?? null;
   const variant = guess?.variant ?? null;
