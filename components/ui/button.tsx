@@ -56,7 +56,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
           )
         )}
       </AnimatePresence>
-      <span>{children}</span>
+      <span className="inline-flex items-center gap-[inherit]">{children}</span>
     </motion.button>
   );
 });

@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowLeft, ArrowRight, Check, Landmark, Mail, ScanLine, ShieldCheck, Sparkles, Zap } from "lucide-react";
+import { Aurora, glass } from "@/components/ui/aurora";
+import { Logo } from "@/components/ui/brand";
 import { Button } from "@/components/ui/button";
 import { formatIban, isValidIban } from "@/lib/shared/iban";
 
@@ -27,7 +29,7 @@ type Step = (typeof STEPS)[number];
 const ease = [0.22, 1, 0.36, 1] as const;
 
 const input =
-  "h-[52px] w-full rounded-[14px] border border-line bg-raised px-4 text-base text-ink outline-none transition placeholder:text-muted/70 focus:border-ink focus:shadow-[0_0_0_4px_rgba(17,23,20,0.06)]";
+  "h-[52px] w-full rounded-[14px] border border-black/[0.06] bg-white/80 px-4 text-base text-ink outline-none transition placeholder:text-muted/70 focus:border-ink focus:bg-white focus:shadow-[0_0_0_4px_rgba(17,23,20,0.06)]";
 
 function Label({ children, hint }: { children: React.ReactNode; hint?: string }) {
   return (
@@ -105,19 +107,21 @@ export function OnboardingWizard() {
   const progress = Math.min(i, 4) / 4;
 
   return (
-    <div className="mx-auto flex min-h-[calc(100dvh-9rem)] w-full max-w-md flex-col">
+    <div className="mx-auto flex min-h-[calc(100dvh-9rem)] w-full max-w-[460px] flex-col justify-center py-2">
+      <Aurora />
+      <motion.div layout transition={{ duration: 0.35, ease }} className={`${glass} flex flex-col p-6 sm:p-8`}>
       {/* Progress + back */}
       {step !== "welcome" && step !== "done" && (
-        <div className="mb-8 flex items-center gap-3">
+        <div className="mb-7 flex items-center gap-3">
           <button
             type="button"
             onClick={() => go(STEPS[i - 1])}
             aria-label="Étape précédente"
-            className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-raised text-ink transition hover:bg-sunken"
+            className="grid size-10 shrink-0 place-items-center rounded-full border border-white/80 bg-white/70 text-ink transition hover:bg-white"
           >
             <ArrowLeft className="size-4" aria-hidden />
           </button>
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-sunken">
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/[0.06]">
             <motion.div className="h-full rounded-full bg-brand" animate={{ width: `${progress * 100}%` }} transition={{ duration: 0.5, ease }} />
           </div>
           <span className="w-10 text-right text-xs font-semibold text-muted">{i}/4</span>
@@ -170,7 +174,7 @@ export function OnboardingWizard() {
                           setTimeout(() => go("name"), 220);
                         }}
                         className={`flex h-16 items-center justify-between rounded-[16px] border px-5 text-left text-base font-semibold transition ${
-                          on ? "border-ink bg-ink text-surface" : "border-line bg-raised hover:border-line-strong/60"
+                          on ? "border-ink bg-ink text-surface" : "border-black/[0.06] bg-white/80 hover:bg-white"
                         }`}
                       >
                         {label}
@@ -244,7 +248,7 @@ export function OnboardingWizard() {
 
         {/* Footer actions */}
         {step !== "welcome" && step !== "done" && (
-          <div className="mt-8 flex flex-col gap-2 pb-4">
+          <div className="mt-8 flex flex-col gap-2">
             <AnimatePresence>
               {error && (
                 <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="text-sm text-on-danger-soft">
@@ -266,6 +270,7 @@ export function OnboardingWizard() {
           </div>
         )}
       </form>
+      </motion.div>
     </div>
   );
 }
@@ -273,7 +278,7 @@ export function OnboardingWizard() {
 function Screen({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col">
-      <h1 className="text-[28px] font-bold leading-tight tracking-tight">{title}</h1>
+      <h1 className="text-[26px] font-bold leading-tight tracking-tight">{title}</h1>
       <p className="mb-7 mt-2 text-[15px] text-muted">{subtitle}</p>
       {children}
     </div>
@@ -319,48 +324,65 @@ function IbanField({ value, onChange }: { value: string; onChange: (v: string) =
 }
 
 function Welcome({ onStart }: { onStart: () => void }) {
-  const items = [
-    { Icon: ScanLine, text: "Scanne ton ticket de caisse" },
-    { Icon: Zap, text: "Notre agent écrit à la marque pour toi" },
-    { Icon: Mail, text: "Les réponses arrivent ici, pas dans ta boîte mail" },
+  const steps = [
+    { Icon: ScanLine, title: "Scanne ton ticket", text: "Une photo suffit, on lit chaque ligne." },
+    { Icon: Zap, title: "Coche le produit", text: "Notre agent écrit à la marque pour toi." },
+    { Icon: Mail, title: "Reçois ton argent", text: "Les réponses et le remboursement arrivent ici." },
   ];
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-8 text-center">
-      <motion.div initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 260, damping: 18 }} className="relative">
-        <motion.span className="absolute inset-0 rounded-full bg-brand/30" animate={{ scale: [1, 1.5], opacity: [0.6, 0] }} transition={{ duration: 1.8, repeat: Infinity, ease: "easeOut" }} />
-        <span className="relative grid size-24 place-items-center rounded-full bg-brand text-on-brand shadow-[0_14px_40px_rgba(34,197,94,0.35)]">
-          <svg viewBox="0 0 24 24" className="size-11" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round">
-            <motion.path d="M5 12.5l4.5 4.5L19 7.5" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: 0.35, duration: 0.6, ease }} />
-          </svg>
-        </span>
+    <div className="flex flex-col">
+      <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ ease }} className="inline-flex w-fit items-center rounded-full border border-white/80 bg-white/70 py-1.5 pl-1.5 pr-3 shadow-sm">
+        <Logo className="scale-[0.85] origin-left" />
       </motion.div>
-      <div>
-        <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, ease }} className="text-[32px] font-bold leading-tight tracking-tight">
-          Bienvenue sur Refundit
-        </motion.h1>
-        <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35, ease }} className="mt-2 text-[15px] text-muted">
-          Un produit défectueux ? On récupère ton argent.
-        </motion.p>
+
+      <motion.h1
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1, duration: 0.5, ease }}
+        className="mt-6 text-[34px] font-bold leading-[1.05] tracking-tight sm:text-[40px]"
+      >
+        On récupère{" "}
+        <span className="bg-gradient-to-r from-[#15803D] via-[#22C55E] to-[#65A30D] bg-clip-text text-transparent">ton argent.</span>
+      </motion.h1>
+      <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18, ease }} className="mt-3 text-[15px] text-muted">
+        Un produit abîmé, périmé ou décevant ? Refundit s&apos;occupe de la réclamation à ta place.
+      </motion.p>
+
+      <div className="mt-7">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Comment ça marche</p>
+        <ol className="relative flex flex-col gap-4">
+          <motion.span
+            className="absolute bottom-5 left-[19px] top-5 w-px origin-top bg-gradient-to-b from-brand via-brand/40 to-transparent"
+            initial={{ scaleY: 0 }}
+            animate={{ scaleY: 1 }}
+            transition={{ delay: 0.35, duration: 0.8, ease }}
+            aria-hidden
+          />
+          {steps.map(({ Icon, title, text }, k) => (
+            <motion.li
+              key={title}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 + k * 0.12, ease }}
+              className="relative flex items-start gap-3.5"
+            >
+              <span className="relative z-10 grid size-10 shrink-0 place-items-center rounded-full border border-white bg-white text-brand-strong shadow-[0_4px_12px_rgba(17,23,20,0.08)]">
+                <Icon className="size-[18px]" aria-hidden />
+              </span>
+              <span className="pt-1">
+                <span className="block text-[15px] font-semibold">{title}</span>
+                <span className="block text-[13px] text-muted">{text}</span>
+              </span>
+            </motion.li>
+          ))}
+        </ol>
       </div>
-      <ul className="flex w-full flex-col gap-2.5 text-left">
-        {items.map(({ Icon, text }, k) => (
-          <motion.li
-            key={text}
-            initial={{ opacity: 0, x: -12 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.5 + k * 0.1, ease }}
-            className="flex items-center gap-3 rounded-[16px] border border-line bg-raised/80 px-4 py-3.5 text-[15px] font-medium backdrop-blur"
-          >
-            <span className="grid size-9 place-items-center rounded-full bg-brand-soft text-brand-strong"><Icon className="size-[18px]" aria-hidden /></span>
-            {text}
-          </motion.li>
-        ))}
-      </ul>
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.85, ease }} className="w-full">
+
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7, ease }} className="mt-8">
         <Button type="button" variant="dark" size="lg" block onClick={onStart}>
-          C&apos;est parti <ArrowRight className="size-4" aria-hidden />
+          Commencer <ArrowRight className="size-4" aria-hidden />
         </Button>
-        <p className="mt-3 text-xs text-muted">2 minutes · tes données ne servent qu&apos;à remplir les formulaires des marques</p>
+        <p className="mt-3 text-center text-xs text-muted">2 minutes · tes données servent uniquement à remplir les formulaires des marques</p>
       </motion.div>
     </div>
   );

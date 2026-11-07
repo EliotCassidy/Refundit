@@ -6,7 +6,7 @@ import { ScanLine } from "lucide-react";
 
 export function ScanFab() {
   const path = usePathname();
-  if (path.startsWith("/receipts/new")) return null;
+  if (path.startsWith("/receipts/new") || path.startsWith("/onboarding")) return null;
   return (
     <Link
       href="/receipts/new"
