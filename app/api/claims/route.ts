@@ -16,11 +16,16 @@ export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: lineItems, error: liError } = await supabase
     .from("line_items")
-    .select("id, brand_id")
+    .select("id, brand_id, confirmed_product")
     .eq("receipt_id", receiptId)
     .in("id", items.map((i) => i.lineItemId));
   if (liError) return apiError(500, "db_error", liError.message);
   if (lineItems.length !== items.length) return apiError(400, "invalid_line_items", "Unknown line item(s)");
+
+  // CLAUDE.md rule 8: every item needs a validated product (or an explicit "not_found") before a claim exists.
+  if (lineItems.some((li) => li.confirmed_product === null)) {
+    return apiError(400, "product_not_confirmed", "Choisissez le produit (ou « Je ne trouve pas mon produit ») pour chaque article.");
+  }
 
   const brandByItem = new Map(lineItems.map((li) => [li.id, li.brand_id]));
   const { data: claims, error } = await supabase

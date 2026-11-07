@@ -12,7 +12,8 @@ Hackathon project: 2 devs, 1 weekend. **Working end-to-end demo > completeness.*
 
 ## Current state (keep short; update it when it changes)
 - **Receipt → product (Dev 1, done):** `POST /api/receipts` parses the photo with the H model (~5–20 s). `POST /api/receipts/:id/identify` handles one item per call (~1–8 s, one short LLM call, no Linkup): Open Food Facts / Open Beauty Facts candidates ranked against the receipt label, format and Open Prices. `POST /api/receipts/:id/confirm` takes an `ean` that must be one of the proposed candidates, or `null` ("je ne trouve pas mon produit" → `not_found`). Confirmations feed the shared `product_matches` cache.
-- **Coming (Dev 1):** upload / receipt / selection pages. Once the selection page ships, `POST /api/claims` returns `400 product_not_confirmed` for any item whose `confirmed_product` is null. Code or tests that create claims from seed data must call `/confirm` first (or set `confirmed_product` to `{"status":"not_found"}`).
+- **Receipt pages (Dev 1, done):** `/receipts/new` (photo downsized in the browser), `/receipts/[id]` (items as printed), `/receipts/[id]/select` (issue + product choice, "je ne trouve pas mon produit", honesty checkbox). **`POST /api/claims` now returns `400 product_not_confirmed`** for any item whose `confirmed_product` is null: code or tests that create claims from seed data must call `/confirm` first (or set `confirmed_product` to `{"status":"not_found"}`).
+- **Still TODO (Dev 1):** onboarding and profile pages.
 - **Missing info (Dev 2, done):** DLC/DDM, batch number, "do you still have the product?" are asked after submission through `waiting_input` (`claims.missing_fields` / `user_answers`, `POST /api/claims/:id/answers`). The selection page does not ask for them.
 - **Demo brands (Dev 2 spike):** Coca-Cola and Lu work through the web form; Evian goes through the email fallback; Bonne Maman goes through the missing-info flow; Pringles is not automatable (`needs_manual`).
 
