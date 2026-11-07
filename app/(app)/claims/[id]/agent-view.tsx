@@ -13,6 +13,18 @@ export function AgentView({ claimId, live, actions }: { claimId: string; live: b
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
 
+  // Jury demo tour (components/demo): opens / closes the agent's screen on its own.
+  useEffect(() => {
+    const show = () => setOpen(true);
+    const hide = () => setOpen(false);
+    window.addEventListener("refundit-demo:open-agent", show);
+    window.addEventListener("refundit-demo:close-agent", hide);
+    return () => {
+      window.removeEventListener("refundit-demo:open-agent", show);
+      window.removeEventListener("refundit-demo:close-agent", hide);
+    };
+  }, []);
+
   useEffect(() => {
     let stop = false;
     async function load() {
@@ -129,6 +141,11 @@ function Lightbox({ shots, log, live, onClose }: { shots: Step[]; log: Step[]; l
           <button type="button" onClick={onClose} aria-label="Fermer" className="grid size-9 shrink-0 place-items-center rounded-full bg-ink text-surface shadow-md transition hover:scale-105"><X className="size-4" strokeWidth={2.5} aria-hidden /></button>
         </div>
         <div className="min-h-0 flex-1 overflow-auto bg-sunken">
+          {!shot?.screenshot && (
+            <div className="grid h-64 place-items-center text-sm text-muted">
+              <span className="flex items-center gap-2"><Bot className="size-5 animate-pulse" aria-hidden /> L&apos;agent ouvre son navigateur…</span>
+            </div>
+          )}
           {shot?.screenshot && (
             // eslint-disable-next-line @next/next/no-img-element -- authenticated proxy route
             <img src={shot.screenshot} alt="Écran du navigateur de l'agent" className="mx-auto w-full max-w-2xl bg-white" />

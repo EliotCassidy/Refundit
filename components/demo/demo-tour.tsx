@@ -5,11 +5,11 @@
 // dashboard (balance → purchases → Scanner) → demo receipt → NotCoca claim → live agent → missing info →
 // NotCoca back-office (refund) → back on the dashboard (email + balance) → end.
 import "driver.js/dist/driver.css";
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { driver, type Config, type DriveStep, type Driver } from "driver.js";
-import { Hand, PartyPopper, RotateCcw, Sparkles, X } from "lucide-react";
+import { Hand, Lightbulb, PartyPopper, RotateCcw, Sparkles, X } from "lucide-react";
 import { getDemo, patchDemo, setDemo, useDemoRaw, type DemoState } from "./demo-state";
 
 const BASE: Config = {
@@ -65,6 +65,7 @@ export function DemoTour() {
   const status = useDomValue(() => document.querySelector("[data-demo-status]")?.getAttribute("data-demo-status") ?? null);
   const firstRequest = useDomValue(() => document.querySelector("[data-demo-first-status]")?.getAttribute("data-demo-first-status") ?? null);
   const received = useDomValue(() => document.querySelector("#demo-balance")?.getAttribute("data-received") ?? null);
+  const ready = useDomValue(() => (document.querySelector("li[data-demo-ready]") ? "1" : null));
   const drv = useRef<Driver | null>(null);
 
   const step = state?.step ?? null;
@@ -75,7 +76,7 @@ export function DemoTour() {
   useEffect(() => () => {
     drv.current?.destroy();
     drv.current = null;
-  }, [pathname, step, status, firstRequest]);
+  }, [pathname, step, status, firstRequest, ready]);
 
   // Step transitions driven by navigation.
   useEffect(() => {
@@ -150,28 +151,26 @@ export function DemoTour() {
         return;
       }
 
-      // 3) Receipt: pick NotCoca, choose a problem, send.
+      // 3) Receipt: pick NotCoca, choose a problem, send. The tour only moves on once the card is complete
+      //    (Oui + problem + product): no "next" button that would leave the jury stuck.
       if (step === "receipt" && /^\/receipts\/(?!new)/.test(pathname)) {
+        if (ready) {
+          const el = await waitFor(() => document.querySelector("#demo-submit"));
+          if (!el) return;
+          spot({
+            element: el,
+            disableActiveInteraction: false,
+            popover: { title: "Envoie ta réclamation", description: "Coche la case (on ne réclame que pour de vrais problèmes) puis envoie : l'agent H Company prend le relais.", side: "top", align: "center", showButtons: [] },
+          });
+          return;
+        }
         const card = await waitFor(notcocaCard, 40_000);
         if (!card || cancelled) return;
-        await new Promise((r) => setTimeout(r, 900)); // let the identification settle
-        show(
-          {
-            steps: [
-              {
-                element: notcocaCard() ?? card,
-                disableActiveInteraction: false,
-                popover: { title: "Un problème avec NotCoca ?", description: "Touche « Oui » sur la boisson NotCoca, puis choisis le problème de ton choix.", side: "top", align: "center", showButtons: ["next"], nextBtnText: "C'est fait" },
-              },
-              {
-                element: "#demo-submit",
-                disableActiveInteraction: false,
-                popover: { title: "Envoie ta réclamation", description: "Coche la case (on ne réclame que pour de vrais problèmes) puis envoie : l'agent H Company prend le relais.", side: "top", align: "center", showButtons: [] },
-              },
-            ],
-          },
-          (d) => d.drive(),
-        );
+        spot({
+          element: card,
+          disableActiveInteraction: false,
+          popover: { title: "Un problème avec NotCoca ?", description: "Touche « Oui » sur la boisson NotCoca, puis choisis le problème de ton choix.", side: "top", align: "center", showButtons: [] },
+        });
         return;
       }
 
@@ -192,16 +191,24 @@ export function DemoTour() {
         if (status === "submitting" && !seen("agent-live")) {
           const el = await waitFor(() => document.querySelector("#demo-agent"), 90_000);
           if (!el) return;
+          const watch = () => {
+            markSeen("agent-live");
+            drv.current?.destroy();
+            window.dispatchEvent(new Event("refundit-demo:open-agent"));
+          };
           spot(
             {
               element: el,
               disableActiveInteraction: false,
-              popover: { title: "L'agent H Company, en direct", description: "Il ouvre le site de NotCoca, trouve le formulaire et le remplit avec tes infos. Touche la ligne pour regarder son écran.", side: "bottom", align: "center", showButtons: ["next"], nextBtnText: "OK" },
+              popover: { title: "L'agent H Company, en direct", description: "Il ouvre le site de NotCoca, trouve le formulaire et le remplit avec tes infos. Regardons son écran.", side: "bottom", align: "center", showButtons: ["next"], nextBtnText: "Regarder l'agent" },
+              onHighlighted: (e) => onClick(e, watch),
             },
-            { onNextClick: () => { markSeen("agent-live"); drv.current?.destroy(); } },
+            { onNextClick: watch },
           );
         } else if (status === "waiting_input" && !seen("missing")) {
           await new Promise((r) => setTimeout(r, 2500)); // let the jury see the agent stop first
+          window.dispatchEvent(new Event("refundit-demo:close-agent"));
+          await new Promise((r) => setTimeout(r, 400));
           const el = await waitFor(() => document.querySelector("#demo-missing"));
           if (!el) return;
           spot({
@@ -317,7 +324,7 @@ export function DemoTour() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run on page / step / page-state changes only
-  }, [step, pathname, status, firstRequest, received]);
+  }, [step, pathname, status, firstRequest, received, ready]);
 
   // Final step: fetch the brand's email and refresh until the balance goes up.
   useEffect(() => {
@@ -335,6 +342,7 @@ export function DemoTour() {
       <DemoChip />
       <AnimatePresence>
         {step === "agent" && status === "submitting" && seen("agent-live") && <CancelNote key="note" />}
+        {step === "agent" && status === "submitting" && seen("agent-live") && <FunFacts key="facts" />}
         {step === "done" && <EndCard key="end" />}
       </AnimatePresence>
     </>
@@ -355,11 +363,11 @@ function DemoChip() {
 function CancelNote() {
   return (
     <motion.div
-      initial={{ y: 30, opacity: 0, rotate: -1.5 }}
+      initial={{ y: -30, opacity: 0, rotate: -1.5 }}
       animate={{ y: 0, opacity: 1, rotate: -1.5 }}
-      exit={{ y: 30, opacity: 0 }}
+      exit={{ y: -30, opacity: 0 }}
       transition={{ type: "spring", stiffness: 300, damping: 24, delay: 0.4 }}
-      className="fixed bottom-24 left-1/2 z-[60] w-[min(340px,calc(100%-2rem))] -translate-x-1/2 rounded-[18px] bg-[#FEF3C7] px-4 py-3 text-[14px] text-[#422006] shadow-[0_18px_40px_-12px_rgba(66,32,6,0.45)]"
+      className="fixed left-1/2 top-[calc(env(safe-area-inset-top)+0.75rem)] z-[120] w-[min(340px,calc(100%-2rem))] -translate-x-1/2 rounded-[18px] bg-[#FEF3C7] px-4 py-3 text-[14px] text-[#422006] shadow-[0_18px_40px_-12px_rgba(66,32,6,0.45)]"
     >
       <p className="flex items-center gap-2 font-semibold"><Hand className="size-4" aria-hidden /> Tu gardes la main</p>
       <p className="mt-0.5 text-[13px] leading-snug">Tu peux arrêter l&apos;agent à tout moment avec « Arrêter l&apos;agent » : rien n&apos;est envoyé sans toi.</p>
@@ -393,6 +401,54 @@ function EndCard() {
           <button type="button" onClick={() => setDemo(null)} className="h-11 rounded-full font-semibold text-muted hover:text-ink">Quitter le mode démo</button>
         </div>
       </motion.div>
+    </motion.div>
+  );
+}
+
+// Fun facts shown while the agent works. Facts about how Refundit works (from the code and the providers' docs);
+// the H cost per claim is the team's own figure.
+const FACTS = [
+  { k: "≈ 0,11 €", t: "C'est le coût moyen en appels à l'API H Company pour une demande de remboursement." },
+  { k: "0 invention", t: "L'agent ne remplit un champ qu'avec tes vraies infos. S'il en manque une, il s'arrête et te la demande." },
+  { k: "1 adresse / demande", t: "Les marques répondent sur une adresse e-mail dédiée à ta demande, jamais sur la tienne." },
+  { k: "< 1 centime", t: "Marque inconnue ? Un seul appel Linkup trouve son formulaire ou son e-mail de contact." },
+  { k: "3 bases ouvertes", t: "Open Food Facts, Open Beauty Facts et Open Prices aident à reconnaître le produit exact de ton ticket." },
+  { k: "Stripe", t: "Le remboursement arrive via Stripe (en mode test pour la démo), transférable vers ton compte." },
+];
+
+function FunFacts() {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setI((n) => (n + 1) % FACTS.length), 6500);
+    return () => clearInterval(t);
+  }, []);
+  const f = FACTS[i];
+  return (
+    <motion.div
+      initial={{ y: 40, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      exit={{ y: 40, opacity: 0 }}
+      className="fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] left-1/2 z-[120] w-[min(380px,calc(100%-2rem))] -translate-x-1/2"
+    >
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={i}
+          initial={{ opacity: 0, y: 12, rotateX: -25 }}
+          animate={{ opacity: 1, y: 0, rotateX: 0 }}
+          exit={{ opacity: 0, y: -12, rotateX: 25 }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="rounded-[20px] bg-[#111714] px-5 py-4 text-[#F2F4F1] shadow-[0_20px_50px_-15px_rgba(0,0,0,0.6)]"
+        >
+          <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#86EFAC]"><Lightbulb className="size-3.5" aria-hidden /> Le savais-tu ?</p>
+          <p className="mt-1.5 text-[22px] font-semibold leading-tight tracking-tight">{f.k}</p>
+          <p className="mt-1 text-[14px] leading-snug text-[#C9D1CC]">{f.t}</p>
+          <div className="mt-3 flex gap-1">
+            {FACTS.map((_, n) => (
+              <span key={n} className={`h-1 flex-1 rounded-full ${n === i ? "bg-[#86EFAC]" : "bg-white/15"}`} />
+            ))}
+          </div>
+        </motion.div>
+      </AnimatePresence>
     </motion.div>
   );
 }

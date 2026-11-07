@@ -304,6 +304,8 @@ function ProductCard({ it, s, patch, identify, confirm }: {
   return (
     <motion.li
       layout="position"
+      // Jury demo tour: this claim is complete (Oui + problem + product) → the tour can move on to "Envoyer".
+      data-demo-ready={hasIssue && s.issueType && s.confirmed && (s.issueType !== "other" || s.description.trim()) ? "" : undefined}
       className={`rounded-[18px] transition-shadow ${
         sure
           ? "bg-[linear-gradient(135deg,#22C55E,#BBF7D0_45%,#4ADE80)] p-[1.5px] shadow-[0_6px_18px_rgba(34,197,94,0.14)]"
