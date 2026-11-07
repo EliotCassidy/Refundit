@@ -185,9 +185,10 @@ export function UploadForm() {
                     {/* eslint-disable-next-line @next/next/no-img-element -- static demo image */}
                     <img src={DEMO_TICKET} alt="Ticket de caisse fictif Carrefour Bastille : Nutella, Prince, Panzani, Evian, NotCoca 6×33 cl, NotCoca Zéro, Dove" className="mx-auto w-full max-w-[360px]" />
                   </div>
+                  {/* No "use" here on purpose: close the zoom first, then "Utiliser ce ticket" (the demo tour's next step). */}
                   <div className="p-4">
-                    <button type="button" onClick={pickDemoTicket} className="inline-flex h-12 w-full items-center justify-center rounded-full bg-ink text-[15px] font-semibold text-surface">
-                      Utiliser ce ticket
+                    <button type="button" onClick={() => setZoom(false)} className="inline-flex h-12 w-full items-center justify-center rounded-full bg-ink text-[15px] font-semibold text-surface">
+                      Fermer
                     </button>
                   </div>
                 </motion.div>
