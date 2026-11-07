@@ -1,8 +1,10 @@
 // OWNER: Dev 2. NotCoca — FICTIONAL demo brand site (public, no Refundit auth).
 // Page structure mirrors a typical soda brand site (header/nav, hero, footer columns);
-// visual identity follows the brand direction: dynamic red, white, flowing script logo.
+// visual identity: dynamic red and white, flowing ribbon, script wordmark, condensed capitals.
 import type { Metadata } from "next";
+import { Barlow_Condensed } from "next/font/google";
 import Link from "next/link";
+import { DISPLAY, NotCocaLogo, Wave } from "./brand";
 
 export const metadata: Metadata = {
   title: { default: "NotCoca France", template: "%s | NotCoca France" },
@@ -10,84 +12,74 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export function NotCocaLogo({ className = "", light = false }: { className?: string; light?: boolean }) {
-  return (
-    <span className={`inline-flex items-center gap-2 ${className}`}>
-      <svg viewBox="0 0 32 32" className="h-8 w-8 shrink-0" aria-hidden>
-        <path
-          fill={light ? "#fff" : "var(--notcoca-red)"}
-          d="M16 4c-2.2 4.4-6 6.4-6 11.2C10 20.5 12.7 24 16 24s6-3.5 6-8.8C22 10.4 18.2 8.4 16 4z"
-        />
-        <circle cx="11.2" cy="24.6" r="2.6" fill={light ? "#fff" : "var(--notcoca-red)"} />
-        <circle cx="18.6" cy="23" r="3.6" fill={light ? "#fff" : "var(--notcoca-red)"} />
-        <circle cx="22" cy="25.4" r="1.7" fill={light ? "#fff" : "var(--notcoca-red)"} />
-      </svg>
-      <span className={`font-script text-2xl leading-none ${light ? "text-white" : "text-notcoca"}`}>NotCoca</span>
-    </span>
-  );
-}
+const display = Barlow_Condensed({ weight: ["600", "700", "800"], subsets: ["latin"], variable: "--font-nc-display" });
 
 const NAV = [
-  { href: "/notcoca", label: "Nos boissons" },
+  { href: "/notcoca#boissons", label: "Nos boissons" },
   { href: "/notcoca#engagements", label: "Nos engagements" },
   { href: "/notcoca#entreprise", label: "Notre entreprise" },
-  { href: "/notcoca/contact", label: "Contactez-nous" },
+];
+
+const FOOTER = [
+  { title: "Nos boissons", items: ["NotCoca Original", "NotCoca Zéro", "NotCoca Cherry", "NotCoca Citron"] },
+  { title: "Notre entreprise", items: ["Qui sommes-nous", "Engagements", "Presse"] },
+  { title: "Informations", items: ["Mentions légales", "Politique de confidentialité", "Cookies"] },
 ];
 
 export default function NotCocaLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-full flex-1 flex-col bg-white text-neutral-900 [color-scheme:light]">
-      <div className="bg-neutral-900 py-1.5 text-center text-xs text-white">
+    <div className={`${display.variable} flex min-h-full flex-1 flex-col bg-white text-neutral-900 [color-scheme:light]`}>
+      <div className="bg-black py-1.5 text-center text-[11px] font-medium tracking-wide text-white/85">
         Site de démonstration — NotCoca est une marque fictive
       </div>
-      <header className="sticky top-0 z-20 border-b border-neutral-200 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
+
+      <header className="sticky top-0 z-30 border-b border-black/5 bg-white/85 backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
           <Link href="/notcoca" aria-label="NotCoca, accueil">
             <NotCocaLogo />
           </Link>
-          <nav className="hidden gap-6 text-sm font-semibold md:flex">
+          <nav className={`${DISPLAY} hidden items-center gap-1 text-[15px] font-bold md:flex`}>
             {NAV.map((n) => (
-              <Link key={n.href} href={n.href} className="transition-colors hover:text-notcoca">
+              <Link key={n.href} href={n.href} className="rounded-full px-4 py-2 transition-colors hover:bg-notcoca/10 hover:text-notcoca">
                 {n.label}
               </Link>
             ))}
           </nav>
           <Link
             href="/notcoca/contact"
-            className="rounded-full bg-notcoca px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-notcoca-dark md:hidden"
+            className="rounded-full bg-notcoca px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-notcoca/25 transition hover:-translate-y-0.5 hover:bg-notcoca-dark"
           >
-            Contact
+            Contactez-nous
           </Link>
         </div>
       </header>
 
       <main className="flex-1">{children}</main>
 
-      <footer className="mt-16 bg-notcoca text-white">
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 text-sm sm:grid-cols-3">
-          <div className="flex flex-col gap-2">
-            <NotCocaLogo className="mb-1 scale-90 origin-left" light />
-            <span className="font-semibold">NotCoca France</span>
-            <Link href="/notcoca/contact" className="underline-offset-2 hover:underline">Service consommateurs</Link>
-            <span>Mentions légales</span>
-            <span>Politique de confidentialité</span>
+      <footer className="relative mt-24 bg-notcoca text-white">
+        <Wave className="absolute inset-x-0 -top-[47px] h-12 w-full text-notcoca" />
+        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-x-6 gap-y-8 px-4 pb-10 pt-10 sm:grid-cols-4">
+          <div className="col-span-2 flex flex-col gap-3 sm:col-span-1">
+            <NotCocaLogo light />
+            <p className="text-sm text-white/85">Des bulles franches, un goût net.</p>
+            <Link href="/notcoca/contact" className="w-fit rounded-full bg-white px-4 py-2 text-sm font-bold text-notcoca transition hover:-translate-y-0.5">
+              Service consommateurs
+            </Link>
           </div>
-          <div className="flex flex-col gap-2">
-            <span className="font-semibold">Nos boissons</span>
-            <span>NotCoca Original</span>
-            <span>NotCoca Zéro</span>
-            <span>NotCoca Cherry</span>
-          </div>
-          <div className="flex flex-col gap-2">
-            <span className="font-semibold">Notre entreprise</span>
-            <span>Qui sommes-nous</span>
-            <span>Engagements</span>
-            <span>Presse</span>
-          </div>
+          {FOOTER.map((col) => (
+            <div key={col.title} className="flex flex-col gap-2 text-sm">
+              <span className={`${DISPLAY} mb-1 text-lg font-bold`}>{col.title}</span>
+              {col.items.map((i) => (
+                <span key={i} className="text-white/85">{i}</span>
+              ))}
+            </div>
+          ))}
         </div>
-        <p className="px-4 pb-5 text-center text-xs text-white/80">
-          © 2026 NotCoca — marque fictive créée pour une démonstration. Aucun lien avec une marque existante.
-        </p>
+        <div className="border-t border-white/20">
+          <p className="mx-auto max-w-6xl px-4 py-5 text-xs text-white/80">
+            © 2026 NotCoca — marque fictive créée pour une démonstration. Aucun lien avec une marque existante.
+          </p>
+        </div>
       </footer>
     </div>
   );
