@@ -1,0 +1,263 @@
+# API contracts
+
+This is the source of truth for everything both devs depend on. Change it only through a PR that updates this file **and** the code, and tell the other dev.
+
+## 1. Enums
+
+```sql
+create type receipt_status as enum ('uploaded','parsing','parsed','failed');
+
+create type issue_type as enum (
+  'damaged',          -- abîmé / écrasé
+  'missing_quantity', -- quantité manquante
+  'expired',          -- date dépassée
+  'quality',          -- goût / texture anormale
+  'foreign_object',   -- corps étranger
+  'flat_drink',       -- boisson sans gaz
+  'other'             -- texte libre (ou voix, P2)
+);
+
+create type claim_status as enum (
+  'draft',          -- created by Dev 1, not yet sent
+  'submitting',     -- H agent session running
+  'submitted',      -- form sent (or dry run done), waiting for a brand reply
+  'waiting_input',  -- brand asked for more information
+  'accepted',       -- brand promised a refund or voucher
+  'refused',        -- brand declined
+  'agent_failed',   -- technical failure, can be retried
+  'needs_manual',   -- agent blocked (captcha, login, no form, missing info)
+  'cancelled'       -- user cancelled
+);
+
+create type brand_source as enum ('seed','linkup','manual');
+create type email_classification as enum ('acknowledgement','accepted','refused','waiting_input','other');
+```
+
+### Allowed status transitions (enforced in `lib/claims/transition.ts`)
+```
+draft         → submitting | cancelled
+submitting    → submitted | needs_manual | agent_failed | cancelled
+agent_failed  → submitting                       (retry)
+needs_manual  → submitting | cancelled           (retry after brand fix)
+submitted     → waiting_input | accepted | refused
+waiting_input → submitted | accepted | refused
+```
+Every transition inserts a `claim_events` row.
+
+## 2. Database schema (Supabase / Postgres)
+
+All tables have `id uuid primary key default gen_random_uuid()` and `created_at timestamptz default now()`, so those columns are omitted below. **Owner = the dev whose code writes the table.**
+
+### `profiles` (owner: Dev 1)
+| column | type | notes |
+|---|---|---|
+| id | uuid PK | = `auth.users.id` (no default) |
+| first_name, last_name | text not null | |
+| phone | text | |
+| address_line1 | text not null | |
+| address_line2 | text | |
+| postal_code, city | text not null | |
+| country | text not null default 'FR' | |
+| iban | text | optional, P2 |
+| updated_at | timestamptz | |
+
+### `brands` (owner: Dev 1)
+| column | type | notes |
+|---|---|---|
+| name | text unique not null | display brand, e.g. "Pringles" |
+| manufacturer | text | e.g. "Kellanova" |
+| aliases | text[] default '{}' | lowercase receipt spellings, e.g. `{pringles,pringl}` |
+| contact_url | text | customer-service form URL |
+| agent_hints | text | free text for the agent prompt ("choose 'Réclamation produit' in the subject dropdown") |
+| requires_receipt_upload | boolean default false | |
+| captcha_observed | boolean default false | |
+| verified | boolean default false | true = tested by us |
+| source | brand_source not null | |
+| last_checked_at | timestamptz | |
+
+### `receipts` (owner: Dev 1)
+| column | type | notes |
+|---|---|---|
+| user_id | uuid FK auth.users not null | |
+| image_path | text not null | Storage path in bucket `receipts` |
+| status | receipt_status not null default 'uploaded' | |
+| store_name | text | |
+| purchased_at | timestamptz | |
+| total_cents | integer | |
+| currency | text default 'EUR' | |
+| raw_parse | jsonb | the full `ParsedReceipt`, for debugging |
+| error | text | |
+
+### `line_items` (owner: Dev 1)
+| column | type | notes |
+|---|---|---|
+| receipt_id | uuid FK receipts on delete cascade | |
+| user_id | uuid not null | denormalized for RLS |
+| position | integer not null | order on the receipt |
+| raw_label | text not null | e.g. "PRINGLES ORIG 175G" |
+| product_name | text not null | e.g. "Pringles Original 175g" |
+| brand_id | uuid FK brands | null if unresolved |
+| brand_name_guess | text | from the parser |
+| ean | text | rarely available |
+| quantity | numeric not null default 1 | |
+| unit_price_cents | integer | |
+| total_price_cents | integer not null | |
+
+### `claims` (insert: Dev 1 as `draft` · every later update: Dev 2)
+| column | type | written by |
+|---|---|---|
+| user_id | uuid not null | Dev 1 |
+| receipt_id | uuid FK receipts | Dev 1 |
+| line_item_id | uuid FK line_items | Dev 1 |
+| brand_id | uuid FK brands | Dev 1 (may be null) → Dev 2 fills it after lookup |
+| issue_type | issue_type not null | Dev 1 |
+| issue_description | text | Dev 1 (user free text) |
+| issue_photo_path | text | Dev 1 (optional Storage path) |
+| status | claim_status not null default 'draft' | Dev 2 (after draft) |
+| inbound_alias | text unique | Dev 2, e.g. `claim-8f3k2a` |
+| complaint_text | text | Dev 2 |
+| h_session_id | text | Dev 2 |
+| h_agent_view_url | text | Dev 2 |
+| attempt | integer default 0 | Dev 2 |
+| dry_run | boolean default false | Dev 2 |
+| confirmation_number | text | Dev 2 |
+| failure_reason | text | Dev 2 (blocker code or error) |
+| submitted_at, resolved_at, updated_at | timestamptz | Dev 2 |
+
+### `claim_events` (owner: Dev 2)
+| column | type | notes |
+|---|---|---|
+| claim_id | uuid FK claims on delete cascade | |
+| type | text not null | `status_change` · `agent_update` · `email_received` · `note` |
+| from_status, to_status | claim_status | for `status_change` |
+| payload | jsonb | anything useful (H status, error, email id) |
+
+### `claim_emails` (owner: Dev 2)
+| column | type | notes |
+|---|---|---|
+| claim_id | uuid FK claims | null if unmatched |
+| provider_message_id | text unique not null | idempotency |
+| from_address, to_address | text not null | |
+| subject | text | |
+| body_text | text | |
+| received_at | timestamptz not null | |
+| classification | email_classification | |
+| classification_reason | text | |
+
+### RLS
+- `profiles`, `receipts`, `line_items`: a user can read and write rows where `user_id = auth.uid()` (`id` for profiles).
+- `claims`: the user can read their own rows and insert their own rows with `status = 'draft'`. Users never update. Updates go through server routes with the service role.
+- `claim_events`, `claim_emails`: the user can read rows whose claim belongs to them. Only the service role writes.
+- `brands`: any authenticated user can read. Only the service role writes.
+
+### Storage
+Bucket `receipts` (private). Paths:
+- `{userId}/{receiptId}.jpg`
+- `{userId}/claims/{claimId}-issue.jpg`
+
+### Migrations
+`supabase/migrations/<timestamp>_<name>.sql`. Timestamps prevent filename collisions. **Never edit a migration that's already on `main`; add a new one.** `0001_init` (everything above) is written together at kickoff.
+
+## 3. Shared TypeScript types (`lib/shared/types.ts`)
+
+Row types come from `lib/shared/database.types.ts` (generated). The types below are the **non-DB** contracts.
+
+```ts
+import { z } from "zod";
+
+export const ISSUE_TYPES = ["damaged","missing_quantity","expired","quality","foreign_object","flat_drink","other"] as const;
+export type IssueType = (typeof ISSUE_TYPES)[number];
+
+export const ISSUE_LABELS_FR: Record<IssueType, string> = {
+  damaged: "Produit abîmé / écrasé",
+  missing_quantity: "Quantité manquante",
+  expired: "Date de consommation dépassée",
+  quality: "Goût ou texture anormale",
+  foreign_object: "Corps étranger",
+  flat_drink: "Boisson sans gaz",
+  other: "Autre problème",
+};
+
+export const CLAIM_STATUSES = ["draft","submitting","submitted","waiting_input","accepted","refused","agent_failed","needs_manual","cancelled"] as const;
+export type ClaimStatus = (typeof CLAIM_STATUSES)[number];
+
+// ---- Receipt parser output (Dev 1 produces; validated with zod) ----
+export const ParsedReceiptSchema = z.object({
+  store_name: z.string().nullable(),
+  purchased_at: z.string().nullable(),          // ISO 8601
+  currency: z.literal("EUR"),
+  total_cents: z.number().int().nullable(),
+  items: z.array(z.object({
+    raw_label: z.string(),
+    product_name: z.string(),                    // normalized, human-readable
+    brand_guess: z.string().nullable(),          // e.g. "Pringles"
+    quantity: z.number().positive(),
+    unit_price_cents: z.number().int().nullable(),
+    total_price_cents: z.number().int(),
+  })),
+});
+export type ParsedReceipt = z.infer<typeof ParsedReceiptSchema>;
+
+// ---- H agent structured answer (Dev 2) ----
+export const AGENT_BLOCKERS = ["captcha","login_required","no_contact_form","missing_info","upload_failed","site_error","other"] as const;
+export const AgentAnswerSchema = z.object({
+  submitted: z.boolean(),
+  confirmation_number: z.string().nullable(),
+  form_url: z.string().nullable(),              // URL of the form actually used
+  blocker: z.enum(AGENT_BLOCKERS).nullable(),
+  notes: z.string(),                            // short explanation / 'dry_run_ready'
+});
+export type AgentAnswer = z.infer<typeof AgentAnswerSchema>;
+
+// ---- Brand contact (Dev 1 provides, Dev 2 consumes) ----
+export type BrandContact = {
+  brandId: string;
+  name: string;
+  contactUrl: string | null;   // null → claim goes to needs_manual
+  agentHints: string | null;
+  requiresReceiptUpload: boolean;
+  verified: boolean;
+};
+```
+
+## 4. Cross-owner function contracts
+
+```ts
+// lib/brands/index.ts (Dev 1)
+export async function resolveBrand(label: string, brandGuess: string | null): Promise<{ brandId: string } | null>;
+/** Returns the registry entry; if missing or without a contact_url, runs a Linkup lookup and upserts a brands row. */
+export async function getBrandContact(input: { brandId: string } | { brandName: string }): Promise<BrandContact>;
+
+// lib/shared/llm.ts (Dev 1 creates, both use)
+export async function generateObject<T>(schema: z.ZodType<T>, prompt: string, opts?: { images?: { mediaType: string; base64: string }[] }): Promise<T>;
+export async function generateText(prompt: string, opts?: { maxTokens?: number }): Promise<string>;
+
+// lib/claims/transition.ts (Dev 2)
+export async function transitionClaim(claimId: string, to: ClaimStatus, payload?: Record<string, unknown>): Promise<void>; // throws on illegal transition
+```
+
+## 5. HTTP endpoints
+
+All endpoints use JSON unless noted. Errors return `{ "error": { "code": string, "message": string } }` with a 4xx/5xx status. User endpoints require a Supabase session cookie; webhooks require a valid signature.
+
+### Dev 1
+| Method | Path | Body | Response |
+|---|---|---|---|
+| POST | `/api/receipts` | multipart: `image` (jpeg/png/heic ≤ 10 MB) | `201 { receiptId, status: "parsed" \| "failed", items: LineItemRow[] }` (synchronous parse, `maxDuration=60`) |
+| POST | `/api/claims` | `{ receiptId, items: [{ lineItemId, issueType, issueDescription?, issuePhotoPath? }] }` | `201 { claimIds: string[] }`. Inserts `draft` claims, then calls submit for each |
+
+Reads (receipt, items, profile) go directly through the Supabase client with RLS, not through custom endpoints.
+
+### Dev 2
+| Method | Path | Body | Response |
+|---|---|---|---|
+| POST | `/api/claims/:id/submit` | none | `202 { status: "submitting", agentViewUrl }` · `409` if the status doesn't allow it · `200 { status: "needs_manual", reason }` if no contact form |
+| POST | `/api/claims/:id/cancel` | none | `200 { status: "cancelled" }` (deletes the H session if running) |
+| POST | `/api/claims/:id/sync` | none | `200 { status }`. Polls H if `submitting`; the claim page calls it every 5s |
+| POST | `/api/webhooks/h` | H webhook payload `{type,id,created_at,data:{session_id,status,previous_status}}` | `200` (idempotent on `X-H-Webhook-Delivery`) |
+| POST | `/api/webhooks/resend` | Resend `email.received` event (Svix-signed) | `200` |
+
+`/submit` and `/cancel` accept either the user's session (the owner of the claim) or the header `x-internal-key: $INTERNAL_API_KEY` for server-to-server calls from `/api/claims`.
+
+### Mock mode (unblocks Dev 1 before the agent works)
+If `AGENT_MOCK=true`, `/submit` skips H. It sets `submitting`, then `/sync` moves the claim to `submitted` after ~10s with a fake `h_agent_view_url`. Dev 2 ships this stub by milestone M0.
