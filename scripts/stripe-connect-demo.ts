@@ -1,8 +1,10 @@
-// OWNER: Dev 2. Creates (once) a Stripe Connect TEST account for the demo user, so NotCoca refunds
-// can be paid to them, and stores it in profiles.stripe_account_id.
+// OWNER: Dev 2. Creates (once) a Stripe Connect TEST account for the demo user (Accounts v2,
+// "recipient" configuration = can receive funds), stores it in profiles.stripe_account_id, and
+// prints a Stripe-hosted onboarding link to complete ONCE in the browser with Stripe test data.
 //   npm run stripe:demo-account [-- --email demo@refundit.test]
-// Uses Stripe's documented test values (docs.stripe.com/connect/testing): dob 1902-01-01,
-// address line1 "address_full_match", test IBAN FR1420041010050500013M02606.
+// Why v2: in test mode Stripe rejected a v1 account with platform-owned losses ("use Accounts v2").
+// For the "recipient" configuration v2 requires fees/losses collector = application and an
+// "express" (hosted onboarding) or "none" dashboard.
 import { parseArgs } from "node:util";
 import { config } from "dotenv";
 import Stripe from "stripe";
@@ -12,11 +14,31 @@ import type { Database } from "../lib/shared/database.types";
 config({ path: ".env.local" });
 const { values } = parseArgs({ options: { email: { type: "string" } } });
 const email = values.email ?? process.env.SEED_DEMO_EMAIL ?? "demo@refundit.test";
+const appUrl = process.env.APP_URL || "http://localhost:3000";
 
 const key = process.env.STRIPE_SECRET_KEY ?? "";
 if (!key.startsWith("sk_test_")) throw new Error("Set a TEST key (sk_test_…) in STRIPE_SECRET_KEY");
 const stripe = new Stripe(key);
 const db = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+
+async function createAccount(profile: Database["public"]["Tables"]["profiles"]["Row"], dashboard: "express" | "none") {
+  return stripe.v2.core.accounts.create({
+    contact_email: email,
+    display_name: `${profile.first_name} ${profile.last_name}`,
+    dashboard,
+    identity: {
+      country: "fr",
+      entity_type: "individual",
+      individual: { given_name: profile.first_name, surname: profile.last_name },
+    },
+    configuration: { recipient: { capabilities: { stripe_balance: { stripe_transfers: { requested: true } } } } },
+    // Stripe (test mode): a "recipient" account only allows application-owned fees/losses and an
+    // "express" or "none" dashboard. v1 refused platform-owned losses, v2 accepts them.
+    defaults: { responsibilities: { fees_collector: "application", losses_collector: "application" } },
+    metadata: { refundit_user_id: profile.id },
+    include: ["configuration.recipient", "requirements"],
+  });
+}
 
 async function main() {
   const { data: users } = await db.auth.admin.listUsers();
@@ -27,42 +49,33 @@ async function main() {
 
   let accountId = profile.stripe_account_id;
   if (!accountId) {
-    const account = await stripe.accounts.create({
-      country: "FR",
-      email,
-      controller: {
-        fees: { payer: "application" },
-        losses: { payments: "application" },
-        stripe_dashboard: { type: "none" },
-        requirement_collection: "application",
-      },
-      capabilities: { transfers: { requested: true } },
-      business_type: "individual",
-      business_profile: { mcc: "5734", product_description: "Particulier — remboursements Refundit (démo)" },
-      individual: {
-        first_name: profile.first_name,
-        last_name: profile.last_name,
-        email,
-        phone: "+33600000000",
-        dob: { day: 1, month: 1, year: 1902 },
-        address: { line1: "address_full_match", city: "Paris", postal_code: "75001", country: "FR" },
-      },
-      external_account: { object: "bank_account", country: "FR", currency: "eur", account_number: "FR1420041010050500013M02606" },
-      tos_acceptance: { date: Math.floor(Date.now() / 1000), ip: "127.0.0.1" },
-      metadata: { refundit_user_id: user.id },
-    });
+    let account;
+    try {
+      account = await createAccount(profile, "express");
+    } catch (err) {
+      console.log("express dashboard refused:", err instanceof Error ? err.message : err, "→ retrying with none");
+      account = await createAccount(profile, "none");
+    }
     accountId = account.id;
     await db.from("profiles").update({ stripe_account_id: accountId }).eq("id", user.id);
-    console.log("Created", accountId);
+    console.log("Created", accountId, "dashboard:", account.dashboard);
   }
 
-  const account = await stripe.accounts.retrieve(accountId);
-  console.log(JSON.stringify({
-    account: account.id,
-    transfers: account.capabilities?.transfers ?? null,
-    currently_due: account.requirements?.currently_due ?? [],
-    disabled_reason: account.requirements?.disabled_reason ?? null,
-  }, null, 2));
+  const account = await stripe.v2.core.accounts.retrieve(accountId, { include: ["configuration.recipient", "requirements"] });
+  const transfers = account.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers;
+  console.log(JSON.stringify({ account: account.id, stripe_transfers: transfers ?? null, requirements: account.requirements?.summary ?? null }, null, 2));
+
+  const link = await stripe.v2.core.accountLinks.create({
+    account: accountId,
+    use_case: {
+      type: "account_onboarding",
+      account_onboarding: {
+        refresh_url: `${appUrl}/claims`,
+        return_url: `${appUrl}/claims`,
+      },
+    },
+  });
+  console.log("\nOnboarding link (open it, use Stripe's TEST data):\n" + link.url);
 }
 
 main().catch((e) => {
