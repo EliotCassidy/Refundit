@@ -86,7 +86,7 @@ All tables have `id uuid primary key default gen_random_uuid()` and `created_at 
 | purchased_at | timestamptz | |
 | total_cents | integer | |
 | currency | text default 'EUR' | |
-| raw_parse | jsonb | the full `ParsedReceipt`, for debugging |
+| raw_parse | jsonb | full extraction (`ReceiptExtraction`, lib/receipts/parse.ts): copied lines, discounts, printed totals, `check_errors`, `needs_review` |
 | error | text | |
 
 ### `line_items` (owner: Dev 1)
@@ -96,13 +96,27 @@ All tables have `id uuid primary key default gen_random_uuid()` and `created_at 
 | user_id | uuid not null | denormalized for RLS |
 | position | integer not null | order on the receipt |
 | raw_label | text not null | e.g. "PRINGLES ORIG 175G" |
-| product_name | text not null | e.g. "Pringles Original 175g" |
-| brand_id | uuid FK brands | null if unresolved |
-| brand_name_guess | text | from the parser |
-| ean | text | rarely available |
+| product_name | text not null | = `raw_label` until the product is confirmed, then the confirmed name |
+| brand_id | uuid FK brands | registry match (`resolveBrand`); refreshed on confirmation |
+| brand_name_guess | text | null from the parser (no LLM guess); the confirmed brand after confirmation |
+| ean | text | set from `confirmed_product` on confirmation |
 | quantity | numeric not null default 1 | |
 | unit_price_cents | integer | |
-| total_price_cents | integer not null | |
+| total_price_cents | integer not null | paid for the line, item discount included |
+| product_candidates | jsonb | `ProductCandidates` (§3) from `/identify`. Display only |
+| confirmed_product | jsonb | `ConfirmedProduct` (§3). **NULL until the user validates.** The only product field the agent may trust |
+
+### `product_matches` (owner: Dev 1, service role only)
+Shared cache of products confirmed by users: `(store_chain, label_key) → ean`. A confirmed match is ranked first next time; the user still confirms (never auto-confirmed).
+| column | type | notes |
+|---|---|---|
+| store_chain | text not null default '' | normalized chain printed on the receipt |
+| label_key | text not null | normalized `raw_label` |
+| raw_label | text not null | last label seen, as printed |
+| ean | text not null | unique with (store_chain, label_key) |
+| product | jsonb not null | same shape as a confirmed `confirmed_product` |
+| confirmations | integer default 1 | |
+| last_confirmed_at | timestamptz | |
 
 ### `claims` (insert: Dev 1 as `draft` · every later update: Dev 2)
 | column | type | written by |
@@ -151,6 +165,7 @@ All tables have `id uuid primary key default gen_random_uuid()` and `created_at 
 - `claims`: the user can read their own rows and insert their own rows with `status = 'draft'`. Users never update. Updates go through server routes with the service role.
 - `claim_events`, `claim_emails`: the user can read rows whose claim belongs to them. Only the service role writes.
 - `brands`: any authenticated user can read. Only the service role writes.
+- `product_matches`: no user access (RLS on, no policy). Only the service role reads and writes.
 
 ### Storage
 Bucket `receipts` (private). Paths:
@@ -191,14 +206,31 @@ export const ParsedReceiptSchema = z.object({
   total_cents: z.number().int().nullable(),
   items: z.array(z.object({
     raw_label: z.string(),
-    product_name: z.string(),                    // normalized, human-readable
-    brand_guess: z.string().nullable(),          // e.g. "Pringles"
+    product_name: z.string(),                    // = raw_label (the LLM never names the product)
+    brand_guess: z.string().nullable(),          // null (the LLM never guesses the brand)
     quantity: z.number().positive(),
     unit_price_cents: z.number().int().nullable(),
     total_price_cents: z.number().int(),
   })),
 });
 export type ParsedReceipt = z.infer<typeof ParsedReceiptSchema>;
+
+// ---- Product identification, step 2 (Dev 1). Every product field comes from a product DB, never from the LLM ----
+export const ProductSchema = z.object({
+  ean: z.string(),                 // check digit verified
+  brand: z.string().nullable(),
+  name: z.string(),
+  quantity: z.string().nullable(), // e.g. "175 g"
+  image_url: z.string().nullable(),
+  source: z.enum(["off","obf","linkup","confirmed_match"]),
+});
+// line_items.confirmed_product (NULL until the user validates)
+export const ConfirmedProductSchema = z.discriminatedUnion("status", [
+  ProductSchema.extend({ status: z.literal("confirmed") }),
+  z.object({ status: z.literal("not_found") }),   // none of the candidates is the user's product
+]);
+// line_items.product_candidates: top 5 + llm_guess (a hint, never a result) + uncertain / uncertain_reasons
+export const ProductCandidatesSchema = z.object({ llm_guess, candidates /* max 5, with score, reference_price_cents, reasons */, uncertain, uncertain_reasons, searched_at });
 
 // ---- H agent structured answer (Dev 2) ----
 export const AGENT_BLOCKERS = ["captcha","login_required","no_contact_form","missing_info","upload_failed","site_error","other"] as const;
@@ -247,8 +279,14 @@ All endpoints use JSON unless noted. Errors return `{ "error": { "code": string,
 ### Dev 1
 | Method | Path | Body | Response |
 |---|---|---|---|
-| POST | `/api/receipts` | multipart: `image` (jpeg/png/heic ≤ 10 MB) | `201 { receiptId, status: "parsed" \| "failed", items: LineItemRow[] }` (synchronous parse, `maxDuration=60`) |
-| POST | `/api/claims` | `{ receiptId, items: [{ lineItemId, issueType, issueDescription?, issuePhotoPath? }] }` | `201 { claimIds: string[] }`. Inserts `draft` claims, then calls submit for each |
+| POST | `/api/receipts` | multipart: `image` (jpeg/png/webp/heic **≤ 4.5 MB**: Vercel's body limit, the page downsizes the photo first) | `201 { receiptId, status: "parsed" \| "failed", items: LineItemRow[] }` (synchronous parse, `maxDuration=120`) · `413 image_too_large` |
+| POST | `/api/receipts/:id/identify` | `{ lineItemId }` (**one item per call**; the page calls them in parallel) | `200 { lineItemId, productCandidates: ProductCandidates }`, also saved in `line_items.product_candidates` (`maxDuration=60`) |
+| POST | `/api/receipts/:id/confirm` | `{ lineItemId, ean: string \| null }` (`null` = "je ne trouve pas mon produit") | `200 { lineItemId, confirmedProduct: ConfirmedProduct }`; updates `ean`, `product_name`, `brand_name_guess`, `brand_id` and `product_matches` |
+| POST | `/api/claims` | `{ receiptId, items: [{ lineItemId, issueType, issueDescription?, issuePhotoPath? }] }` | `201 { claimIds: string[] }`. Inserts `draft` claims, then calls submit for each. `400 product_not_confirmed` if an item has `confirmed_product = null` (enforced once the selection page ships) |
+
+**Product identity in claims (Dev 2 reads, Dev 1 guarantees).** Read the product from `line_items.confirmed_product`:
+- `status = "confirmed"`: use its `name`, `brand`, `ean` (also mirrored in `product_name`, `brand_name_guess`, `ean`).
+- `status = "not_found"`, or `null` (defensive): the claim goes out marked **"produit non identifié"**: the complaint text and the agent instruction quote the receipt label as printed (`raw_label`) and never state a brand or an EAN. Never present `raw_label` or `product_candidates` as the identified product.
 
 Reads (receipt, items, profile) go directly through the Supabase client with RLS, not through custom endpoints.
 

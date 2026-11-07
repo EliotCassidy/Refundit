@@ -77,10 +77,11 @@ It's one Next.js app with no separate backend, no queue and no worker. The long-
 3. The server calls the parser (provider chosen by Dev 1). It must return `ParsedReceipt` (API_CONTRACTS §3), validated with zod.
 4. For each item, `resolveBrand(label)` (C4) tries to match a `brands` row by name or alias. If there's no match, `brand_id = null` and `brand_name_guess` is set.
 5. The server inserts `line_items` and sets `receipts.status='parsed'`, or `'failed'` with an `error`.
-6. Parsing is synchronous inside the request (set `maxDuration = 60`). The client shows a spinner.
+6. Parsing is synchronous inside the request (`maxDuration = 120`: extraction + one retry). The client shows a spinner. Vercel caps request bodies at 4.5 MB, so the page downsizes the photo before upload.
 
 ### 4.2 Selection → claims (Dev 1 → Dev 2)
 1. The user ticks items and picks an `issue_type` for each, plus an optional description and an optional photo of the damaged product.
+   For each ticked item the page calls `POST /api/receipts/:id/identify` (one item per call, in parallel): Open Food Facts / Open Beauty Facts candidates ranked against the receipt label and price. The user picks the right product, or "je ne trouve pas mon produit" → `/confirm` fills `line_items.confirmed_product` (API_CONTRACTS §2, §5).
 2. The client sends `POST /api/claims` (Dev 1). The server inserts one `claims` row per item with `status='draft'`.
 3. The server then calls `POST /api/claims/{id}/submit` for each claim (Dev 2's endpoint; server-to-server, or the client fires them after creation).
 4. **This handoff is the integration seam.** Dev 1 never touches a claim after `draft`.

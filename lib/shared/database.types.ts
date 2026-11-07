@@ -282,10 +282,12 @@ export type Database = {
         Row: {
           brand_id: string | null
           brand_name_guess: string | null
+          confirmed_product: Json | null
           created_at: string
           ean: string | null
           id: string
           position: number
+          product_candidates: Json | null
           product_name: string
           quantity: number
           raw_label: string
@@ -297,10 +299,12 @@ export type Database = {
         Insert: {
           brand_id?: string | null
           brand_name_guess?: string | null
+          confirmed_product?: Json | null
           created_at?: string
           ean?: string | null
           id?: string
           position: number
+          product_candidates?: Json | null
           product_name: string
           quantity?: number
           raw_label: string
@@ -312,10 +316,12 @@ export type Database = {
         Update: {
           brand_id?: string | null
           brand_name_guess?: string | null
+          confirmed_product?: Json | null
           created_at?: string
           ean?: string | null
           id?: string
           position?: number
+          product_candidates?: Json | null
           product_name?: string
           quantity?: number
           raw_label?: string
@@ -340,6 +346,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      product_matches: {
+        Row: {
+          confirmations: number
+          created_at: string
+          ean: string
+          id: string
+          label_key: string
+          last_confirmed_at: string
+          product: Json
+          raw_label: string
+          store_chain: string
+        }
+        Insert: {
+          confirmations?: number
+          created_at?: string
+          ean: string
+          id?: string
+          label_key: string
+          last_confirmed_at?: string
+          product: Json
+          raw_label: string
+          store_chain?: string
+        }
+        Update: {
+          confirmations?: number
+          created_at?: string
+          ean?: string
+          id?: string
+          label_key?: string
+          last_confirmed_at?: string
+          product?: Json
+          raw_label?: string
+          store_chain?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {

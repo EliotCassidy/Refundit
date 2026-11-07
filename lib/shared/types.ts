@@ -68,6 +68,45 @@ export const ParsedReceiptSchema = z.object({
 });
 export type ParsedReceipt = z.infer<typeof ParsedReceiptSchema>;
 
+// ---- Product identification, step 2 (Dev 1 produces; API_CONTRACTS §3) ----
+export const PRODUCT_SOURCES = ["off", "obf", "linkup", "confirmed_match"] as const;
+
+/** A real product for a receipt line. Every field comes from a product database, never from the LLM. */
+export const ProductSchema = z.object({
+  ean: z.string(), // check digit verified
+  brand: z.string().nullable(),
+  name: z.string(),
+  quantity: z.string().nullable(), // e.g. "175 g"
+  image_url: z.string().nullable(),
+  source: z.enum(PRODUCT_SOURCES),
+});
+export type Product = z.infer<typeof ProductSchema>;
+
+/** line_items.confirmed_product. NULL until the user validates. The ONLY product field the claim agent may trust. */
+export const ConfirmedProductSchema = z.discriminatedUnion("status", [
+  ProductSchema.extend({ status: z.literal("confirmed") }),
+  z.object({ status: z.literal("not_found") }), // the user said none of the candidates is their product
+]);
+export type ConfirmedProduct = z.infer<typeof ConfirmedProductSchema>;
+
+/** line_items.product_candidates: what /identify found. Display only. */
+export const ProductCandidatesSchema = z.object({
+  llm_guess: z.string().nullable(), // the LLM's expansion of the abbreviated label: a hint, NEVER a result
+  candidates: z
+    .array(
+      ProductSchema.extend({
+        score: z.number(),
+        reference_price_cents: z.number().int().nullable(), // Open Prices median
+        reasons: z.array(z.string()), // why it ranks there (French, shown to the user)
+      }),
+    )
+    .max(5),
+  uncertain: z.boolean(),
+  uncertain_reasons: z.array(z.string()),
+  searched_at: z.string(), // ISO 8601
+});
+export type ProductCandidates = z.infer<typeof ProductCandidatesSchema>;
+
 // ---- H agent structured answer (Dev 2) ----
 export const AGENT_BLOCKERS = [
   "captcha", "login_required", "no_contact_form", "missing_info", "upload_failed", "site_error", "other",
