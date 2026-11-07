@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { Camera, ImagePlus } from "lucide-react";
 import { ReceiptScan } from "@/components/ui/receipt-scan";
+import { useDemoRaw } from "@/components/demo/demo-state";
+import { DEMO_TICKET } from "@/lib/demo/config";
 
 const PIXEL_BUDGET = 2000 * 1500; // un peu plus que le serveur (1600×1200) : il fait la réduction finale
 const MAX_BYTES = 4.5 * 1024 * 1024;
@@ -29,6 +31,8 @@ async function downscale(file: File): Promise<Blob> {
 }
 
 export function UploadForm() {
+  // Jury demo mode (components/demo): offers the fictional receipt in one tap.
+  const demo = useDemoRaw() !== null;
   const router = useRouter();
   const [preview, setPreview] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -78,6 +82,24 @@ export function UploadForm() {
           </motion.div>
         ) : (
           <motion.div key="actions" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex w-full max-w-sm flex-col gap-2.5">
+            {demo && (
+              <button
+                id="demo-ticket"
+                type="button"
+                onClick={async () => {
+                  const blob = await fetch(DEMO_TICKET).then((r) => r.blob());
+                  void onFile(new File([blob], "ticket-demo.png", { type: blob.type || "image/png" }));
+                }}
+                className="mb-2 flex items-center gap-3.5 rounded-[20px] bg-white/85 p-3 text-left shadow-[0_12px_32px_-18px_rgba(17,23,20,0.3)] ring-1 ring-black/[0.06] transition hover:bg-white active:scale-[0.98]"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element -- static demo image */}
+                <img src={DEMO_TICKET} alt="" className="h-20 w-12 shrink-0 rounded-[6px] object-cover object-top ring-1 ring-black/10" />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[15px] font-semibold">Utiliser le ticket de démo</span>
+                  <span className="block text-[13px] text-muted">Carrefour Bastille · ticket fictif avec NotCoca</span>
+                </span>
+              </button>
+            )}
             <label className="inline-flex h-[52px] cursor-pointer items-center justify-center gap-2 rounded-full bg-ink px-5 text-[15px] font-semibold text-surface transition hover:bg-ink/90 active:scale-[0.98]">
               <Camera className="size-5" aria-hidden />
               Prendre une photo

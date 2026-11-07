@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 const toCents = (v: FormDataEntryValue | null) => Math.round(Number(String(v ?? "0").replace(",", ".")) * 100);
 
-export function DecisionForm({ requestId }: { requestId: string }) {
+export function DecisionForm({ requestId, demoTarget = false }: { requestId: string; demoTarget?: boolean }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +27,7 @@ export function DecisionForm({ requestId }: { requestId: string }) {
   return (
     <div className="mt-4 flex flex-col gap-3 border-t border-neutral-100 pt-4">
       <form
+        id={demoTarget ? "demo-refund" : undefined}
         action={(f) => send({ kind: "refund", refundCents: toCents(f.get("refund")), compensationCents: toCents(f.get("compensation")) })}
         className="flex flex-wrap items-end gap-3"
       >

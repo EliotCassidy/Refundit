@@ -234,6 +234,7 @@ export function ProductBoard({ receiptId, items, ticket }: { receiptId: string; 
         )}
       </div>
 
+      <div id="demo-submit" className="flex flex-col gap-4">
       {claimIds.length > 0 && (
         <button
           type="button"
@@ -270,6 +271,7 @@ export function ProductBoard({ receiptId, items, ticket }: { receiptId: string; 
       {claimIds.length === 0 && (
         <p className="text-center text-sm text-muted">Touchez « Oui » sur le produit qui pose problème.</p>
       )}
+      </div>
     </div>
   );
 }

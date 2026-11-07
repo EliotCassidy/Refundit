@@ -5,6 +5,7 @@ import { AccountMenu } from "@/components/ui/account-menu";
 import { Aurora } from "@/components/ui/aurora";
 import { Logo } from "@/components/ui/brand";
 import { ScanFab } from "@/components/ui/scan-fab";
+import { DemoTour } from "@/components/demo/demo-tour";
 import { createClient, getUser } from "@/lib/shared/supabase/server";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
@@ -25,6 +26,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       </header>
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-28 pt-6 md:px-8 md:pb-24 md:pt-10">{children}</main>
       <ScanFab />
+      <DemoTour />
     </div>
   );
 }

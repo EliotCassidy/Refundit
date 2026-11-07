@@ -105,7 +105,7 @@ export default async function ClaimPage({ params }: PageProps<"/claims/[id]">) {
   const actionable = (!hasAgent || !live) && ["draft", "submitting", "needs_manual", "waiting_input", "agent_failed"].includes(claim.status);
 
   return (
-    <div className="mx-auto flex w-full max-w-[600px] flex-col gap-7">
+    <div className="mx-auto flex w-full max-w-[600px] flex-col gap-7" data-demo-status={claim.status}>
       <Link href="/" className="-ml-1 inline-flex w-fit items-center gap-0.5 text-sm font-medium text-muted transition hover:text-ink">
         <ChevronLeft className="size-4" aria-hidden /> Retour
       </Link>
@@ -138,7 +138,7 @@ export default async function ClaimPage({ params }: PageProps<"/claims/[id]">) {
       )}
 
       {claim.status === "waiting_input" && claim.missing_fields.length > 0 && (
-        <FadeIn delay={0.08}>
+        <FadeIn delay={0.08} id="demo-missing">
           <MissingInfoForm claimId={claim.id} fields={claim.missing_fields} answers={(claim.user_answers ?? {}) as Record<string, string>} />
         </FadeIn>
       )}
@@ -171,14 +171,14 @@ export default async function ClaimPage({ params }: PageProps<"/claims/[id]">) {
             )}
           </>
           {hasAgent && (
-            <div>
+            <div id="demo-agent">
               <AgentView claimId={claim.id} live={live} actions={live ? <ClaimActions claimId={claim.id} status={claim.status} /> : undefined} />
             </div>
           )}
         </Section>
       </FadeIn>
 
-      <FadeIn delay={0.14}>
+      <FadeIn delay={0.14} id="demo-suivi">
         <Section title="Suivi">
           <Timeline items={items} waitingFor={sent && !answered && !stopped ? brand : null} />
         </Section>

@@ -342,6 +342,12 @@ Reads (receipt, items, profile) go directly through the Supabase client with RLS
 - `POST /api/profile` also accepts optional `civility` and `iban` (normalized, mod-97 checked by `lib/shared/iban.ts`); they are only written when sent, so the profile page is unaffected.
 - `POST /api/profile/iban` `{ iban }` → `200 { ok: true }` · `400 invalid_iban`: sets the IBAN only (dashboard reminder).
 
+### Jury demo mode (Dev 2) — demo account only (`refundit@demo.fr`, lib/demo/config.ts)
+| Method | Path | Body | Response |
+|---|---|---|---|
+| POST | `/api/demo/reset` | none (demo session) | `200 { ok, removed: { claims, receipts } }` — restores the saved snapshot (private Storage `receipts/_demo/snapshot.json`) (deletes what the demo run created, incl. its NotCoca requests) · `403 not_demo` |
+| GET | `/api/demo/notcoca-admin` | none (demo session) | `303` → `/notcoca/admin` with the back-office cookie set |
+
 ### Payouts (Dev 2) — refunds to the user's bank, Stripe TEST mode
 | Method | Path | Body | Response |
 |---|---|---|---|

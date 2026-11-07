@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { isAdmin } from "@/lib/notcoca/admin";
 import { euros } from "@/lib/notcoca/catalog";
 import { createAdminClient } from "@/lib/shared/supabase/admin";
+import { DemoTour } from "@/components/demo/demo-tour";
 import { DecisionForm } from "./decision-form";
 
 export const metadata: Metadata = { title: "Back-office service consommateurs" };
@@ -38,9 +39,10 @@ export default async function AdminPage({ searchParams }: PageProps<"/notcoca/ad
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-10">
       <h1 className="text-2xl font-black">Demandes consommateurs</h1>
+      <DemoTour />
       {!requests?.length && <p className="text-neutral-500">Aucune demande pour l&apos;instant.</p>}
-      {requests?.map((r) => (
-        <details key={r.id} open={r.status === "new"} className="rounded-2xl border border-neutral-200 p-4">
+      {requests?.map((r, i) => (
+        <details key={r.id} open={r.status === "new"} data-demo-first-status={i === 0 ? r.status : undefined} className="rounded-2xl border border-neutral-200 p-4">
           <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2">
             <span className="font-bold">{r.ticket_number} · {r.first_name} {r.last_name}</span>
             <span className="flex items-center gap-2 text-sm text-neutral-500">
@@ -60,7 +62,7 @@ export default async function AdminPage({ searchParams }: PageProps<"/notcoca/ad
           </dl>
           <p className="mt-3 whitespace-pre-wrap rounded-xl bg-neutral-50 p-3 text-sm">{r.message}</p>
           {r.status === "new" ? (
-            <DecisionForm requestId={r.id} />
+            <DecisionForm requestId={r.id} demoTarget={i === 0} />
           ) : (
             r.status === "refunded" && (
               <p className="mt-3 text-sm text-green-800">

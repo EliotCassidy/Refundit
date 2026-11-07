@@ -19,6 +19,8 @@ export function DashboardHero({ firstName, received, pending, openCount, needsCo
 
   return (
     <motion.section
+      id="demo-balance"
+      data-received={received}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
@@ -74,7 +76,7 @@ export function DashboardHero({ firstName, received, pending, openCount, needsCo
       <div className="relative mx-auto mt-5 grid w-full max-w-[420px] grid-cols-4 gap-2">
         {actions.map(({ href, label, Icon, primary, badge }, i) => (
           <motion.div key={label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.05, ease: [0.22, 1, 0.36, 1] }}>
-            <Link href={href} className="group flex flex-col items-center gap-2 outline-none">
+            <Link href={href} id={primary ? "demo-scan" : undefined} className="group flex flex-col items-center gap-2 rounded-[20px] outline-none">
               <motion.span
                 whileHover={{ y: -2 }}
                 whileTap={{ scale: 0.92 }}
