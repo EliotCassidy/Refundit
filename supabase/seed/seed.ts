@@ -103,7 +103,12 @@ async function main() {
     { position: 4, raw_label: "BONNE MAMAN CONF FRAISE 370G", product_name: "BONNE MAMAN CONF FRAISE 370G",
       brand_id: brandId("Bonne Maman"), brand_name_guess: null, quantity: 1, unit_price_cents: 329, total_price_cents: 329 },
   ];
-  const { data: existing } = await db.from("line_items").select("raw_label").eq("receipt_id", receipt.id);
+  const { data: existing } = await db.from("line_items").select("id, raw_label, brand_id").eq("receipt_id", receipt.id);
+  // Items seeded before their brand existed: attach the brand now.
+  for (const item of DEMO_ITEMS) {
+    const row = existing?.find((e) => e.raw_label === item.raw_label);
+    if (row && !row.brand_id && item.brand_id) await db.from("line_items").update({ brand_id: item.brand_id }).eq("id", row.id);
+  }
   const missing = DEMO_ITEMS.filter((i) => !existing?.some((e) => e.raw_label === i.raw_label));
   if (missing.length) {
     const { error } = await db.from("line_items")
