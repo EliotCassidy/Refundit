@@ -28,7 +28,10 @@ type ItemState = {
   searchMessage: string | null; // message d'erreur de la recherche (ex. code-barres inconnu)
   confirmed: ConfirmedProduct | null;
   confirming: boolean;
+  auto: boolean; // validé automatiquement (1er très probablement juste)
 };
+
+type Manual = { name: string; brand?: string; quantity?: string };
 
 const parse = <T,>(schema: { safeParse: (v: unknown) => { success: boolean; data?: T } }, v: unknown) => {
   const r = schema.safeParse(v);
@@ -45,6 +48,7 @@ export function SelectForm({ receiptId, items }: { receiptId: string; items: Sel
         searching: false, searchError: false, searchMessage: null,
         confirmed: parse<ConfirmedProduct>(ConfirmedProductSchema, it.confirmed_product),
         confirming: false,
+        auto: false,
       }]),
     ),
   );
@@ -64,20 +68,24 @@ export function SelectForm({ receiptId, items }: { receiptId: string; items: Sel
     if (!res?.ok || !body?.productCandidates) {
       return patch(id, { searching: false, searchError: true, searchMessage: body?.error?.message ?? null });
     }
-    patch(id, { searching: false, candidates: body.productCandidates });
+    const found = body.productCandidates as ProductCandidates;
+    patch(id, { searching: false, candidates: found });
+    // Cas sûrs (≥ 90 % de justes sur notre éval) : validé directement, l'utilisateur peut toujours changer.
+    if (found.confident && found.candidates[0]) void confirm(id, found.candidates[0].ean, { auto: true });
   }
 
-  async function confirm(id: string, ean: string | null) {
+  async function confirm(id: string, ean: string | null, opts: { auto?: boolean; manual?: Manual } = {}) {
     patch(id, { confirming: true });
     const res = await fetch(`/api/receipts/${receiptId}/confirm`, {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lineItemId: id, ean }),
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lineItemId: id, ean, manual: opts.manual }),
     }).catch(() => null);
     const body = await res?.json().catch(() => null);
     if (!res?.ok || !body?.confirmedProduct) {
       patch(id, { confirming: false });
       return setError(body?.error?.message ?? "Impossible d'enregistrer ce choix. Réessayez.");
     }
-    patch(id, { confirming: false, confirmed: body.confirmedProduct });
+    patch(id, { confirming: false, confirmed: body.confirmedProduct, auto: Boolean(opts.auto) });
   }
 
   function toggle(id: string) {
@@ -147,7 +155,8 @@ export function SelectForm({ receiptId, items }: { receiptId: string; items: Sel
                     onPick={(ean) => confirm(it.id, ean)}
                     onRetry={() => identify(it.id)}
                     onSearch={(extra) => identify(it.id, extra)}
-                    onChange={() => patch(it.id, { confirmed: null })}
+                    onManual={(manual) => confirm(it.id, null, { manual })}
+                    onChange={() => patch(it.id, { confirmed: null, auto: false })}
                   />
                 </div>
               )}
@@ -188,11 +197,13 @@ async function readBarcode(file: File): Promise<string | null> {
   return codes[0]?.rawValue ?? null;
 }
 
-function ProductPicker({ state: s, onPick, onRetry, onSearch, onChange }: {
+function ProductPicker({ state: s, onPick, onRetry, onSearch, onManual, onChange }: {
   state: ItemState; onPick: (ean: string | null) => void; onRetry: () => void;
-  onSearch: (extra: { ean?: string; query?: string }) => void; onChange: () => void;
+  onSearch: (extra: { ean?: string; query?: string }) => void; onManual: (m: Manual) => void; onChange: () => void;
 }) {
   const [manual, setManual] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const [byHand, setByHand] = useState<Manual>({ name: "" });
   const [ean, setEan] = useState("");
   const [query, setQuery] = useState("");
   const [scanMessage, setScanMessage] = useState<string | null>(null);
@@ -203,9 +214,13 @@ function ProductPicker({ state: s, onPick, onRetry, onSearch, onChange }: {
     return (
       <div className="flex items-center justify-between gap-2 rounded-lg border border-green-600/40 bg-green-500/10 p-2 text-sm">
         <span>
-          {s.confirmed.status === "confirmed"
-            ? <>✓ {s.confirmed.name}{s.confirmed.brand ? ` · ${s.confirmed.brand}` : ""}{s.confirmed.quantity ? ` · ${s.confirmed.quantity}` : ""}</>
-            : "Produit non identifié : la réclamation citera le libellé du ticket"}
+          {s.confirmed.status === "confirmed" ? (
+            <>
+              {s.auto && <span className="block text-xs text-green-600">Reconnu automatiquement</span>}
+              {s.confirmed.source === "user" && <span className="block text-xs text-neutral-500">Saisi par vous</span>}
+              ✓ {s.confirmed.name}{s.confirmed.brand ? ` · ${s.confirmed.brand}` : ""}{s.confirmed.quantity ? ` · ${s.confirmed.quantity}` : ""}
+            </>
+          ) : "Produit non identifié : la réclamation citera le libellé du ticket"}
         </span>
         <button type="button" onClick={onChange} className="shrink-0 text-neutral-500 underline">Changer</button>
       </div>
@@ -225,7 +240,7 @@ function ProductPicker({ state: s, onPick, onRetry, onSearch, onChange }: {
         <p className="text-xs text-amber-600">À vérifier : {s.candidates.uncertain_reasons.join(", ")}</p>
       )}
       {s.candidates && !s.candidates.candidates.length && <p className="text-sm text-neutral-500">Aucun produit trouvé.</p>}
-      {s.candidates?.candidates.map((c) => (
+      {s.candidates?.candidates.slice(0, showAll ? 5 : 3).map((c) => (
         <button key={c.ean} type="button" disabled={s.confirming} onClick={() => onPick(c.ean)}
           className="flex items-center gap-3 rounded-lg border border-neutral-500/30 p-2 text-left disabled:opacity-50">
           {c.image_url
@@ -238,6 +253,12 @@ function ProductPicker({ state: s, onPick, onRetry, onSearch, onChange }: {
           </span>
         </button>
       ))}
+
+      {!showAll && (s.candidates?.candidates.length ?? 0) > 3 && (
+        <button type="button" onClick={() => setShowAll(true)} className="text-left text-sm text-neutral-500 underline">
+          Voir les {s.candidates!.candidates.length - 3} autres propositions
+        </button>
+      )}
 
       {/* Secours : le produit n'est pas dans la liste */}
       {!manual ? (
@@ -268,6 +289,21 @@ function ProductPicker({ state: s, onPick, onRetry, onSearch, onChange }: {
             <input value={query} onChange={(e) => setQuery(e.target.value)} maxLength={100}
               placeholder="Nom du produit (ex. Bonne Maman madeleines)" className="min-w-0 flex-1 rounded-lg border border-neutral-500/40 bg-transparent px-2 py-1 text-sm" />
             <button className="rounded-lg border border-neutral-500/40 px-3 text-sm">Chercher</button>
+          </form>
+
+          {/* Toujours rien : l'utilisateur décrit le produit lui-même (ce sont ses faits, sans EAN) */}
+          <form className="flex flex-col gap-2 border-t border-neutral-500/30 pt-2"
+            onSubmit={(e) => { e.preventDefault(); if (byHand.name.trim().length >= 2) onManual({ name: byHand.name.trim(), brand: byHand.brand?.trim() || undefined, quantity: byHand.quantity?.trim() || undefined }); }}>
+            <p className="text-sm font-medium">Toujours introuvable ? Saisissez-le à la main</p>
+            <input value={byHand.brand ?? ""} onChange={(e) => setByHand({ ...byHand, brand: e.target.value })} maxLength={60}
+              placeholder="Marque (ex. Bonne Maman)" className="rounded-lg border border-neutral-500/40 bg-transparent px-2 py-1 text-sm" />
+            <input value={byHand.name} onChange={(e) => setByHand({ ...byHand, name: e.target.value })} maxLength={120} required
+              placeholder="Nom du produit (ex. Madeleines pur beurre)" className="rounded-lg border border-neutral-500/40 bg-transparent px-2 py-1 text-sm" />
+            <input value={byHand.quantity ?? ""} onChange={(e) => setByHand({ ...byHand, quantity: e.target.value })} maxLength={30}
+              placeholder="Format (ex. 300 g)" className="rounded-lg border border-neutral-500/40 bg-transparent px-2 py-1 text-sm" />
+            <button disabled={s.confirming || byHand.name.trim().length < 2} className="rounded-lg bg-foreground px-3 py-2 text-sm font-medium text-background disabled:opacity-40">
+              Utiliser ce produit
+            </button>
           </form>
         </div>
       )}

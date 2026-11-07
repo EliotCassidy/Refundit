@@ -1,5 +1,6 @@
 // OWNER: Dev 1. POST /api/receipts/:id/confirm : l'utilisateur valide un produit (API_CONTRACTS §5).
-// { ean } doit être l'un des candidats proposés par /identify ; { ean: null } = « je ne trouve pas mon produit ».
+// { ean } doit être l'un des candidats proposés par /identify ; { ean: null } = « je ne trouve pas mon produit » ;
+// { ean: null, manual: { name, brand?, quantity? } } = produit saisi à la main par l'utilisateur (source "user", sans EAN).
 // confirmed_product est le SEUL champ produit que l'agent lit (CLAUDE.md règle 8) ; on le recopie aussi dans
 // ean / product_name / brand_name_guess / brand_id, et on alimente le cache partagé product_matches.
 import { z } from "zod";
@@ -11,7 +12,17 @@ import type { ReceiptExtraction } from "@/lib/receipts/parse";
 import { recordConfirmation } from "@/lib/receipts/products/matches";
 import { resolveBrand } from "@/lib/brands";
 
-const BodySchema = z.object({ lineItemId: z.uuid(), ean: z.string().nullable() });
+const BodySchema = z.object({
+  lineItemId: z.uuid(),
+  ean: z.string().nullable(),
+  manual: z
+    .object({
+      name: z.string().trim().min(2).max(120),
+      brand: z.string().trim().max(60).optional(),
+      quantity: z.string().trim().max(30).optional(),
+    })
+    .optional(),
+});
 
 export async function POST(request: Request, ctx: RouteContext<"/api/receipts/[id]/confirm">) {
   const user = await getUser();
@@ -31,6 +42,27 @@ export async function POST(request: Request, ctx: RouteContext<"/api/receipts/[i
     supabase.from("receipts").select("store_name, raw_parse").eq("id", id).maybeSingle(),
   ]);
   if (!item || !receipt) return apiError(404, "not_found", "Article ou ticket introuvable");
+
+  // Produit saisi à la main : des faits donnés par l'utilisateur (règle 1), sans EAN, hors cache partagé.
+  if (body.data.ean === null && body.data.manual) {
+    const m = body.data.manual;
+    const confirmedProduct: ConfirmedProduct = {
+      status: "confirmed", ean: null, brand: m.brand || null, name: m.name, quantity: m.quantity || null, image_url: null, source: "user",
+    };
+    const brand = await resolveBrand(`${m.brand ?? ""} ${m.name}`, m.brand || null);
+    const { error } = await supabase
+      .from("line_items")
+      .update({
+        confirmed_product: confirmedProduct as unknown as Json,
+        ean: null,
+        product_name: m.quantity ? `${m.name} ${m.quantity}` : m.name,
+        brand_name_guess: m.brand || null,
+        brand_id: brand?.brandId ?? null,
+      })
+      .eq("id", item.id);
+    if (error) return apiError(500, "db_error", error.message);
+    return Response.json({ lineItemId: item.id, confirmedProduct });
+  }
 
   // « Je ne trouve pas mon produit » : la réclamation partira marquée « produit non identifié ».
   if (body.data.ean === null) {

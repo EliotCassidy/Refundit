@@ -174,5 +174,20 @@ export function rank(candidates: Candidate[], input: RankInput): Omit<ProductCan
     })),
     uncertain: uncertain_reasons.length > 0,
     uncertain_reasons,
+    confident: isConfident(scored),
   };
+}
+
+/**
+ * Valider directement le 1er ? Seuils calibrés sur npm run eval:identify (2026-11-07, 76 EAN, sans Linkup) :
+ * score ≥ 90 → 5/5 justes ; score ≥ 60 avec 20 points d'avance → 3/3 justes. En dessous, < 90 % de justes.
+ */
+const CONFIDENT_SCORE = 90;
+const CONFIDENT_MIN_SCORE = 60;
+const CONFIDENT_GAP = 20;
+
+function isConfident(scored: { score: number }[]): boolean {
+  const [top, second] = scored;
+  if (!top) return false;
+  return top.score >= CONFIDENT_SCORE || (top.score >= CONFIDENT_MIN_SCORE && top.score - (second?.score ?? 0) >= CONFIDENT_GAP);
 }

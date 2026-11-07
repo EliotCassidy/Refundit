@@ -228,11 +228,13 @@ export const ProductSchema = z.object({
 });
 // line_items.confirmed_product (NULL until the user validates)
 export const ConfirmedProductSchema = z.discriminatedUnion("status", [
-  ProductSchema.extend({ status: z.literal("confirmed") }),
+  // from a product DB (EAN verified), OR typed by the user when nothing matched: source "user", ean null (user facts, rule 1)
+  ProductSchema.extend({ status: z.literal("confirmed"), ean: z.string().nullable(), source: z.enum([...PRODUCT_SOURCES, "user"]) }),
   z.object({ status: z.literal("not_found") }),   // none of the candidates is the user's product
 ]);
 // line_items.product_candidates: top 5 + llm_guess (a hint, never a result) + uncertain / uncertain_reasons
-export const ProductCandidatesSchema = z.object({ llm_guess, candidates /* max 5, with score, reference_price_cents, reasons */, uncertain, uncertain_reasons, searched_at });
+// + confident: the 1st is right in ≥ 90% of cases on our eval → the page validates it directly (the user can change it)
+export const ProductCandidatesSchema = z.object({ llm_guess, candidates /* max 5, with score, reference_price_cents, reasons */, uncertain, uncertain_reasons, confident, searched_at });
 
 // ---- H agent structured answer (Dev 2) ----
 export const AGENT_BLOCKERS = ["captcha","login_required","no_contact_form","missing_info","upload_failed","site_error","other"] as const;
@@ -291,7 +293,7 @@ All endpoints use JSON unless noted. Errors return `{ "error": { "code": string,
 |---|---|---|---|
 | POST | `/api/receipts` | multipart: `image` (jpeg/png/webp/heic **≤ 4.5 MB**: Vercel's body limit, the page downsizes the photo first) | `201 { receiptId, status: "parsed" \| "failed", items: LineItemRow[] }` (synchronous parse, `maxDuration=120`) · `413 image_too_large` |
 | POST | `/api/receipts/:id/identify` | `{ lineItemId, ean?, query? }` (**one item per call**; the page calls them in parallel). Fallbacks when the product isn't proposed: `ean` = barcode typed or scanned by the user (exact OFF/OBF product), `query` = product name typed by the user | `200 { lineItemId, productCandidates: ProductCandidates }`, also saved in `line_items.product_candidates` (`maxDuration=60`) · `400 invalid_ean` · `404 ean_unknown` |
-| POST | `/api/receipts/:id/confirm` | `{ lineItemId, ean: string \| null }` (`null` = "je ne trouve pas mon produit") | `200 { lineItemId, confirmedProduct: ConfirmedProduct }`; updates `ean`, `product_name`, `brand_name_guess`, `brand_id` and `product_matches` |
+| POST | `/api/receipts/:id/confirm` | `{ lineItemId, ean: string \| null, manual?: { name, brand?, quantity? } }`: `ean` must be a proposed candidate; `null` = "je ne trouve pas mon produit" (`not_found`); `null` + `manual` = product typed by the user (`confirmed`, source `user`, no EAN) | `200 { lineItemId, confirmedProduct: ConfirmedProduct }`; updates `ean`, `product_name`, `brand_name_guess`, `brand_id` and (DB products only) `product_matches` |
 | POST | `/api/claims` | `{ receiptId, items: [{ lineItemId, issueType, issueDescription?, issuePhotoPath? }] }` | `201 { claimIds: string[] }`. Inserts `draft` claims, then calls submit for each. `400 product_not_confirmed` if an item has `confirmed_product = null` |
 
 **Product identity in claims (Dev 2 reads, Dev 1 guarantees).** Read the product from `line_items.confirmed_product`:

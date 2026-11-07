@@ -82,9 +82,17 @@ export const ProductSchema = z.object({
 });
 export type Product = z.infer<typeof ProductSchema>;
 
-/** line_items.confirmed_product. NULL until the user validates. The ONLY product field the claim agent may trust. */
+/**
+ * line_items.confirmed_product. NULL until the user validates. The ONLY product field the claim agent may trust.
+ * "confirmed" = a product from a database (source off/obf/linkup/confirmed_match, EAN verified)
+ *   OR typed by the user when nothing matched (source "user", ean null): facts the user provided (rule 1).
+ */
 export const ConfirmedProductSchema = z.discriminatedUnion("status", [
-  ProductSchema.extend({ status: z.literal("confirmed") }),
+  ProductSchema.extend({
+    status: z.literal("confirmed"),
+    ean: z.string().nullable(), // null only when source = "user"
+    source: z.enum([...PRODUCT_SOURCES, "user"]),
+  }),
   z.object({ status: z.literal("not_found") }), // the user said none of the candidates is their product
 ]);
 export type ConfirmedProduct = z.infer<typeof ConfirmedProductSchema>;
@@ -103,6 +111,9 @@ export const ProductCandidatesSchema = z.object({
     .max(5),
   uncertain: z.boolean(),
   uncertain_reasons: z.array(z.string()),
+  // true = the 1st is right in ≥ 90% of cases on our eval (score ≥ 90, or ≥ 60 with 20 points ahead of the 2nd,
+  // or a barcode typed by the user): the page validates it directly (the user can still change it).
+  confident: z.boolean().default(false),
   searched_at: z.string(), // ISO 8601
 });
 export type ProductCandidates = z.infer<typeof ProductCandidatesSchema>;

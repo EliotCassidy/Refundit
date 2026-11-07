@@ -59,6 +59,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/receipts/[i
       candidates: [{ ...hit, score: 100, reference_price_cents: null, reasons: ["code-barres saisi par vous"] }],
       uncertain: false,
       uncertain_reasons: [],
+      confident: true, // code-barres saisi par l'utilisateur : c'est son produit
       searched_at: new Date().toISOString(),
     };
   } else {

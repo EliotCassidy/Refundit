@@ -1,6 +1,7 @@
 // Éval de l'étape 2 : le bon EAN est-il dans le top 5 ? Sur les tickets Open Prices, sans Linkup.
 //   npm run eval:identify                     tous les tickets de tickets/openprices/
 //   npm run eval:identify -- --only 143495    un ou quelques tickets
+//   npm run eval:identify -- --linkup         AVEC le secours Linkup (payant, ~0,006 $ par ligne faible) : à demander d'abord
 //
 // 1. Les lignes viennent des transcriptions sauvées par eval:extract (.cache/eval/transcripts) : aucun appel d'extraction.
 // 2. Chaque prix connu (<id>.known.json) est rattaché aux lignes de même montant (prix unitaire ou total, avant ou
@@ -13,6 +14,8 @@ import type { ReceiptExtraction } from "../parse";
 import { interpret } from "../interpret";
 
 const args = process.argv.slice(2);
+// Linkup est payant : JAMAIS en lot sans demande explicite (--linkup), quel que soit .env.local.
+if (!args.includes("--linkup")) process.env.LINKUP_PRODUCTS = "false";
 const ONLY = args.includes("--only") ? args[args.indexOf("--only") + 1].split(",") : null;
 const CONCURRENCY = 3; // l'API H limite à 30 requêtes/min
 
@@ -50,6 +53,8 @@ async function main() {
   const ids = (await readdir("tickets/openprices")).filter((f) => f.endsWith(".known.json")).map((f) => f.split(".")[0]);
   const total = { known: 0, aligned: 0, top1: 0, top5: 0 };
   const misses: Record<string, number> = {};
+  // Calibration : pour chaque ligne évaluée, le score du 1er, l'écart avec le 2e, et si le 1er est le bon.
+  const calib: { score: number; gap: number; uncertain: boolean; ok: boolean }[] = [];
 
   for (const id of ids.filter((i) => !ONLY || ONLY.includes(i))) {
     const known = JSON.parse(await readFile(`tickets/openprices/${id}.known.json`, "utf8")) as Known;
@@ -76,6 +81,7 @@ async function main() {
 
     const t0 = Date.now();
     const results = new Map<number, string[]>();
+    const full = new Map<number, Awaited<ReturnType<typeof identifyProduct>> | null>();
     const pools = new Map<number, { pool?: string[]; shortlist?: string[] }>();
     await pool(lines, CONCURRENCY, async (n) => {
       const it = x.items[n];
@@ -92,8 +98,16 @@ async function main() {
         return null;
       });
       results.set(n, (r?.candidates ?? []).map((c) => eanKey(c.ean)));
+      full.set(n, r);
     });
 
+    for (const n of lines) {
+      const r = full.get(n);
+      const top = r?.candidates[0];
+      if (!r || !top) continue;
+      const truth = [...aligned].filter(([, ls]) => ls.includes(n)).map(([ean]) => eanKey(ean));
+      calib.push({ score: top.score, gap: top.score - (r.candidates[1]?.score ?? 0), uncertain: r.uncertain, ok: truth.includes(eanKey(top.ean)) });
+    }
     let top1 = 0, top5 = 0;
     for (const [ean, ls] of aligned) {
       const ranks = ls.map((n) => results.get(n)?.indexOf(eanKey(ean)) ?? -1).filter((r) => r >= 0);
@@ -122,6 +136,18 @@ async function main() {
       ` (${pct(total.top5, total.known)} de tous les EAN connus)`,
   );
   console.log(`Ratés : ${Object.entries(misses).map(([k, v]) => `${k} ${v}`).join(" · ")}`);
+
+  // Quelle règle donne un 1er juste à ≥ 90 % ? (pour valider automatiquement)
+  console.log("\nCalibration (lignes où le 1er est le bon produit, selon son score et son écart avec le 2e) :");
+  for (const minScore of [60, 70, 80, 90, 100]) {
+    for (const minGap of [0, 5, 10, 20]) {
+      const sel = calib.filter((c) => c.score >= minScore && c.gap >= minGap);
+      const ok = sel.filter((c) => c.ok).length;
+      if (sel.length) console.log(`  score ≥ ${String(minScore).padStart(3)} et écart ≥ ${String(minGap).padStart(2)} : ${String(ok).padStart(2)}/${String(sel.length).padEnd(2)} justes (${pct(ok, sel.length)}), ${pct(sel.length, calib.length)} des lignes`);
+    }
+  }
+  const sure = calib.filter((c) => !c.uncertain);
+  console.log(`  « pas incertain » : ${sure.filter((c) => c.ok).length}/${sure.length} justes (${pct(sure.filter((c) => c.ok).length, sure.length)})`);
 }
 
 main().catch((err) => {
