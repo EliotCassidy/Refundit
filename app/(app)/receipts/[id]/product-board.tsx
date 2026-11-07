@@ -601,40 +601,63 @@ const ISSUE_ICON: Record<IssueType, LucideIcon> = {
   other: MessageSquareMore,
 };
 
-/** The problem, as one dropdown (Radix) instead of a wall of chips. */
+/** The problem, as a select that unfolds INSIDE the card (not a floating menu): nothing to clip, and the jury
+ *  demo's spotlight (which blocks clicks outside the highlighted card) can't swallow it. */
 function IssueSelect({ value, onChange }: { value: IssueType | null; onChange: (t: IssueType) => void }) {
+  const [open, setOpen] = useState(!value);
   const Icon = value ? ISSUE_ICON[value] : null;
   return (
-    <Dropdown.Root>
-      <Dropdown.Trigger
-        className={`flex h-11 w-full items-center gap-2.5 rounded-[14px] px-3.5 text-left text-[14px] outline-none ring-1 transition data-[state=open]:ring-ink/30 ${
-          value ? "bg-white font-medium text-ink ring-black/[0.08]" : "bg-black/[0.04] text-muted ring-transparent hover:bg-black/[0.06]"
-        }`}
+    <div className={`overflow-hidden rounded-[14px] ring-1 transition ${open ? "bg-white ring-ink/20" : value ? "bg-white ring-black/[0.08]" : "bg-black/[0.04] ring-transparent"}`}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className={`flex h-11 w-full items-center gap-2.5 px-3.5 text-left text-[14px] ${value ? "font-medium text-ink" : "text-muted"}`}
       >
         {Icon ? <Icon className="size-4 shrink-0 text-ink" aria-hidden /> : <CircleHelp className="size-4 shrink-0" aria-hidden />}
         <span className="min-w-0 flex-1 truncate">{value ? ISSUE_LABELS_FR[value] : "Quel est le problème ?"}</span>
-        <ChevronDown className="size-4 shrink-0 text-muted" aria-hidden />
-      </Dropdown.Trigger>
-      <Dropdown.Portal>
-        <Dropdown.Content align="start" sideOffset={6} className={`${menuCls} w-[var(--radix-dropdown-menu-trigger-width)]`}>
-          <Dropdown.RadioGroup value={value ?? ""} onValueChange={(v) => onChange(v as IssueType)}>
+        <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }} className="shrink-0 text-muted">
+          <ChevronDown className="size-4" aria-hidden />
+        </motion.span>
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="list"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            role="radiogroup"
+            aria-label="Quel est le problème ?"
+            className="border-t border-black/[0.06] p-1.5"
+          >
             {ISSUE_TYPES.map((t) => {
               const I = ISSUE_ICON[t];
+              const on = t === value;
               return (
-                <Dropdown.RadioItem key={t} value={t} className={`${itemCls} pr-9 relative data-[state=checked]:font-semibold`}>
-                  <I className="size-4 text-muted" aria-hidden /> {ISSUE_LABELS_FR[t]}
-                  <Dropdown.ItemIndicator className="absolute right-3">
+                <button
+                  key={t}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  onClick={() => { onChange(t); setOpen(false); }}
+                  className={`flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-2.5 text-left text-[14px] transition-colors hover:bg-black/[0.04] ${on ? "font-semibold" : ""}`}
+                >
+                  <I className="size-4 shrink-0 text-muted" aria-hidden />
+                  <span className="flex-1">{ISSUE_LABELS_FR[t]}</span>
+                  {on && (
                     <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="grid size-5 place-items-center rounded-full bg-brand text-on-brand">
                       <Check className="size-3" strokeWidth={3} aria-hidden />
                     </motion.span>
-                  </Dropdown.ItemIndicator>
-                </Dropdown.RadioItem>
+                  )}
+                </button>
               );
             })}
-          </Dropdown.RadioGroup>
-        </Dropdown.Content>
-      </Dropdown.Portal>
-    </Dropdown.Root>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
