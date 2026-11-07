@@ -115,9 +115,9 @@ export function SelectForm({ receiptId, items }: { receiptId: string; items: Sel
         {items.map((it) => {
           const s = state[it.id];
           return (
-            <li key={it.id} className={`rounded-xl border p-3 ${s.checked ? "border-black" : "border-neutral-200"}`}>
+            <li key={it.id} className={`rounded-xl border p-3 ${s.checked ? "border-foreground" : "border-neutral-500/30"}`}>
               <label className="flex cursor-pointer items-start gap-3">
-                <input type="checkbox" checked={s.checked} onChange={() => toggle(it.id)} className="mt-1 size-5 accent-black" />
+                <input type="checkbox" checked={s.checked} onChange={() => toggle(it.id)} className="mt-1 size-5 accent-foreground" />
                 <span className="flex-1 font-mono text-sm">{it.raw_label}</span>
                 <span className="text-sm text-neutral-500">{euros(it.total_price_cents)}</span>
               </label>
@@ -128,14 +128,14 @@ export function SelectForm({ receiptId, items }: { receiptId: string; items: Sel
                   <div className="flex flex-wrap gap-2">
                     {ISSUE_TYPES.map((t) => (
                       <button key={t} type="button" onClick={() => patch(it.id, { issueType: t })}
-                        className={`rounded-full border px-3 py-1 text-sm ${s.issueType === t ? "border-black bg-black text-white" : "border-neutral-300"}`}>
+                        className={`rounded-full border px-3 py-1 text-sm ${s.issueType === t ? "border-foreground bg-foreground text-background" : "border-neutral-500/40"}`}>
                         {ISSUE_LABELS_FR[t]}
                       </button>
                     ))}
                   </div>
                   <textarea value={s.description} onChange={(e) => patch(it.id, { description: e.target.value })} rows={2} maxLength={2000}
                     placeholder={s.issueType === "other" ? "Décrivez le problème (obligatoire pour « Autre »)" : "Précisions (facultatif)"}
-                    className="rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
+                    className="rounded-lg border border-neutral-500/40 px-3 py-2 text-sm" />
 
                   {/* Produit */}
                   <ProductPicker
@@ -153,7 +153,7 @@ export function SelectForm({ receiptId, items }: { receiptId: string; items: Sel
 
       {selected.length > 0 && (
         <label className="flex items-start gap-3 text-sm">
-          <input type="checkbox" checked={certified} onChange={(e) => setCertified(e.target.checked)} className="mt-0.5 size-5 accent-black" />
+          <input type="checkbox" checked={certified} onChange={(e) => setCertified(e.target.checked)} className="mt-0.5 size-5 accent-foreground" />
           Je confirme que ces problèmes sont réels et que je les ai constatés moi-même.
         </label>
       )}
@@ -161,7 +161,7 @@ export function SelectForm({ receiptId, items }: { receiptId: string; items: Sel
       {error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
       <button type="button" disabled={!ready || sending} onClick={submit}
-        className="rounded-xl bg-black px-4 py-4 text-lg font-medium text-white disabled:opacity-40">
+        className="rounded-xl bg-foreground px-4 py-4 text-lg font-medium text-background disabled:opacity-40">
         {sending ? "Envoi…" : `Envoyer ${selected.length > 1 ? `les ${selected.length} réclamations` : "la réclamation"}`}
       </button>
       {selected.length > 0 && !ready && !sending && (
@@ -176,7 +176,7 @@ function ProductPicker({ state: s, onPick, onRetry, onChange }: {
 }) {
   if (s.confirmed) {
     return (
-      <div className="flex items-center justify-between gap-2 rounded-lg bg-neutral-50 p-2 text-sm">
+      <div className="flex items-center justify-between gap-2 rounded-lg border border-green-600/40 bg-green-500/10 p-2 text-sm">
         <span>
           {s.confirmed.status === "confirmed"
             ? <>✓ {s.confirmed.name}{s.confirmed.brand ? ` · ${s.confirmed.brand}` : ""}{s.confirmed.quantity ? ` · ${s.confirmed.quantity}` : ""}</>
@@ -201,11 +201,11 @@ function ProductPicker({ state: s, onPick, onRetry, onChange }: {
       )}
       {s.candidates?.candidates.map((c) => (
         <button key={c.ean} type="button" disabled={s.confirming} onClick={() => onPick(c.ean)}
-          className="flex items-center gap-3 rounded-lg border border-neutral-200 p-2 text-left disabled:opacity-50">
+          className="flex items-center gap-3 rounded-lg border border-neutral-500/30 p-2 text-left disabled:opacity-50">
           {c.image_url
             // eslint-disable-next-line @next/next/no-img-element -- images Open Food Facts, domaine externe
             ? <img src={c.image_url} alt="" className="size-12 shrink-0 rounded object-contain" />
-            : <span className="size-12 shrink-0 rounded bg-neutral-100" />}
+            : <span className="size-12 shrink-0 rounded bg-neutral-500/10" />}
           <span className="flex flex-col">
             <span className="text-sm font-medium">{c.name}</span>
             <span className="text-xs text-neutral-500">{[c.brand, c.quantity].filter(Boolean).join(" · ")}</span>

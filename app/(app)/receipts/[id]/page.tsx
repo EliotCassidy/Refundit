@@ -28,7 +28,7 @@ export default async function ReceiptPage({ params }: PageProps<"/receipts/[id]"
         <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
           {receipt.status === "failed" ? "Ce ticket n'a pas pu être lu." : "Lecture en cours…"}
         </p>
-        <Link href="/receipts/new" className="rounded-xl bg-black px-4 py-3 text-center font-medium text-white">
+        <Link href="/receipts/new" className="rounded-xl bg-foreground px-4 py-3 text-center font-medium text-background">
           Reprendre une photo
         </Link>
       </div>
@@ -56,7 +56,7 @@ export default async function ReceiptPage({ params }: PageProps<"/receipts/[id]"
         </div>
       )}
 
-      <ul className="flex flex-col divide-y divide-neutral-100 rounded-xl border border-neutral-200">
+      <ul className="flex flex-col divide-y divide-neutral-500/20 rounded-xl border border-neutral-500/30">
         {(items ?? []).map((it) => {
           const discount = discountOf(it.position, it.raw_label);
           return (
@@ -74,7 +74,7 @@ export default async function ReceiptPage({ params }: PageProps<"/receipts/[id]"
         })}
       </ul>
 
-      <Link href={`/receipts/${receipt.id}/select`} className="rounded-xl bg-black px-4 py-4 text-center text-lg font-medium text-white">
+      <Link href={`/receipts/${receipt.id}/select`} className="rounded-xl bg-foreground px-4 py-4 text-center text-lg font-medium text-background">
         Signaler un problème sur un produit
       </Link>
       <p className="text-center text-xs text-neutral-500">Uniquement pour un problème réel, constaté par vous.</p>

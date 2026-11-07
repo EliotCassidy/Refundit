@@ -55,22 +55,22 @@ export function UploadForm() {
     <div className="flex flex-col gap-4">
       {preview && (
         // eslint-disable-next-line @next/next/no-img-element -- aperçu local (blob:), pas d'optimisation utile
-        <img src={preview} alt="Aperçu du ticket" className="max-h-72 w-full rounded-xl border border-neutral-200 object-contain" />
+        <img src={preview} alt="Aperçu du ticket" className="max-h-72 w-full rounded-xl border border-neutral-500/30 object-contain" />
       )}
 
       {pending ? (
-        <div className="flex flex-col items-center gap-2 rounded-xl bg-neutral-50 p-6 text-center">
-          <div className="size-6 animate-spin rounded-full border-2 border-neutral-300 border-t-black" />
+        <div className="flex flex-col items-center gap-2 rounded-xl bg-neutral-500/10 p-6 text-center">
+          <div className="size-6 animate-spin rounded-full border-2 border-neutral-500/40 border-t-foreground" />
           <p className="font-medium">Lecture du ticket…</p>
           <p className="text-sm text-neutral-500">Ça prend 10 à 30 secondes.</p>
         </div>
       ) : (
         <>
-          <label className="cursor-pointer rounded-xl bg-black px-4 py-5 text-center text-lg font-medium text-white">
+          <label className="cursor-pointer rounded-xl bg-foreground px-4 py-5 text-center text-lg font-medium text-background">
             Prendre une photo
             <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
           </label>
-          <label className="cursor-pointer rounded-xl border border-neutral-300 px-4 py-3 text-center font-medium">
+          <label className="cursor-pointer rounded-xl border border-neutral-500/40 px-4 py-3 text-center font-medium">
             Choisir une photo existante
             <input type="file" accept="image/*" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
           </label>
