@@ -258,3 +258,7 @@ body::before {
   from { opacity: 0; transform: translateY(-4px) scale(0.97); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+
+/* Radix Accordion height animation */
+@keyframes acc-down { from { height: 0; opacity: 0; } to { height: var(--radix-accordion-content-height); opacity: 1; } }
+@keyframes acc-up { from { height: var(--radix-accordion-content-height); opacity: 1; } to { height: 0; opacity: 0; } }
