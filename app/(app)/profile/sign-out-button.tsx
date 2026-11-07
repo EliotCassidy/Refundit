@@ -18,7 +18,7 @@ export function SignOutButton() {
 
   return (
     <button type="button" onClick={signOut} disabled={pending}
-      className="rounded-xl border border-neutral-500/40 px-4 py-3 font-medium disabled:opacity-40">
+      className="rounded-[20px] border border-line-strong/50 px-4 py-3 font-medium disabled:opacity-40">
       {pending ? "Déconnexion…" : "Se déconnecter"}
     </button>
   );

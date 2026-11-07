@@ -1,26 +1,194 @@
 @import "tailwindcss";
 
+/* Refundit design tokens — see Refundit-Palette-et-Typographie.md.
+   Ink on cream for 90 % of the UI; green is rare (logo, main action, money received). */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --brand: #22c55e;
+  --on-brand: #0b1f12;
+  --brand-strong: #15803d;
+  --brand-soft: #dcfce7;
+  --on-brand-soft: #166534;
+  --brand-neon: #4ade80;
+
+  --surface: #f8f7f2;
+  --surface-raised: #ffffff;
+  --surface-sunken: #efede5;
+  --line: #e3e1d8;
+  --line-strong: #8a8f88;
+  --ink: #111714;
+  --ink-muted: #5b635e;
+
+  --info: #1d4ed8;
+  --info-soft: #dbeafe;
+  --on-info-soft: #1d4ed8;
+  --warning: #f59e0b;
+  --warning-soft: #fef3c7;
+  --on-warning-soft: #92400e;
+  --danger: #c81e1e;
+  --danger-soft: #fee2e2;
+  --on-danger-soft: #b91c1c;
+
+  /* aliases kept for screens written before the design system */
+  --background: var(--surface);
+  --foreground: var(--ink);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --brand: #2edb6e;
+    --on-brand: #06140b;
+    --brand-strong: #4ade80;
+    --brand-soft: #12301e;
+    --on-brand-soft: #86efac;
+    --surface: #0f1412;
+    --surface-raised: #18201c;
+    --surface-sunken: #0a0e0c;
+    --line: #2a332e;
+    --line-strong: #6b746e;
+    --ink: #f2f4f1;
+    --ink-muted: #a4ada7;
+    --info: #60a5fa;
+    --info-soft: #172554;
+    --on-info-soft: #93c5fd;
+    --warning: #fbbf24;
+    --warning-soft: #3a2a0e;
+    --on-warning-soft: #fcd34d;
+    --danger: #f87171;
+    --danger-soft: #3a1717;
+    --on-danger-soft: #fca5a5;
+  }
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-brand: var(--brand);
+  --color-on-brand: var(--on-brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-soft: var(--brand-soft);
+  --color-on-brand-soft: var(--on-brand-soft);
+  --color-brand-neon: var(--brand-neon);
+
+  --color-surface: var(--surface);
+  --color-raised: var(--surface-raised);
+  --color-sunken: var(--surface-sunken);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-muted: var(--ink-muted);
+
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-on-info-soft: var(--on-info-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-on-warning-soft: var(--on-warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-on-danger-soft: var(--on-danger-soft);
+
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, Menlo, monospace;
+
+  --radius-card: 24px;
+  --radius-btn: 14px;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Money is always mono (guide §7). */
+.money {
+  font-family: var(--font-jetbrains), ui-monospace, Menlo, monospace;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Overline: "RÉCUPÉRÉ AU TOTAL" */
+.overline {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Tight poster headings (guide §7: H1 app). */
+.title-tight {
+  letter-spacing: -0.035em;
+  line-height: 0.95;
+}
+
+/* Pastel panels with grain (guide §5). Only one ambiance visible at a time. */
+.panel {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.18;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+.panel-scan {
+  background:
+    radial-gradient(60% 55% at 86% 80%, rgba(246, 214, 90, 0.85), transparent 70%),
+    radial-gradient(50% 45% at 20% 105%, rgba(246, 214, 90, 0.45), transparent 70%),
+    linear-gradient(180deg, #f3eedc, #f6ebc0);
+  color: #111714;
+}
+.panel-check {
+  background:
+    radial-gradient(60% 55% at 86% 80%, rgba(110, 214, 140, 0.8), transparent 70%),
+    radial-gradient(50% 45% at 20% 105%, rgba(110, 214, 140, 0.4), transparent 70%),
+    linear-gradient(180deg, #e8f1e4, #d7eed4);
+  color: #111714;
+}
+.panel-claim {
+  background:
+    radial-gradient(60% 55% at 86% 80%, rgba(120, 170, 240, 0.8), transparent 70%),
+    radial-gradient(50% 45% at 20% 105%, rgba(120, 170, 240, 0.4), transparent 70%),
+    linear-gradient(180deg, #e6ecf4, #d7e4f5);
+  color: #111714;
+}
+.panel-recover {
+  background:
+    radial-gradient(60% 55% at 86% 80%, rgba(249, 150, 84, 0.8), transparent 70%),
+    radial-gradient(50% 45% at 20% 105%, rgba(249, 150, 84, 0.4), transparent 70%),
+    linear-gradient(180deg, #f8dfcb, #f9cba9);
+  color: #111714;
+}
+
+/* Glossy "candy" icons (guide §6). */
+.candy {
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  box-shadow: 0 6px 14px rgba(17, 23, 20, 0.16), inset 0 -3px 6px rgba(0, 0, 0, 0.12);
+  color: #fff;
+  font-weight: 800;
+}
+.candy-scan { background: radial-gradient(circle at 34% 22%, rgba(255,255,255,.9), rgba(255,255,255,0) 28%), radial-gradient(circle at 40% 35%, #fff2a8, #f2c21b 55%, #b88700); color: #5c4300; }
+.candy-check { background: radial-gradient(circle at 34% 22%, rgba(255,255,255,.9), rgba(255,255,255,0) 28%), radial-gradient(circle at 40% 35%, #b8f7ce, #22c55e 55%, #127a39); color: #0b1f12; }
+.candy-claim { background: radial-gradient(circle at 34% 22%, rgba(255,255,255,.9), rgba(255,255,255,0) 28%), radial-gradient(circle at 40% 35%, #cfe1ff, #4c8df6 55%, #1d4ed8); }
+.candy-recover { background: radial-gradient(circle at 34% 22%, rgba(255,255,255,.9), rgba(255,255,255,0) 28%), radial-gradient(circle at 40% 35%, #ffd7b8, #f2772f 55%, #c2410c); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* Receipt scanline (scan screen) */
+@keyframes scan {
+  0%, 100% { transform: translateY(0); opacity: 0.4; }
+  50% { transform: translateY(150px); opacity: 1; }
 }

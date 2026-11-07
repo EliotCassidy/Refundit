@@ -15,9 +15,9 @@ export default async function OnboardingPage() {
     <div className="flex flex-col gap-5">
       <div>
         <h1 className="text-xl font-semibold">Quelques informations</h1>
-        <p className="mt-1 text-sm text-neutral-500">Pour créer votre compte, il nous faut votre nom et votre adresse.</p>
+        <p className="mt-1 text-sm text-muted">Pour créer votre compte, il nous faut votre nom et votre adresse.</p>
       </div>
-      <p className="rounded-xl bg-neutral-500/10 p-3 text-sm">
+      <p className="rounded-[20px] bg-sunken p-3 text-sm">
         Ces informations servent à remplir les formulaires des marques. Les marques vous répondent sur une adresse email
         dédiée, jamais la vôtre.
       </p>

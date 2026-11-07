@@ -61,31 +61,37 @@ export function UploadForm() {
     <div className="flex flex-col gap-4">
       {preview && (
         // eslint-disable-next-line @next/next/no-img-element -- aperçu local (blob:), pas d'optimisation utile
-        <img src={preview} alt="Aperçu du ticket" className="max-h-72 w-full rounded-xl border border-neutral-500/30 object-contain" />
+        <img src={preview} alt="Aperçu du ticket" className="max-h-72 w-full rounded-[20px] border border-line-strong/50 object-contain" />
       )}
 
       {pending ? (
-        <div className="flex flex-col items-center gap-2 rounded-xl bg-neutral-500/10 p-6 text-center">
-          <div className="size-6 animate-spin rounded-full border-2 border-neutral-500/40 border-t-foreground" />
-          <p className="font-medium">Lecture du ticket…</p>
-          <p className="text-sm text-neutral-500">Ça prend 10 à 30 secondes.</p>
+        <div className="relative flex flex-col items-center gap-3 overflow-hidden rounded-[24px] bg-[#111714] p-8 text-center text-[#F2F4F1]">
+          {/* scanline */}
+          <div className="pointer-events-none absolute inset-x-6 top-0 h-0.5 animate-[scan_1.6s_ease-in-out_infinite] bg-[#4ADE80] shadow-[0_0_18px_#4ADE80]" aria-hidden />
+          <p className="text-lg font-bold">Lecture du ticket…</p>
+          <p className="text-sm text-[#A4ADA7]">On recopie chaque ligne et on vérifie les montants. 10 à 30 secondes.</p>
         </div>
       ) : (
         <>
-          <label className="cursor-pointer rounded-xl bg-foreground px-4 py-5 text-center text-lg font-medium text-background">
-            Prendre une photo
+          <label className="group relative grid cursor-pointer place-items-center gap-3 rounded-[24px] border-2 border-dashed border-line-strong/60 bg-sunken px-6 py-10 text-center transition hover:border-ink">
+            <span className="grid size-16 place-items-center rounded-full bg-ink text-surface transition group-hover:scale-105" aria-hidden>
+              <svg viewBox="0 0 24 24" className="size-7" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2" /><circle cx="12" cy="12" r="3.5" />
+              </svg>
+            </span>
+            <span className="text-lg font-bold">Prendre le ticket en photo</span>
+            <span className="text-sm text-muted">Bien à plat, en entier, sans reflet</span>
             <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
           </label>
-          <label className="cursor-pointer rounded-xl border border-neutral-500/40 px-4 py-3 text-center font-medium">
+          <label className="cursor-pointer rounded-[14px] border border-line-strong/60 bg-raised px-4 py-3 text-center text-sm font-semibold transition hover:border-ink">
             Choisir une photo existante
             <input type="file" accept="image/*" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
           </label>
-          <p className="text-sm text-neutral-500">Ticket bien à plat, en entier, sans reflet. Le total doit être visible.</p>
         </>
       )}
 
       {error && (
-        <div className="rounded-xl bg-red-500/10 p-3 text-sm text-red-600">
+        <div className="rounded-[20px] bg-danger-soft p-3 text-sm text-on-danger-soft">
           {error}
           {scanLimit && (
             <>

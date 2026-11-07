@@ -2,6 +2,7 @@
 // (photo du 1er candidat, nom, prix) avec « Faire une réclamation » / « Ce n'est pas le bon produit ».
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Candy } from "@/components/ui/brand";
 import { createClient } from "@/lib/shared/supabase/server";
 import { euros, frDate } from "@/lib/receipts/format";
 import type { ReceiptExtraction } from "@/lib/receipts/parse";
@@ -24,10 +25,10 @@ export default async function ReceiptPage({ params }: PageProps<"/receipts/[id]"
     return (
       <div className="flex flex-col gap-4">
         <h1 className="text-xl font-semibold">Ticket</h1>
-        <p className="rounded-xl bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-400">
+        <p className="rounded-[20px] bg-danger-soft p-3 text-sm text-on-danger-soft">
           {receipt.status === "failed" ? "Ce ticket n'a pas pu être lu." : "Lecture en cours…"}
         </p>
-        <Link href="/receipts/new" className="rounded-xl bg-foreground px-4 py-3 text-center font-medium text-background">
+        <Link href="/receipts/new" className="rounded-[20px] bg-ink px-4 py-3 text-center font-medium text-surface">
           Reprendre une photo
         </Link>
       </div>
@@ -51,24 +52,35 @@ export default async function ReceiptPage({ params }: PageProps<"/receipts/[id]"
   }));
 
   return (
-    <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="text-2xl font-semibold">{receipt.store_name ?? "Ticket de caisse"}</h1>
-        <p className="text-sm text-neutral-500">
-          {[frDate(receipt.purchased_at), x?.time].filter(Boolean).join(" à ") || "Date non lue"}
-          {receipt.total_cents != null && <> · Total {euros(receipt.total_cents)}</>}
-        </p>
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-5">
+      <header className="panel panel-check flex items-center gap-4 rounded-[28px] p-5 md:p-6">
+        <Candy kind="check" size={52} />
+        <div className="min-w-0 flex-1">
+          <h1 className="title-tight text-[34px] font-bold md:text-[44px]">Coche</h1>
+          <p className="text-sm text-[#5B635E]">le produit qui a un problème.</p>
+        </div>
+      </header>
+
+      {/* Receipt stub */}
+      <div className="flex items-center justify-between gap-3 rounded-[20px] border border-dashed border-line-strong/60 bg-raised px-4 py-3">
+        <div className="min-w-0">
+          <p className="truncate font-bold">{receipt.store_name ?? "Ticket de caisse"}</p>
+          <p className="money text-xs font-normal text-muted">
+            {[frDate(receipt.purchased_at), x?.time].filter(Boolean).join(" · ") || "Date non lue"} · {boardItems.length} article{boardItems.length > 1 ? "s" : ""}
+          </p>
+        </div>
+        {receipt.total_cents != null && <span className="money shrink-0 text-lg">{euros(receipt.total_cents)}</span>}
       </div>
 
       {x?.needs_review && (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400">
+        <div className="rounded-[20px] border border-warning/50 bg-warning-soft p-3 text-sm text-on-warning-soft">
           Certains montants n&apos;ont pas pu être vérifiés (ticket coupé ou peu lisible). Vérifiez la liste avant de continuer.
         </div>
       )}
 
       <div className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold">Quel produit a un problème ?</h2>
-        <p className="text-sm text-neutral-500">Identifiés à partir du ticket. Corrigez si besoin, puis touchez « Oui » sur celui qui pose problème.</p>
+        <h2 className="text-xl font-bold">Quel produit a un problème ?</h2>
+        <p className="text-sm text-muted">Identifiés à partir du ticket. Corrigez si besoin, puis touchez « Oui » sur celui qui pose problème.</p>
         <ProductBoard receiptId={receipt.id} items={boardItems} />
       </div>
     </div>

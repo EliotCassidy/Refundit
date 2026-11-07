@@ -196,17 +196,17 @@ export function ProductBoard({ receiptId, items }: { receiptId: string; items: B
         </label>
       )}
 
-      {error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-400">{error}</p>}
+      {error && <p className="rounded-[20px] bg-danger-soft p-3 text-sm text-on-danger-soft">{error}</p>}
 
       <button type="button" disabled={!ready || sending} onClick={submit}
-        className="rounded-xl bg-foreground px-4 py-4 text-lg font-medium text-background disabled:opacity-40">
+        className="rounded-[20px] bg-ink px-4 py-4 text-lg font-medium text-surface disabled:opacity-40">
         {sending ? "Envoi…" : `Envoyer ${claimIds.length > 1 ? `les ${claimIds.length} réclamations` : "la réclamation"}`}
       </button>
       {claimIds.length > 0 && !ready && !sending && (
-        <p className="text-center text-xs text-neutral-500">Pour chaque réclamation : choisissez le problème, puis confirmez le produit.</p>
+        <p className="text-center text-xs text-muted">Pour chaque réclamation : choisissez le problème, puis confirmez le produit.</p>
       )}
       {claimIds.length === 0 && (
-        <p className="text-center text-sm text-neutral-500">Touchez « Oui » sur le produit qui pose problème.</p>
+        <p className="text-center text-sm text-muted">Touchez « Oui » sur le produit qui pose problème.</p>
       )}
     </div>
   );
@@ -236,26 +236,26 @@ function ProductCard({ it, s, patch, identify, confirm }: {
   }
 
   return (
-    <li className={`overflow-hidden rounded-2xl border transition-colors ${active ? "border-foreground/50 bg-neutral-500/5" : "border-neutral-500/20"}`}>
+    <li className={`overflow-hidden rounded-[24px] border transition-colors ${active ? "border-ink/40 bg-sunken/60" : "border-line"}`}>
       <div className="flex items-center gap-3 p-3">
-        <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-neutral-500/10">
+        <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-[20px] bg-sunken">
           {info.image
             // eslint-disable-next-line @next/next/no-img-element -- images Open Food Facts / Open Beauty Facts, domaine externe
             ? <img src={info.image} alt="" className="size-full object-contain p-1" onError={(e) => (e.currentTarget.style.display = "none")} />
             : s.searching
-              ? <div className="size-8 animate-spin rounded-full border-2 border-neutral-500/30 border-t-foreground" />
-              : <div className="size-8 rounded-lg bg-neutral-500/15" />}
+              ? <div className="size-8 animate-spin rounded-full border-2 border-line-strong/50 border-t-foreground" />
+              : <div className="size-8 rounded-[14px] bg-sunken" />}
         </div>
         <div className="min-w-0 flex-1">
           <p className="line-clamp-2 text-[15px] font-medium leading-snug">
-            {it.quantity > 1 && <span className="text-neutral-500">{it.quantity} × </span>}
+            {it.quantity > 1 && <span className="text-muted">{it.quantity} × </span>}
             {info.name}
           </p>
-          {info.meta && <p className="mt-0.5 truncate text-xs text-neutral-500">{info.meta}</p>}
+          {info.meta && <p className="mt-0.5 truncate text-xs text-muted">{info.meta}</p>}
           {s.searching ? (
-            <p className="mt-0.5 text-xs text-neutral-500">Recherche du produit…</p>
+            <p className="mt-0.5 text-xs text-muted">Recherche du produit…</p>
           ) : s.searchError && !s.candidates ? (
-            <button type="button" onClick={() => void identify()} className="mt-0.5 text-xs text-red-700 underline dark:text-red-400">
+            <button type="button" onClick={() => void identify()} className="mt-0.5 text-xs text-on-danger-soft underline">
               Recherche impossible — réessayer
             </button>
           ) : info.note ? (
@@ -265,26 +265,26 @@ function ProductCard({ it, s, patch, identify, confirm }: {
         <div className="shrink-0 text-right">
           <p className="text-[15px] font-medium tabular-nums">{euros(it.total_price_cents)}</p>
           {it.discount_cents > 0 && (
-            <p className="text-xs tabular-nums text-green-700 dark:text-green-400">remise −{euros(it.discount_cents)}</p>
+            <p className="text-xs tabular-nums text-brand-strong">remise −{euros(it.discount_cents)}</p>
           )}
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 border-t border-neutral-500/10 p-3">
+      <div className="flex flex-col gap-3 border-t border-line p-3">
         <div className="flex items-center gap-2">
           <p className="flex-1 text-sm font-medium">Ce produit a-t-il un problème ?</p>
           <button type="button" onClick={() => choose(false)} aria-pressed={!hasIssue}
-            className={`rounded-xl border px-4 py-2.5 text-sm font-medium ${hasIssue ? "border-neutral-500/40" : "border-red-600 bg-red-600 text-white"}`}>
+            className={`rounded-[20px] border px-4 py-2.5 text-sm font-medium ${hasIssue ? "border-line-strong/50" : "border-danger bg-danger-soft text-on-danger-soft"}`}>
             Non
           </button>
           <button type="button" onClick={() => choose(true)} aria-pressed={hasIssue}
-            className={`rounded-xl border px-4 py-2.5 text-sm font-medium ${hasIssue ? "border-green-600 bg-green-600 text-white" : "border-neutral-500/40"}`}>
+            className={`rounded-[20px] border px-4 py-2.5 text-sm font-medium ${hasIssue ? "border-brand bg-brand text-on-brand" : "border-line-strong/50"}`}>
             Oui
           </button>
         </div>
 
         {s.mode === "idle" && (
-          <button type="button" onClick={enterProduct} className="self-start text-sm text-neutral-500 underline">
+          <button type="button" onClick={enterProduct} className="self-start text-sm text-muted underline">
             Ce n&apos;est pas le bon produit
           </button>
         )}
@@ -296,23 +296,23 @@ function ProductCard({ it, s, patch, identify, confirm }: {
               <div className="flex flex-wrap gap-2">
                 {ISSUE_TYPES.map((t) => (
                   <button key={t} type="button" onClick={() => patch({ issueType: t })}
-                    className={`rounded-full border px-3 py-1.5 text-sm ${s.issueType === t ? "border-foreground bg-foreground text-background" : "border-neutral-500/40"}`}>
+                    className={`rounded-full border px-3 py-1.5 text-sm ${s.issueType === t ? "border-ink bg-ink text-surface" : "border-line-strong/50"}`}>
                     {ISSUE_LABELS_FR[t]}
                   </button>
                 ))}
               </div>
               <textarea value={s.description} onChange={(e) => patch({ description: e.target.value })} rows={2} maxLength={2000}
                 placeholder={s.issueType === "other" ? "Décrivez le problème (obligatoire pour « Autre »)" : "Précisions (facultatif)"}
-                className="rounded-lg border border-neutral-500/40 bg-transparent px-3 py-2 text-sm" />
+                className="rounded-[14px] border border-line-strong/50 bg-transparent px-3 py-2 text-sm" />
             </div>
 
             {s.confirmed ? (
-              <div className={`flex items-center justify-between gap-2 rounded-xl border p-3 text-sm ${s.confirmed.status === "confirmed" ? "border-green-600/30 bg-green-500/10" : "border-neutral-500/30 bg-neutral-500/5"}`}>
+              <div className={`flex items-center justify-between gap-2 rounded-[20px] border p-3 text-sm ${s.confirmed.status === "confirmed" ? "border-brand/40 bg-brand-soft" : "border-line-strong/50 bg-sunken/60"}`}>
                 <span className="min-w-0">
                   {s.confirmed.status === "confirmed" ? (
                     <>
-                      {s.auto && <span className="block text-xs text-green-700 dark:text-green-400">Reconnu automatiquement</span>}
-                      {s.confirmed.source === "user" && <span className="block text-xs text-neutral-500">Saisi par vous</span>}
+                      {s.auto && <span className="block text-xs text-brand-strong">Reconnu automatiquement</span>}
+                      {s.confirmed.source === "user" && <span className="block text-xs text-muted">Saisi par vous</span>}
                       <span className="font-medium">✓ {s.confirmed.name}{s.confirmed.brand ? ` · ${s.confirmed.brand}` : ""}{s.confirmed.quantity ? ` · ${s.confirmed.quantity}` : ""}</span>
                     </>
                   ) : "Produit non identifié : la réclamation citera le libellé du ticket"}
@@ -332,7 +332,7 @@ function ProductCard({ it, s, patch, identify, confirm }: {
           <div className="flex flex-col gap-2">
             <p className="text-sm font-medium">Quel est ce produit ?</p>
             <ProductPicker state={s} onPick={(ean) => confirm(ean)} onRetry={() => void identify()} onSearch={(extra) => void identify(extra)} onManual={(m) => confirm(null, { manual: m })} />
-            <button type="button" onClick={() => patch({ mode: s.returnTo })} className="self-start text-sm text-neutral-500 underline">
+            <button type="button" onClick={() => patch({ mode: s.returnTo })} className="self-start text-sm text-muted underline">
               Annuler
             </button>
           </div>
@@ -369,12 +369,12 @@ function ProductPicker({ state: s, onPick, onRetry, onSearch, onManual }: {
 
   if (s.confirmed) {
     return (
-      <div className="flex items-center justify-between gap-2 rounded-lg border border-green-600/40 bg-green-500/10 p-2 text-sm">
+      <div className="flex items-center justify-between gap-2 rounded-[14px] border border-brand/50 bg-brand-soft p-2 text-sm">
         <span>
           {s.confirmed.status === "confirmed" ? (
             <>
-              {s.auto && <span className="block text-xs text-green-700 dark:text-green-400">Reconnu automatiquement</span>}
-              {s.confirmed.source === "user" && <span className="block text-xs text-neutral-500">Saisi par vous</span>}
+              {s.auto && <span className="block text-xs text-brand-strong">Reconnu automatiquement</span>}
+              {s.confirmed.source === "user" && <span className="block text-xs text-muted">Saisi par vous</span>}
               ✓ {s.confirmed.name}{s.confirmed.brand ? ` · ${s.confirmed.brand}` : ""}{s.confirmed.quantity ? ` · ${s.confirmed.quantity}` : ""}
             </>
           ) : "Produit non identifié : la réclamation citera le libellé du ticket"}
@@ -382,35 +382,35 @@ function ProductPicker({ state: s, onPick, onRetry, onSearch, onManual }: {
       </div>
     );
   }
-  if (s.searching) return <p className="text-sm text-neutral-500">Recherche du produit… (quelques secondes)</p>;
+  if (s.searching) return <p className="text-sm text-muted">Recherche du produit… (quelques secondes)</p>;
 
   return (
     <div className="flex flex-col gap-2">
       {s.searchError && (
-        <p className="text-sm text-red-700 dark:text-red-400">
+        <p className="text-sm text-on-danger-soft">
           {s.searchMessage ?? "Recherche impossible."} <button type="button" onClick={onRetry} className="underline">Réessayer</button>
         </p>
       )}
       {s.candidates?.uncertain && s.candidates.candidates.length > 0 && (
-        <p className="text-xs text-amber-700 dark:text-amber-400">À vérifier : {s.candidates.uncertain_reasons.join(", ")}</p>
+        <p className="text-xs text-on-warning-soft">À vérifier : {s.candidates.uncertain_reasons.join(", ")}</p>
       )}
-      {s.candidates && !s.candidates.candidates.length && <p className="text-sm text-neutral-500">Aucun produit trouvé.</p>}
+      {s.candidates && !s.candidates.candidates.length && <p className="text-sm text-muted">Aucun produit trouvé.</p>}
       {s.candidates?.candidates.slice(0, showAll ? 5 : 3).map((c) => (
         <button key={c.ean} type="button" disabled={s.confirming} onClick={() => onPick(c.ean)}
-          className="flex items-center gap-3 rounded-lg border border-neutral-500/30 p-2 text-left disabled:opacity-50">
+          className="flex items-center gap-3 rounded-[14px] border border-line-strong/50 p-2 text-left disabled:opacity-50">
           {c.image_url
             // eslint-disable-next-line @next/next/no-img-element -- images Open Food Facts, domaine externe
             ? <img src={c.image_url} alt="" className="size-12 shrink-0 rounded object-contain" onError={(e) => (e.currentTarget.style.display = "none")} />
-            : <span className="size-12 shrink-0 rounded bg-neutral-500/10" />}
+            : <span className="size-12 shrink-0 rounded bg-sunken" />}
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-medium">{c.name}</span>
-            <span className="block truncate text-xs text-neutral-500">{[c.brand, c.quantity].filter(Boolean).join(" · ")}</span>
+            <span className="block truncate text-xs text-muted">{[c.brand, c.quantity].filter(Boolean).join(" · ")}</span>
           </span>
         </button>
       ))}
 
       {!showAll && (s.candidates?.candidates.length ?? 0) > 3 && (
-        <button type="button" onClick={() => setShowAll(true)} className="text-left text-sm text-neutral-500 underline">
+        <button type="button" onClick={() => setShowAll(true)} className="text-left text-sm text-muted underline">
           Voir les {s.candidates!.candidates.length - 3} autres propositions
         </button>
       )}
@@ -421,11 +421,11 @@ function ProductPicker({ state: s, onPick, onRetry, onSearch, onManual }: {
           Ce n&apos;est aucun de ceux-là ?
         </button>
       ) : (
-        <div className="flex flex-col gap-2 rounded-lg border border-neutral-500/30 p-2">
+        <div className="flex flex-col gap-2 rounded-[14px] border border-line-strong/50 p-2">
           <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (ean.trim()) onSearch({ ean: ean.trim() }); }}>
             <input value={ean} onChange={(e) => setEan(e.target.value.replace(/\D/g, ""))} inputMode="numeric" maxLength={14}
-              placeholder="Code-barres (chiffres sous les barres)" className="min-w-0 flex-1 rounded-lg border border-neutral-500/40 bg-transparent px-2 py-1 text-sm" />
-            <button className="rounded-lg border border-neutral-500/40 px-3 text-sm">Chercher</button>
+              placeholder="Code-barres (chiffres sous les barres)" className="min-w-0 flex-1 rounded-[14px] border border-line-strong/50 bg-transparent px-2 py-1 text-sm" />
+            <button className="rounded-[14px] border border-line-strong/50 px-3 text-sm">Chercher</button>
           </form>
           {canScan && (
             <label className="cursor-pointer text-sm underline">
@@ -439,31 +439,31 @@ function ProductPicker({ state: s, onPick, onRetry, onSearch, onManual }: {
               }} />
             </label>
           )}
-          {scanMessage && <p className="text-xs text-red-700 dark:text-red-400">{scanMessage}</p>}
+          {scanMessage && <p className="text-xs text-on-danger-soft">{scanMessage}</p>}
           <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (query.trim().length >= 2) onSearch({ query: query.trim() }); }}>
             <input value={query} onChange={(e) => setQuery(e.target.value)} maxLength={100}
-              placeholder="Nom du produit (ex. Bonne Maman madeleines)" className="min-w-0 flex-1 rounded-lg border border-neutral-500/40 bg-transparent px-2 py-1 text-sm" />
-            <button className="rounded-lg border border-neutral-500/40 px-3 text-sm">Chercher</button>
+              placeholder="Nom du produit (ex. Bonne Maman madeleines)" className="min-w-0 flex-1 rounded-[14px] border border-line-strong/50 bg-transparent px-2 py-1 text-sm" />
+            <button className="rounded-[14px] border border-line-strong/50 px-3 text-sm">Chercher</button>
           </form>
 
           {/* Toujours rien : l'utilisateur décrit le produit lui-même (ce sont ses faits, sans EAN) */}
-          <form className="flex flex-col gap-2 border-t border-neutral-500/30 pt-2"
+          <form className="flex flex-col gap-2 border-t border-line-strong/50 pt-2"
             onSubmit={(e) => { e.preventDefault(); if (byHand.name.trim().length >= 2) onManual({ name: byHand.name.trim(), brand: byHand.brand?.trim() || undefined, quantity: byHand.quantity?.trim() || undefined }); }}>
             <p className="text-sm font-medium">Toujours introuvable ? Saisissez-le à la main</p>
             <input value={byHand.brand ?? ""} onChange={(e) => setByHand({ ...byHand, brand: e.target.value })} maxLength={60}
-              placeholder="Marque (ex. Bonne Maman)" className="rounded-lg border border-neutral-500/40 bg-transparent px-2 py-1 text-sm" />
+              placeholder="Marque (ex. Bonne Maman)" className="rounded-[14px] border border-line-strong/50 bg-transparent px-2 py-1 text-sm" />
             <input value={byHand.name} onChange={(e) => setByHand({ ...byHand, name: e.target.value })} maxLength={120} required
-              placeholder="Nom du produit (ex. Madeleines pur beurre)" className="rounded-lg border border-neutral-500/40 bg-transparent px-2 py-1 text-sm" />
+              placeholder="Nom du produit (ex. Madeleines pur beurre)" className="rounded-[14px] border border-line-strong/50 bg-transparent px-2 py-1 text-sm" />
             <input value={byHand.quantity ?? ""} onChange={(e) => setByHand({ ...byHand, quantity: e.target.value })} maxLength={30}
-              placeholder="Format (ex. 300 g)" className="rounded-lg border border-neutral-500/40 bg-transparent px-2 py-1 text-sm" />
-            <button disabled={s.confirming || byHand.name.trim().length < 2} className="rounded-lg bg-foreground px-3 py-2 text-sm font-medium text-background disabled:opacity-40">
+              placeholder="Format (ex. 300 g)" className="rounded-[14px] border border-line-strong/50 bg-transparent px-2 py-1 text-sm" />
+            <button disabled={s.confirming || byHand.name.trim().length < 2} className="rounded-[14px] bg-ink px-3 py-2 text-sm font-medium text-surface disabled:opacity-40">
               Utiliser ce produit
             </button>
           </form>
         </div>
       )}
 
-      <button type="button" disabled={s.confirming} onClick={() => onPick(null)} className="text-left text-sm text-neutral-500 underline">
+      <button type="button" disabled={s.confirming} onClick={() => onPick(null)} className="text-left text-sm text-muted underline">
         Je ne trouve pas mon produit
       </button>
     </div>

@@ -6,11 +6,11 @@ export function Field({ label, optional, ...props }: { label: string; optional?:
     <label className="flex flex-col gap-1 text-sm">
       <span className="font-medium">
         {label}
-        {optional && <span className="font-normal text-neutral-500"> (facultatif)</span>}
+        {optional && <span className="font-normal text-muted"> (facultatif)</span>}
       </span>
       <input
         {...props}
-        className="w-full rounded-lg border border-neutral-500/30 px-3 py-2 outline-none focus:border-foreground"
+        className="w-full rounded-[14px] border border-line-strong/50 px-3 py-2 outline-none focus:border-ink"
       />
     </label>
   );

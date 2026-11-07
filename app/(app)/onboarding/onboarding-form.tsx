@@ -42,9 +42,9 @@ export function OnboardingForm() {
       </div>
       <Field name="country" label="Pays" autoComplete="country-name" defaultValue="FR" required />
 
-      {error && <p className="rounded-xl bg-red-500/10 p-3 text-sm text-red-600">{error}</p>}
+      {error && <p className="rounded-[20px] bg-danger-soft p-3 text-sm text-on-danger-soft">{error}</p>}
 
-      <button disabled={pending} className="rounded-xl bg-foreground px-4 py-4 text-lg font-medium text-background disabled:opacity-40">
+      <button disabled={pending} className="rounded-[20px] bg-ink px-4 py-4 text-lg font-medium text-surface disabled:opacity-40">
         {pending ? "Enregistrement…" : "Enregistrer"}
       </button>
     </form>

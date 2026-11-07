@@ -31,9 +31,9 @@ export default async function ProfilePage() {
   return (
     <div className="flex flex-col gap-5">
       <h1 className="text-xl font-semibold">Profil</h1>
-      <p className="-mt-3 text-sm text-neutral-500">Ces informations servent à remplir les formulaires des marques.</p>
+      <p className="-mt-3 text-sm text-muted">Ces informations servent à remplir les formulaires des marques.</p>
       <ProfileForm values={values} />
-      <div className="flex flex-col gap-3 border-t border-neutral-500/30 pt-4">
+      <div className="flex flex-col gap-3 border-t border-line-strong/50 pt-4">
         <Link href="/billing" className="text-sm underline">Mon abonnement</Link>
         <SignOutButton />
       </div>
