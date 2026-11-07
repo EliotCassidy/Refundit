@@ -238,6 +238,8 @@ export const ProductSchema = z.object({
   image_url: z.string().nullable(),
   source: z.enum(["off","obf","linkup","confirmed_match"]),
 });
+// source "linkup" = named by the Linkup web search for this label: OFF data when OFF has the EAN, otherwise brand/name/quantity
+// as described by the web page where the EAN is written (no photo). +15 in the ranking, never auto-validated (`confident` false).
 // line_items.confirmed_product (NULL until the user validates)
 export const ConfirmedProductSchema = z.discriminatedUnion("status", [
   // from a product DB (EAN verified), OR typed by the user when nothing matched: source "user", ean null (user facts, rule 1)

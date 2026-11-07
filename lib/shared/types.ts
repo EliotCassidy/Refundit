@@ -71,7 +71,8 @@ export type ParsedReceipt = z.infer<typeof ParsedReceiptSchema>;
 // ---- Product identification, step 2 (Dev 1 produces; API_CONTRACTS §3) ----
 export const PRODUCT_SOURCES = ["off", "obf", "linkup", "confirmed_match"] as const;
 
-/** A real product for a receipt line. Every field comes from a product database, never from the LLM. */
+/** A real product for a receipt line. Every field comes from a product database (or, source "linkup", from the web
+ *  page where its EAN is written when OFF doesn't have it), never from our LLM's guess. */
 export const ProductSchema = z.object({
   ean: z.string(), // check digit verified
   brand: z.string().nullable(),
