@@ -351,11 +351,11 @@ Reads (receipt, items, profile) go directly through the Supabase client with RLS
 ### Payouts (Dev 2) — refunds to the user's bank, Stripe TEST mode
 | Method | Path | Body | Response |
 |---|---|---|---|
-| GET | `/api/payouts` | none (user session) | `200 { availableCents, pendingCents, bankLast4 }` (Stripe balance of `profiles.stripe_account_id`) · `409 no_payout_account` · `502 stripe_error` |
-| POST | `/api/payouts` | none | `200 { payoutId, amountCents }` (pays out the whole available EUR balance to the account's bank) · `409 nothing_available` · `409 no_payout_account` · `502 stripe_error` |
+| GET | `/api/payouts` | none (user session) | `200 { availableCents, pendingCents, bankLast4, plan: "free"\|"plus", feeRate, feeCents, netCents, minPayoutCents }` (Stripe balance of `profiles.stripe_account_id`) · `409 no_payout_account` · `502 stripe_error` |
+| POST | `/api/payouts` | none | `200 { payoutId, amountCents, feeCents }` (free plan: 20 % commission reversed to the platform first, then the rest paid out to the account's bank) · `409 payout_too_small` (< €1.00 to receive) · `409 nothing_available` · `409 no_payout_account` · `502 stripe_error` |
 
-### Billing (Dev 2) — "Refundit Illimité", €9.99/month, Stripe test mode
-Free plan: **1 receipt scan per calendar month** (Europe/Paris); subscribed (`active`/`trialing`): unlimited.
+### Billing (Dev 2) — "Refundit+", €9.99/month (unlimited scans, 0 % commission), Stripe test mode. Free: 5 scans/month, 20 % commission on transfers
+Free plan: **5 receipt scans per calendar month** (Europe/Paris) + 20 % commission on transfers to the bank; Refundit+ (`active`/`trialing`): unlimited, 0 %.
 
 | Method | Path | Body | Response |
 |---|---|---|---|
@@ -368,7 +368,7 @@ Free plan: **1 receipt scan per calendar month** (Europe/Paris); subscribed (`ac
 ```ts
 import { getScanQuota } from "@/lib/billing";
 const quota = await getScanQuota(user.id);
-if (!quota.canScan) return apiError(402, "scan_limit_reached", "Scan gratuit du mois utilisé : passez à Refundit Illimité.");
+if (!quota.canScan) return apiError(402, "scan_limit_reached", "Tes scans gratuits du mois sont utilisés : passe à Refundit+ pour scanner sans limite.");
 ```
 On `402`, the upload page links to `/billing`. Profile page / nav should link to `/billing` ("Mon abonnement").
 Columns: `profiles.stripe_customer_id`, `subscription_status`, `subscription_period_end` (migration `20261107220000`).

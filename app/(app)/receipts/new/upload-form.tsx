@@ -121,7 +121,7 @@ export function UploadForm() {
           {scanLimit && (
             <>
               <br />
-              <Link href="/billing" className="font-semibold underline">Passer à Refundit Illimité</Link>
+              <Link href="/billing" className="font-semibold underline">Passer à Refundit+</Link>
             </>
           )}
         </motion.div>

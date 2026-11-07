@@ -1,10 +1,10 @@
-// OWNER: Dev 2. Subscription page in the app's grouped-list style: usage ring header, the two offers as rows,
+// OWNER: Dev 2. Subscription page (Gratuit: 5 scans + 20 % commission on transfers / Refundit+: unlimited, 0 %) in the app's grouped-list style: usage ring header, the two offers as rows,
 // upgrade button or cancel row, FAQ.
 import { Check, Infinity as InfinityIcon, ScanLine } from "lucide-react";
 import { StripeBadge } from "@/components/ui/brand";
 import { PageHeader, Section } from "@/components/ui/list";
 import { FadeIn } from "@/components/ui/motion";
-import { FREE_SCANS_PER_MONTH, getScanQuota } from "@/lib/billing";
+import { FREE_PAYOUT_FEE, FREE_SCANS_PER_MONTH, getScanQuota } from "@/lib/billing";
 import { createAdminClient } from "@/lib/shared/supabase/admin";
 import { getUser } from "@/lib/shared/supabase/server";
 import { CancelRow, UpgradeButton } from "./billing-buttons";
@@ -12,7 +12,8 @@ import { Faq, UsageRing } from "./billing-visuals";
 
 const FAQ = [
   { q: "Puis-je résilier quand je veux ?", a: "Oui. La résiliation prend effet à la fin du mois en cours : tu gardes les scans illimités jusque-là, sans frais." },
-  { q: "Que se passe-t-il quand j'atteins la limite gratuite ?", a: "Tes réclamations en cours continuent normalement. Tu pourras scanner un nouveau ticket le mois prochain, ou tout de suite avec Illimité." },
+  { q: "Que se passe-t-il quand j'atteins la limite gratuite ?", a: `Tes réclamations en cours continuent normalement. Tes ${FREE_SCANS_PER_MONTH} scans reviennent le mois prochain, ou tout de suite avec Refundit+.` },
+  { q: "Comment fonctionne la commission ?", a: `Avec l'offre gratuite, Refundit garde ${Math.round(FREE_PAYOUT_FEE * 100)} % des remboursements au moment où tu les transfères vers ton compte bancaire. Avec Refundit+, tu gardes 100 %.` },
   { q: "Mes données de paiement sont-elles en sécurité ?", a: "Le paiement est géré par Stripe : Refundit ne voit ni ne stocke jamais ton numéro de carte." },
 ];
 
@@ -62,15 +63,15 @@ export default async function BillingPage({ searchParams }: PageProps<"/billing"
     <div className="mx-auto flex w-full max-w-[600px] flex-col gap-7">
       <FadeIn>
         <PageHeader
-          title={unlimited ? "Refundit Illimité" : "Offre gratuite"}
+          title={unlimited ? "Refundit+" : "Offre gratuite"}
           subtitle={
             unlimited
               ? <>{scans}{end && <><br />Prochaine échéance le {end}</>}</>
               : exempt
                 ? <>Compte de test : scans illimités<br />{scans}</>
                 : atLimit
-                  ? <>Limite gratuite atteinte<br />Ton scan gratuit revient le {nextReset()}</>
-                  : <>{quota.remaining} scan gratuit restant ce mois-ci</>
+                  ? <>Limite gratuite atteinte<br />Tes scans gratuits reviennent le {nextReset()}</>
+                  : <>{quota.remaining} scan{quota.remaining === 1 ? "" : "s"} gratuit{quota.remaining === 1 ? "" : "s"} restant{quota.remaining === 1 ? "" : "s"} ce mois-ci</>
           }
         >
           <div className="mb-4">
@@ -80,7 +81,7 @@ export default async function BillingPage({ searchParams }: PageProps<"/billing"
       </FadeIn>
 
       {status === "success" && (
-        <FadeIn><p className="rounded-[18px] bg-brand-soft px-5 py-3.5 text-center text-[14px] font-medium text-on-brand-soft">Bienvenue dans Refundit Illimité !</p></FadeIn>
+        <FadeIn><p className="rounded-[18px] bg-brand-soft px-5 py-3.5 text-center text-[14px] font-medium text-on-brand-soft">Bienvenue dans Refundit+ !</p></FadeIn>
       )}
       {status === "error" && (
         <FadeIn><p className="rounded-[18px] bg-danger-soft px-5 py-3.5 text-center text-[14px] text-on-danger-soft">Le paiement n&apos;a pas pu être vérifié.</p></FadeIn>
@@ -88,8 +89,8 @@ export default async function BillingPage({ searchParams }: PageProps<"/billing"
 
       <FadeIn delay={0.05} className="flex flex-col gap-4">
         <Section title="Offres">
-          <Offer icon={<ScanLine className="size-[18px]" aria-hidden />} name="Gratuit" detail={`${FREE_SCANS_PER_MONTH} scan de ticket par mois`} price="0 €" current={!unlimited} />
-          <Offer icon={<InfinityIcon className="size-[18px]" aria-hidden />} name="Illimité" detail="Scans illimités · sans engagement" price="9,99 €" current={unlimited} />
+          <Offer icon={<ScanLine className="size-[18px]" aria-hidden />} name="Gratuit" detail={`${FREE_SCANS_PER_MONTH} scans par mois · ${Math.round(FREE_PAYOUT_FEE * 100)} % de commission au retrait`} price="0 €" current={!unlimited} />
+          <Offer icon={<InfinityIcon className="size-[18px]" aria-hidden />} name="Refundit+" detail="Scans illimités · 0 % de commission · sans engagement" price="9,99 €" current={unlimited} />
         </Section>
         {!unlimited && (
           <div className="flex flex-col items-center gap-3">

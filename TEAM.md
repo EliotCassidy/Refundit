@@ -37,7 +37,7 @@ tickets/**               (test receipts for the parser evals)
 - the H spikes
 - brand contact discovery: `getBrandContact` + Linkup (`lib/brands/discover.ts`)
 - email fallback and replies to brands (Gmail SMTP, `lib/email/send.ts`)
-- **Billing**: subscription Refundit Illimité (€9.99/month, 1 free scan/month), `lib/billing.ts` (Dev 1 calls `getScanQuota` in `/api/receipts`)
+- **Billing**: subscription Refundit+ (€9.99/month; free plan: 5 scans/month + 20 % commission on transfers to the bank), `lib/billing.ts` (Dev 1 calls `getScanQuota` in `/api/receipts`)
 - **NotCoca** demo brand site (`/notcoca`: public form + back-office) and Stripe Connect test payouts
 
 **Owns:**

@@ -5,13 +5,22 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowUpRight, Check, Landmark, X } from "lucide-react";
+import { ArrowUpRight, Check, Landmark, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { StripeBadge } from "@/components/ui/brand";
 import { Button } from "@/components/ui/button";
 import { AnimatedMoney } from "@/components/ui/motion";
 
-type Wallet = { availableCents: number; pendingCents: number; bankLast4: string | null };
+type Wallet = {
+  availableCents: number;
+  pendingCents: number;
+  bankLast4: string | null;
+  plan: "free" | "plus";
+  feeRate: number;
+  feeCents: number;
+  netCents: number;
+  minPayoutCents: number;
+};
 const euros = (c: number) => (c / 100).toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
 
 export function TransferButton() {
@@ -57,6 +66,16 @@ function Sheet({ onClose }: { onClose: () => void }) {
       document.removeEventListener("keydown", onKey);
     };
   }, [onClose]);
+
+  const [upgrading, setUpgrading] = useState(false);
+  async function upgrade() {
+    setUpgrading(true);
+    const res = await fetch("/api/billing/checkout", { method: "POST" }).catch(() => null);
+    const body = await res?.json().catch(() => null);
+    if (body?.url) return window.location.assign(body.url); // Stripe Checkout
+    setUpgrading(false);
+    toast.error(body?.error?.message ?? "Impossible d'ouvrir le paiement.");
+  }
 
   async function transfer() {
     setPending(true);
@@ -129,6 +148,24 @@ function Sheet({ onClose }: { onClose: () => void }) {
                     <span className="flex-1 text-[15px] text-muted">Vers</span>
                     <span className="text-[15px] font-medium">{wallet ? (wallet.bankLast4 ? <span className="mono">•••• {wallet.bankLast4}</span> : "Compte bancaire") : "…"}</span>
                   </div>
+                  {wallet && wallet.availableCents > 0 && (
+                    <>
+                      <div className="flex min-h-[52px] items-center justify-between gap-3 px-4 py-3">
+                        <span className="text-[14px] text-muted">
+                          Commission Refundit{wallet.plan === "free" ? ` (${Math.round(wallet.feeRate * 100)} %)` : ""}
+                        </span>
+                        {wallet.plan === "plus" ? (
+                          <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[12px] font-medium text-on-brand-soft">0 € avec Refundit+</span>
+                        ) : (
+                          <span className="money text-[15px] text-on-danger-soft">−{euros(wallet.feeCents)}</span>
+                        )}
+                      </div>
+                      <div className="flex min-h-[52px] items-center justify-between gap-3 px-4 py-3">
+                        <span className="text-[14px] font-medium">Tu reçois</span>
+                        <span className="money text-[17px] font-semibold text-brand-strong">{euros(wallet.netCents)}</span>
+                      </div>
+                    </>
+                  )}
                   {wallet && wallet.pendingCents > 0 && (
                     <div className="flex min-h-[52px] items-center justify-between gap-3 px-4 py-3">
                       <span className="flex items-center gap-2 text-[14px] text-muted"><span className="size-2 animate-pulse rounded-full bg-info" />En cours de validation</span>
@@ -142,9 +179,34 @@ function Sheet({ onClose }: { onClose: () => void }) {
                 <p className="-mt-2 px-1 text-center text-[13px] text-muted">Stripe valide tes derniers remboursements : ils seront transférables dès qu&apos;ils seront disponibles.</p>
               )}
 
-              <Button variant="dark" size="lg" block loading={pending} disabled={!wallet || wallet.availableCents === 0} onClick={transfer}>
-                {wallet && wallet.availableCents > 0 ? `Transférer ${euros(wallet.availableCents)}` : "Transférer"}
+              {wallet?.plan === "free" && wallet.availableCents > 0 && (
+                <div className="flex flex-col gap-3 rounded-[18px] bg-[linear-gradient(135deg,#DCFCE7,#FEF9C3)] p-4">
+                  <div className="flex items-start gap-3">
+                    <span className="grid size-9 shrink-0 place-items-center rounded-full bg-white text-brand-strong"><Sparkles className="size-[18px]" aria-hidden /></span>
+                    <span className="min-w-0 flex-1 text-[13px] leading-snug text-ink/80">
+                      <span className="block text-[15px] font-semibold text-ink">Garde 100 % avec Refundit+</span>
+                      0 % de commission et scans illimités, pour 9,99 € / mois.
+                    </span>
+                  </div>
+                  <button type="button" onClick={upgrade} disabled={upgrading} className="h-10 rounded-full bg-white text-[14px] font-semibold text-ink ring-1 ring-black/[0.08] transition hover:bg-white/80 disabled:opacity-60">
+                    {upgrading ? "Ouverture du paiement…" : "Passer à Refundit+"}
+                  </button>
+                </div>
+              )}
+
+              <Button
+                variant="dark"
+                size="lg"
+                block
+                loading={pending}
+                disabled={!wallet || wallet.availableCents === 0 || wallet.netCents < wallet.minPayoutCents}
+                onClick={transfer}
+              >
+                {wallet && wallet.netCents >= wallet.minPayoutCents ? `Transférer ${euros(wallet.netCents)}` : "Transférer"}
               </Button>
+              {wallet && wallet.availableCents > 0 && wallet.netCents < wallet.minPayoutCents && (
+                <p className="-mt-2 text-center text-[13px] text-muted">Il faut au moins 1,00 € à recevoir pour faire un virement.</p>
+              )}
               <StripeBadge className="justify-center" />
             </motion.div>
           )}

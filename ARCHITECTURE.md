@@ -184,10 +184,10 @@ NotCoca is a **fictional** soda brand served by this app at `/notcoca` (public, 
 
 Demo shortcut, said in the pitch: NotCoca and Refundit share the same Stripe test platform, and NotCoca finds the payee from the claim's plus address. A real brand would pay to the IBAN given in its form.
 
-## 5c. Billing (Dev 2) — "Refundit Illimité", €9.99/month (Stripe test mode)
-- Free plan: **1 receipt scan per calendar month** (Europe/Paris). `getScanQuota` (`lib/billing.ts`) is checked by `POST /api/receipts` → `402 scan_limit_reached` (accounts in `SCAN_QUOTA_EXEMPT_EMAILS` are exempt).
+## 5c. Billing (Dev 2) — "Refundit+", €9.99/month (Stripe test mode). Free plan: 5 scans/month + 20 % commission on transfers to the bank
+- Free plan: **5 receipt scans per calendar month** (Europe/Paris) and a 20 % commission when refunds are transferred to the bank. `getScanQuota` (`lib/billing.ts`) is checked by `POST /api/receipts` → `402 scan_limit_reached` (accounts in `SCAN_QUOTA_EXEMPT_EMAILS` are exempt).
 - `/billing` → `POST /api/billing/checkout` (Stripe Checkout, mode subscription; price found by `lookup_key`, created once) → `/api/billing/return` activates from the Checkout session (no webhook needed) → `/billing`. Cancel at period end via `/api/billing/cancel`.
-- `/api/webhooks/stripe` (signed) applies `customer.subscription.created/updated/deleted` to `profiles.subscription_status` / `subscription_period_end`. Verified in production: subscription → webhook → `active` → unlimited; cancel → `canceled` → back to 1/month.
+- `/api/webhooks/stripe` (signed) applies `customer.subscription.created/updated/deleted` to `profiles.subscription_status` / `subscription_period_end`. Verified in production: subscription → webhook → `active` → unlimited; cancel → `canceled` → back to the free plan.
 
 ## 5d. Deployment
 - Production: **https://refundit.vercel.app**, Vercel project linked to the GitHub repo (every push to `main` deploys). Env vars mirror `.env.example`.

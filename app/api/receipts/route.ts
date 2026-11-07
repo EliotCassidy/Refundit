@@ -28,10 +28,10 @@ export async function POST(request: Request) {
   const user = await getUser();
   if (!user) return apiError(401, "unauthenticated", "Connexion requise");
 
-  // Quota (API_CONTRACTS §5, billing) : 1 scan/mois, avant tout upload.
+  // Quota (API_CONTRACTS §5, billing) : 5 scans/mois (FREE_SCANS_PER_MONTH), avant tout upload.
   if (!isQuotaExempt(user.email)) {
     const quota = await getScanQuota(user.id);
-    if (!quota.canScan) return apiError(402, "scan_limit_reached", "Scan gratuit du mois utilisé : passez à Refundit Illimité.");
+    if (!quota.canScan) return apiError(402, "scan_limit_reached", "Tes scans gratuits du mois sont utilisés : passe à Refundit+ pour scanner sans limite.");
   }
 
   const form = await request.formData().catch(() => null);

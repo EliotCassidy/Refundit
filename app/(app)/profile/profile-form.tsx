@@ -97,7 +97,7 @@ export function ProfileForm({ values, email, maskedIban, unlimited }: { values: 
                 className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition hover:opacity-80 ${unlimited ? "bg-brand-soft text-on-brand-soft" : "bg-black/[0.05] text-ink"}`}
               >
                 {unlimited && <Check className="size-3.5" strokeWidth={2.5} aria-hidden />}
-                {unlimited ? "Refundit Illimité" : "Offre gratuite"}
+                {unlimited ? "Refundit+" : "Offre gratuite"}
               </Link>
             </span>
           }
@@ -191,7 +191,7 @@ export function ProfileForm({ values, email, maskedIban, unlimited }: { values: 
 
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <Section title="Compte">
-            <NavRow href="/billing" icon={<CreditCard className="size-[18px]" aria-hidden />} label="Abonnement" value={unlimited ? "Illimité" : "Gratuit"} />
+            <NavRow href="/billing" icon={<CreditCard className="size-[18px]" aria-hidden />} label="Abonnement" value={unlimited ? "Refundit+" : "Gratuit"} />
             <ButtonRow onClick={signOut} disabled={signingOut} tone="danger" chevron={false} icon={<LogOut className="size-[18px]" aria-hidden />} label={signingOut ? "Déconnexion…" : "Se déconnecter"} />
           </Section>
         </motion.div>

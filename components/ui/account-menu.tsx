@@ -68,11 +68,11 @@ export function AccountMenu({ firstName, email, unlimited }: { firstName: string
             >
               <span>
                 <span className="block text-[11px] font-semibold uppercase tracking-wide text-muted">Mon offre</span>
-                <span className="block text-sm font-semibold">{unlimited ? "Illimité" : "Gratuit · 1 scan / mois"}</span>
+                <span className="block text-sm font-semibold">{unlimited ? "Refundit+" : "Gratuit · 5 scans / mois"}</span>
               </span>
               {!unlimited && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-brand px-2.5 py-1 text-xs font-semibold text-on-brand">
-                  <Sparkles className="size-3" aria-hidden /> Passer à Illimité
+                  <Sparkles className="size-3" aria-hidden /> Passer à Refundit+
                 </span>
               )}
             </Link>

@@ -31,7 +31,7 @@ export function UpgradeButton() {
   const { pending, call } = useBilling();
   return (
     <Button variant="dark" size="lg" block loading={pending} onClick={() => call("/api/billing/checkout")}>
-      {pending ? "Ouverture du paiement…" : "Passer à Illimité · 9,99 € / mois"}
+      {pending ? "Ouverture du paiement…" : "Passer à Refundit+ · 9,99 € / mois"}
     </Button>
   );
 }
@@ -44,7 +44,7 @@ export function CancelRow({ until }: { until: string | null }) {
       chevron={false}
       icon={<XCircle className="size-[18px]" aria-hidden />}
       label={pending ? "Résiliation…" : "Résilier l'abonnement"}
-      description={until ? `Reste actif jusqu'au ${until}` : "Sans frais, à la fin de la période"}
+      description={until ? `Refundit+ reste actif jusqu'au ${until}` : "Sans frais, à la fin de la période"}
       disabled={pending}
       onClick={() => confirm("Résilier à la fin de la période en cours ?") && call("/api/billing/cancel")}
     />

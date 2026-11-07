@@ -1,13 +1,16 @@
-// OWNER: Dev 2. Subscription "Refundit Illimité" (Stripe Billing, TEST mode).
-// Free plan: FREE_SCANS_PER_MONTH receipt scans per calendar month (Europe/Paris).
-// Subscribed (status active/trialing): unlimited scans.
+// OWNER: Dev 2. Subscription "Refundit+" (Stripe Billing, TEST mode), €9.99/month.
+// Free plan: FREE_SCANS_PER_MONTH receipt scans per calendar month (Europe/Paris) and a FREE_PAYOUT_FEE
+// commission when the user transfers refunds to their bank (lib/payouts.ts).
+// Refundit+ (status active/trialing): unlimited scans, no commission.
 import "server-only";
 import type Stripe from "stripe";
 import { createAdminClient } from "@/lib/shared/supabase/admin";
 import { stripe } from "@/lib/stripe";
 
-export const FREE_SCANS_PER_MONTH = 1;
-export const PLAN = { name: "Refundit Illimité", amountCents: 999, currency: "eur", lookupKey: "refundit_unlimited_monthly" } as const;
+export const FREE_SCANS_PER_MONTH = 5;
+/** Commission kept by Refundit on transfers to the bank, free plan only (Refundit+ = 0). */
+export const FREE_PAYOUT_FEE = 0.2;
+export const PLAN = { name: "Refundit+", amountCents: 999, currency: "eur", lookupKey: "refundit_unlimited_monthly" } as const;
 
 const ACTIVE = new Set(["active", "trialing"]);
 
@@ -80,3 +83,6 @@ export async function applySubscription(sub: Stripe.Subscription): Promise<void>
     })
     .eq("stripe_customer_id", customerId);
 }
+
+/** Subscription active (Refundit+)? */
+export const isSubscribed = (status: string | null | undefined) => Boolean(status && ACTIVE.has(status));
