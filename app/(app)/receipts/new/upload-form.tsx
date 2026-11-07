@@ -4,6 +4,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "motion/react";
+import { Camera, ImagePlus } from "lucide-react";
+import { ReceiptScan } from "@/components/ui/receipt-scan";
 
 const PIXEL_BUDGET = 2000 * 1500; // un peu plus que le serveur (1600×1200) : il fait la réduction finale
 const MAX_BYTES = 4.5 * 1024 * 1024;
@@ -58,48 +61,48 @@ export function UploadForm() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      {preview && (
-        // eslint-disable-next-line @next/next/no-img-element -- aperçu local (blob:), pas d'optimisation utile
-        <img src={preview} alt="Aperçu du ticket" className="max-h-72 w-full rounded-[20px] border border-line-strong/50 object-contain" />
-      )}
+    <div className="flex flex-col items-center gap-6">
+      <div className="relative">
+        <ReceiptScan scanning={pending} size={pending ? 240 : 220} />
+        {pending && preview && (
+          // eslint-disable-next-line @next/next/no-img-element -- aperçu local (blob:), pas d'optimisation utile
+          <img src={preview} alt="Ta photo" className="absolute -right-6 bottom-2 h-24 w-16 rotate-6 rounded-[10px] border-2 border-raised object-cover shadow-lg" />
+        )}
+      </div>
 
-      {pending ? (
-        <div className="relative flex flex-col items-center gap-3 overflow-hidden rounded-[24px] bg-[#111714] p-8 text-center text-[#F2F4F1]">
-          {/* scanline */}
-          <div className="pointer-events-none absolute inset-x-6 top-0 h-0.5 animate-[scan_1.6s_ease-in-out_infinite] bg-[#4ADE80] shadow-[0_0_18px_#4ADE80]" aria-hidden />
-          <p className="text-lg font-bold">Lecture du ticket…</p>
-          <p className="text-sm text-[#A4ADA7]">On recopie chaque ligne et on vérifie les montants. 10 à 30 secondes.</p>
-        </div>
-      ) : (
-        <>
-          <label className="group relative grid cursor-pointer place-items-center gap-3 rounded-[24px] border-2 border-dashed border-line-strong/60 bg-sunken px-6 py-10 text-center transition hover:border-ink">
-            <span className="grid size-16 place-items-center rounded-full bg-ink text-surface transition group-hover:scale-105" aria-hidden>
-              <svg viewBox="0 0 24 24" className="size-7" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2" /><circle cx="12" cy="12" r="3.5" />
-              </svg>
-            </span>
-            <span className="text-lg font-bold">Prendre le ticket en photo</span>
-            <span className="text-sm text-muted">Bien à plat, en entier, sans reflet</span>
-            <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
-          </label>
-          <label className="cursor-pointer rounded-[14px] border border-line-strong/60 bg-raised px-4 py-3 text-center text-sm font-semibold transition hover:border-ink">
-            Choisir une photo existante
-            <input type="file" accept="image/*" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
-          </label>
-        </>
-      )}
+      <AnimatePresence mode="wait">
+        {pending ? (
+          <motion.div key="reading" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex flex-col items-center gap-1.5 text-center">
+            <p className="text-lg font-semibold">Lecture du ticket…</p>
+            <p className="text-sm text-muted">On recopie chaque ligne et on vérifie les montants. 10 à 30 secondes.</p>
+          </motion.div>
+        ) : (
+          <motion.div key="actions" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex w-full max-w-sm flex-col gap-2.5">
+            <label className="inline-flex h-[52px] items-center justify-center gap-2 rounded-[14px] bg-ink px-5 font-semibold text-surface transition hover:bg-ink/90 active:scale-[0.98]">
+              <Camera className="size-5" aria-hidden />
+              Prendre une photo
+              <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
+            </label>
+            <label className="inline-flex h-[52px] items-center justify-center gap-2 rounded-[14px] border border-line bg-raised px-5 font-semibold text-ink transition hover:bg-sunken/50 active:scale-[0.98]">
+              <ImagePlus className="size-5 text-muted" aria-hidden />
+              Choisir une photo
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
+            </label>
+            <p className="mt-1 text-center text-xs text-muted">Bien à plat, en entier, sans reflet. Le total doit être visible.</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {error && (
-        <div className="rounded-[20px] bg-danger-soft p-3 text-sm text-on-danger-soft">
+        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm rounded-[14px] bg-danger-soft p-3 text-center text-sm text-on-danger-soft">
           {error}
           {scanLimit && (
             <>
               <br />
-              <Link href="/billing" className="font-medium underline">Passez à Refundit Illimité</Link>
+              <Link href="/billing" className="font-semibold underline">Passer à Refundit Illimité</Link>
             </>
           )}
-        </div>
+        </motion.div>
       )}
     </div>
   );

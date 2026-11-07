@@ -3,9 +3,8 @@
 // Yes/no questions (label ending with "?") get two big buttons instead of a text field.
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Send } from "lucide-react";
+import { MessageCircleQuestion, Send } from "lucide-react";
 import { toast } from "sonner";
-import { Candy } from "@/components/ui/brand";
 import { Button } from "@/components/ui/button";
 
 const isYesNo = (label: string) => label.trim().endsWith("?");
@@ -37,7 +36,7 @@ export function MissingInfoForm({ claimId, fields, answers }: { claimId: string;
   return (
     <section className="flex flex-col gap-4 rounded-[20px] border border-warning/50 bg-warning-soft p-5 text-on-warning-soft md:p-6">
       <div className="flex items-start gap-3">
-        <Candy kind="claim" size={40} />
+        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-warning text-[#3a2a0e]"><MessageCircleQuestion className="size-5" aria-hidden /></span>
         <div>
           <h2 className="text-lg font-semibold">La marque a besoin de toi</h2>
           <p className="text-sm opacity-90">

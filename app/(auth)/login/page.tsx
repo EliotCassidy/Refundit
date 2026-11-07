@@ -1,23 +1,23 @@
 // OWNER: Dev 1 (styled by Dev 2's design pass). Email/password auth.
-import { Candy, Logo } from "@/components/ui/brand";
+import { Logo } from "@/components/ui/brand";
 import { LoginForm } from "./login-form";
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const { next } = await searchParams;
   return (
-    <main className="mx-auto grid w-full max-w-5xl flex-1 gap-6 px-4 py-8 md:grid-cols-2 md:items-center md:gap-10 md:py-16">
-      <section className="panel panel-recover flex flex-col gap-5 rounded-[24px] p-6 md:p-10">
-        <Candy kind="recover" size={56} />
-        <h1 className="text-[40px] font-bold leading-[1.02] tracking-tight md:text-[52px]">Récupère ton argent.</h1>
-        <p className="max-w-sm text-[#5B635E]">
-          Un produit défectueux ? Scanne ton ticket, coche le produit : notre agent écrit à la marque pour toi.
-        </p>
-      </section>
-      <section className="flex flex-col gap-2 rounded-[24px] border border-line bg-raised p-6 md:p-8">
-        <Logo />
-        <p className="mt-2 text-sm text-muted">Connecte-toi pour suivre tes remboursements.</p>
-        <LoginForm next={typeof next === "string" && next.startsWith("/") ? next : "/"} />
-      </section>
+    <main className="grid flex-1 place-items-center px-4 py-10">
+      <div className="w-full max-w-[400px]">
+        <div className="mb-8 flex flex-col items-center gap-5 text-center">
+          <Logo />
+          <div>
+            <h1 className="text-[30px] font-bold leading-tight tracking-tight md:text-[34px]">Récupère ton argent.</h1>
+            <p className="mt-2 text-[15px] text-muted">Un produit défectueux ? Scanne ton ticket, notre agent écrit à la marque pour toi.</p>
+          </div>
+        </div>
+        <section className="rounded-[24px] border border-line bg-raised/90 p-6 shadow-[0_12px_40px_rgba(17,23,20,0.06)] backdrop-blur md:p-7">
+          <LoginForm next={typeof next === "string" && next.startsWith("/") ? next : "/"} />
+        </section>
+      </div>
     </main>
   );
 }

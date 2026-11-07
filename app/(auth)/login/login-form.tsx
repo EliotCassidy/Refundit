@@ -38,7 +38,7 @@ export function LoginForm({ next }: { next: string }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-3">
+    <form onSubmit={onSubmit} className="flex flex-col gap-3">
       <input name="email" type="email" required placeholder="E-mail" autoComplete="email" className={input} />
       <input
         name="password"

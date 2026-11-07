@@ -2,9 +2,8 @@
 // (photo du 1er candidat, nom, prix) avec « Faire une réclamation » / « Ce n'est pas le bon produit ».
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Candy } from "@/components/ui/brand";
 import { createClient } from "@/lib/shared/supabase/server";
-import { euros, frDate } from "@/lib/receipts/format";
+import { frDate } from "@/lib/receipts/format";
 import type { ReceiptExtraction } from "@/lib/receipts/parse";
 import { ProductBoard, type BoardItem } from "./product-board";
 
@@ -52,37 +51,27 @@ export default async function ReceiptPage({ params }: PageProps<"/receipts/[id]"
   }));
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-5">
-      <header className="panel panel-check flex items-center gap-4 rounded-[20px] p-5 md:p-6">
-        <Candy kind="check" size={52} />
-        <div className="min-w-0 flex-1">
-          <h1 className="text-[26px] font-bold tracking-tight md:text-[30px]">Coche</h1>
-          <p className="text-sm text-[#5B635E]">le produit qui a un problème.</p>
-        </div>
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-5">
+      <header className="text-center">
+        <h1 className="text-[28px] font-bold tracking-tight md:text-[32px]">Quel produit a un problème ?</h1>
+        <p className="mt-1.5 text-[15px] text-muted">Vérifie les produits trouvés, puis touche « Oui » sur celui qui pose problème.</p>
       </header>
 
-      {/* Receipt stub */}
-      <div className="flex items-center justify-between gap-3 rounded-[20px] border border-dashed border-line-strong/60 bg-raised px-4 py-3">
-        <div className="min-w-0">
-          <p className="truncate font-bold">{receipt.store_name ?? "Ticket de caisse"}</p>
-          <p className="mono text-xs text-muted">
-            {[frDate(receipt.purchased_at), x?.time].filter(Boolean).join(" · ") || "Date non lue"} · {boardItems.length} article{boardItems.length > 1 ? "s" : ""}
-          </p>
-        </div>
-        {receipt.total_cents != null && <span className="mono shrink-0 text-lg font-semibold">{euros(receipt.total_cents)}</span>}
-      </div>
-
       {x?.needs_review && (
-        <div className="rounded-[20px] border border-warning/50 bg-warning-soft p-3 text-sm text-on-warning-soft">
-          Certains montants n&apos;ont pas pu être vérifiés (ticket coupé ou peu lisible). Vérifiez la liste avant de continuer.
+        <div className="rounded-[14px] border border-warning/50 bg-warning-soft p-3 text-sm text-on-warning-soft">
+          Certains montants n&apos;ont pas pu être vérifiés (ticket coupé ou peu lisible). Vérifie la liste avant de continuer.
         </div>
       )}
 
-      <div className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold">Quel produit a un problème ?</h2>
-        <p className="text-sm text-muted">Identifiés à partir du ticket. Corrigez si besoin, puis touchez « Oui » sur celui qui pose problème.</p>
-        <ProductBoard receiptId={receipt.id} items={boardItems} />
-      </div>
+      <ProductBoard
+        receiptId={receipt.id}
+        items={boardItems}
+        ticket={{
+          store: receipt.store_name ?? "Ticket de caisse",
+          date: [frDate(receipt.purchased_at), x?.time].filter(Boolean).join(" · ") || "Date non lue",
+          totalCents: receipt.total_cents,
+        }}
+      />
     </div>
   );
 }

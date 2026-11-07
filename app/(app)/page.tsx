@@ -1,8 +1,8 @@
 // Main dashboard (home), banking-app style: balance + quick actions, to-dos, activity feed.
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ChevronRight } from "lucide-react";
-import { Candy } from "@/components/ui/brand";
+import { ChevronRight, MessageCircleQuestion } from "lucide-react";
+import { ReceiptScan } from "@/components/ui/receipt-scan";
 import { displayLabel } from "@/components/ui/format";
 import { FadeIn } from "@/components/ui/motion";
 import { STATUS_GROUP } from "@/components/ui/status";
@@ -58,7 +58,7 @@ export default async function DashboardPage() {
                     href={`/claims/${c.id}`}
                     className="group flex items-center gap-3.5 rounded-[18px] border border-warning/40 bg-warning-soft/60 px-4 py-3.5 transition hover:bg-warning-soft active:scale-[0.99]"
                   >
-                    <Candy kind="claim" size={36} />
+                    <span className="grid size-10 shrink-0 place-items-center rounded-full bg-warning text-[#3a2a0e]"><MessageCircleQuestion className="size-5" aria-hidden /></span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-semibold">{c.product}</span>
                       <span className="block truncate text-sm text-on-warning-soft">
@@ -87,22 +87,13 @@ export default async function DashboardPage() {
         </FadeIn>
       ) : (
         <FadeIn delay={0.1}>
-          <section className="panel panel-scan flex flex-col gap-5 rounded-[28px] p-6 md:p-8">
-            <h2 className="text-2xl font-bold tracking-tight">Scanne. Coche. Réclame. Récupère.</h2>
-            <ol className="grid gap-2.5 sm:grid-cols-2">
-              {([
-                ["scan", "Scanne", "ton ticket de caisse"],
-                ["check", "Coche", "le produit qui a un problème"],
-                ["claim", "Réclame", "notre agent écrit à la marque"],
-                ["recover", "Récupère", "le remboursement arrive ici"],
-              ] as const).map(([kind, verb, text]) => (
-                <li key={kind} className="flex items-center gap-3 rounded-[16px] bg-white/70 p-3">
-                  <Candy kind={kind} size={36} />
-                  <span className="text-sm"><b>{verb}</b> {text}</span>
-                </li>
-              ))}
-            </ol>
-            <Link href="/receipts/new" className="self-start rounded-full bg-[#111714] px-5 py-3 text-sm font-semibold text-[#F8F7F2] transition active:scale-95">
+          <section className="flex flex-col items-center gap-4 rounded-[28px] border border-line bg-raised/80 px-6 py-10 text-center backdrop-blur">
+            <ReceiptScan size={150} />
+            <div>
+              <h2 className="text-xl font-bold tracking-tight">Ton premier remboursement commence ici</h2>
+              <p className="mt-1.5 text-sm text-muted">Scanne un ticket, coche le produit qui a un problème : notre agent écrit à la marque pour toi.</p>
+            </div>
+            <Link href="/receipts/new" className="rounded-full bg-ink px-5 py-3 text-sm font-semibold text-surface transition active:scale-95">
               Scanner mon premier ticket
             </Link>
           </section>

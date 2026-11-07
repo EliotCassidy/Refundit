@@ -10,6 +10,8 @@ import {
   type ConfirmedProduct, type IssueType, type ProductCandidates,
 } from "@/lib/shared/types";
 import { euros } from "@/lib/receipts/format";
+import { CircleCheck, CircleHelp, Send } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export type BoardItem = {
   id: string;
@@ -87,7 +89,9 @@ function cardInfo(it: BoardItem, s: ItemState) {
   return { name: it.raw_label, meta: null, image: null, note: null, noteTone: "" };
 }
 
-export function ProductBoard({ receiptId, items }: { receiptId: string; items: BoardItem[] }) {
+export type TicketHeader = { store: string; date: string; totalCents: number | null };
+
+export function ProductBoard({ receiptId, items, ticket }: { receiptId: string; items: BoardItem[]; ticket?: TicketHeader }) {
   const router = useRouter();
   const [state, setState] = useState<Record<string, ItemState>>(() =>
     Object.fromEntries(items.map((it) => [it.id, initialState(it)])),
@@ -175,11 +179,19 @@ export function ProductBoard({ receiptId, items }: { receiptId: string; items: B
       setSending(false);
       return setError(body?.error?.message ?? "Envoi impossible. Réessayez.");
     }
-    router.push("/claims");
+    router.push("/");
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
+      <div className="receipt-paper rounded-[6px] px-4 md:px-6">
+        {ticket && (
+          <header className="mb-4 flex flex-col items-center gap-1 text-center">
+            <p className="mono text-base font-semibold uppercase tracking-[0.18em]">{ticket.store}</p>
+            <p className="mono text-xs text-muted">{ticket.date} · {items.length} article{items.length > 1 ? "s" : ""}</p>
+            <div className="mt-3 w-full border-t-2 border-dashed border-line" />
+          </header>
+        )}
       <ul className="flex flex-col gap-3">
         {items.map((it) => (
           <ProductCard
@@ -192,20 +204,31 @@ export function ProductBoard({ receiptId, items }: { receiptId: string; items: B
           />
         ))}
       </ul>
+        {ticket && (
+          <footer className="mt-5 flex flex-col gap-3">
+            <div className="border-t-2 border-dashed border-line" />
+            {ticket.totalCents != null && (
+              <p className="mono flex items-center justify-between text-base font-semibold">
+                <span>TOTAL</span><span>{euros(ticket.totalCents)}</span>
+              </p>
+            )}
+            <p className="mono text-center text-[11px] uppercase tracking-[0.2em] text-muted">Merci de votre visite</p>
+          </footer>
+        )}
+      </div>
 
       {claimIds.length > 0 && (
         <label className="flex items-start gap-3 text-sm">
-          <input type="checkbox" checked={certified} onChange={(e) => setCertified(e.target.checked)} className="mt-0.5 size-5 accent-foreground" />
+          <input type="checkbox" checked={certified} onChange={(e) => setCertified(e.target.checked)} className="mt-0.5 size-5 accent-[var(--ink)]" />
           Je confirme que ces problèmes sont réels et que je les ai constatés moi-même.
         </label>
       )}
 
       {error && <p className="rounded-[20px] bg-danger-soft p-3 text-sm text-on-danger-soft">{error}</p>}
 
-      <button type="button" disabled={!ready || sending} onClick={submit}
-        className="rounded-[20px] bg-ink px-4 py-4 text-lg font-medium text-surface disabled:opacity-40">
-        {sending ? "Envoi…" : `Envoyer ${claimIds.length > 1 ? `les ${claimIds.length} réclamations` : "la réclamation"}`}
-      </button>
+      <Button type="button" variant="dark" size="lg" block disabled={!ready} loading={sending} onClick={submit} icon={<Send className="size-4" />}>
+        {`Envoyer ${claimIds.length > 1 ? `les ${claimIds.length} réclamations` : "la réclamation"}`}
+      </Button>
       {claimIds.length > 0 && !ready && !sending && (
         <p className="text-center text-xs text-muted">Pour chaque réclamation : choisissez le problème, puis confirmez le produit.</p>
       )}
@@ -227,6 +250,8 @@ function ProductCard({ it, s, patch, identify, confirm }: {
   const active = s.mode !== "idle";
   // « Oui » = l'utilisateur est en train de réclamer ce produit (panneau ouvert, même pendant un « Changer »).
   const hasIssue = s.mode === "issue" || (s.mode === "product" && s.returnTo === "issue");
+  // High confidence: product confirmed, or the 1st candidate is reliable enough to auto-validate.
+  const sure = s.confirmed?.status === "confirmed" || (!s.confirmed && Boolean(s.candidates?.confident));
 
   function enterProduct() {
     patch({ mode: "product", returnTo: s.mode === "issue" ? "issue" : "idle" });
@@ -240,7 +265,14 @@ function ProductCard({ it, s, patch, identify, confirm }: {
   }
 
   return (
-    <li className={`overflow-hidden rounded-[24px] border transition-colors ${active ? "border-ink/40 bg-sunken/60" : "border-line"}`}>
+    <li
+      className={`rounded-[18px] transition-shadow ${
+        sure
+          ? "bg-[linear-gradient(135deg,#22C55E,#BBF7D0_45%,#4ADE80)] p-[1.5px] shadow-[0_6px_18px_rgba(34,197,94,0.14)]"
+          : "border-2 border-dashed border-line-strong/45"
+      }`}
+    >
+     <div className={`overflow-hidden rounded-[16.5px] ${active ? "bg-sunken/70" : "bg-raised"}`}>
       <div className="flex items-center gap-3 p-3">
         <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-[20px] bg-sunken">
           {info.image
@@ -256,6 +288,12 @@ function ProductCard({ it, s, patch, identify, confirm }: {
             {info.name}
           </p>
           {info.meta && <p className="mt-0.5 truncate text-xs text-muted">{info.meta}</p>}
+          {!s.searching && (
+            <span className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${sure ? "bg-brand-soft text-on-brand-soft" : "bg-sunken text-muted"}`}>
+              {sure ? <CircleCheck className="size-3" aria-hidden /> : <CircleHelp className="size-3" aria-hidden />}
+              {sure ? "Identifié" : "À vérifier"}
+            </span>
+          )}
           {s.searching ? (
             <p className="mt-0.5 text-xs text-muted">Recherche du produit…</p>
           ) : s.searchError && !s.candidates ? (
@@ -267,24 +305,26 @@ function ProductCard({ it, s, patch, identify, confirm }: {
           ) : null}
         </div>
         <div className="shrink-0 text-right">
-          <p className="text-[15px] font-medium tabular-nums">{euros(it.total_price_cents)}</p>
+          <p className="mono text-[15px] font-semibold">{euros(it.total_price_cents)}</p>
           {it.discount_cents > 0 && (
             <p className="text-xs tabular-nums text-brand-strong">remise −{euros(it.discount_cents)}</p>
           )}
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 border-t border-line p-3">
+      <div className="flex flex-col gap-3 border-t border-dashed border-line p-3">
         <div className="flex items-center gap-2">
           <p className="flex-1 text-sm font-medium">Ce produit a-t-il un problème ?</p>
-          <button type="button" onClick={() => choose(false)} aria-pressed={!hasIssue}
-            className={`rounded-[20px] border px-4 py-2.5 text-sm font-medium ${hasIssue ? "border-line-strong/50" : "border-danger bg-danger-soft text-on-danger-soft"}`}>
-            Non
-          </button>
-          <button type="button" onClick={() => choose(true)} aria-pressed={hasIssue}
-            className={`rounded-[20px] border px-4 py-2.5 text-sm font-medium ${hasIssue ? "border-brand bg-brand text-on-brand" : "border-line-strong/50"}`}>
-            Oui
-          </button>
+          <div className="inline-flex rounded-full bg-sunken p-1">
+            <button type="button" onClick={() => choose(false)} aria-pressed={!hasIssue}
+              className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${hasIssue ? "text-muted" : "bg-raised text-ink shadow-[0_1px_2px_rgba(17,23,20,0.1)]"}`}>
+              Non
+            </button>
+            <button type="button" onClick={() => choose(true)} aria-pressed={hasIssue}
+              className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${hasIssue ? "bg-brand text-on-brand shadow-[0_1px_2px_rgba(21,128,61,0.3)]" : "text-muted"}`}>
+              Oui
+            </button>
+          </div>
         </div>
 
         {s.mode === "idle" && (
@@ -342,6 +382,7 @@ function ProductCard({ it, s, patch, identify, confirm }: {
           </div>
         )}
       </div>
+     </div>
     </li>
   );
 }
