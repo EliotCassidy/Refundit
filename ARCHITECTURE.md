@@ -88,7 +88,10 @@ It's one Next.js app with no separate backend, no queue and no worker. The long-
 ### 4.3 Submission (Dev 2)
 `POST /api/claims/{id}/submit`:
 1. Load the claim, line item, receipt, profile and brand.
-2. **Brand contact:** call `getBrandContact(brandId | brandNameGuess)` (C4, Dev 1's function). It returns the registry entry or runs a Linkup lookup and saves the result.
+2. **Brand contact:** call `getBrandContact(brandId | brandNameGuess)`. It returns the registry entry or runs a Linkup lookup and saves the result.
+   - **Channel order:** `contact_url` → H agent (web form). No form but a `contact_email` → **email fallback** (Resend, sent from the claim alias, Reply-To = inbound address). Neither → `needs_manual`.
+   - If the agent ends blocked (`captcha`, `login_required`, `no_contact_form`, …) and the brand has a `contact_email`, `syncClaim` falls back to email instead of `needs_manual`.
+   - In dry run, the email is not sent (claim → `submitted` + `dry_run`). Without `RESEND_FROM_DOMAIN` (a domain verified for sending), a real run → `needs_manual` "email_not_configured".
    - If there's no contact URL, move to `needs_manual` with reason `no_contact_form`.
 3. Generate `inbound_alias` (for example `claim-8f3k2a`) and the inbound address.
 4. **Complaint text:** a deterministic French template (`lib/agent/complaint.ts`, no LLM, so nothing can be invented) builds a short, polite complaint from facts only:
@@ -186,10 +189,10 @@ Reply classification:
 
 ## 7. Brand registry and lookup
 
-The `brands` table is the "cache" of known contact forms.
+The `brands` table is the "cache" of known contact forms and support emails.
 - **Seed:** 4–5 brands verified by hand during the spike, with `verified=true`. Candidates: Pringles/Kellanova, Coca-Cola, plus 2–3 others from the demo receipt. Fill in real URLs only after checking them.
 - **Matching:** `resolveBrand(label)` does a case-insensitive match on `name` and `aliases`. The LLM's `brand_guess` from parsing is the main signal.
-- **Unknown brand:** `getBrandContact` queries Linkup for the brand's French customer-service contact page. It saves a `brands` row with `source='linkup'`, `verified=false` and the found `contact_url`. *Linkup request and response shapes must be checked against their docs before implementing.*
+- **Unknown brand (Dev 2, `lib/brands/discover.ts`):** `getBrandContact` calls Linkup `POST /v1/search` with `outputType: "structured"` + `includeSources: true`, asking for `{contact_form_url, support_email}` (depth `standard`, then `deep` only if nothing found). **Anti-hallucination:** a URL is kept only if it is, or shares a host with, a returned source; an email only if it appears verbatim in the sources. The result is cached in `brands` (`source='linkup'`, `verified=false`, `last_checked_at`), so each brand is looked up once.
 
 ## 8. Security and privacy (hackathon level)
 - Supabase RLS: users can read and write only their own `profiles`, `receipts`, `line_items` and `claims` (draft inserts). `claim_events` and `claim_emails` are read-only for users. Server writes use the service role.

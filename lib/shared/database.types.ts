@@ -44,6 +44,7 @@ export type Database = {
           agent_hints: string | null
           aliases: string[]
           captcha_observed: boolean
+          contact_email: string | null
           contact_url: string | null
           created_at: string
           id: string
@@ -58,6 +59,7 @@ export type Database = {
           agent_hints?: string | null
           aliases?: string[]
           captcha_observed?: boolean
+          contact_email?: string | null
           contact_url?: string | null
           created_at?: string
           id?: string
@@ -72,6 +74,7 @@ export type Database = {
           agent_hints?: string | null
           aliases?: string[]
           captcha_observed?: boolean
+          contact_email?: string | null
           contact_url?: string | null
           created_at?: string
           id?: string
@@ -198,6 +201,7 @@ export type Database = {
           receipt_id: string
           resolved_at: string | null
           status: Database["public"]["Enums"]["claim_status"]
+          submission_channel: string | null
           submitted_at: string | null
           updated_at: string
           user_id: string
@@ -221,6 +225,7 @@ export type Database = {
           receipt_id: string
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["claim_status"]
+          submission_channel?: string | null
           submitted_at?: string | null
           updated_at?: string
           user_id: string
@@ -244,6 +249,7 @@ export type Database = {
           receipt_id?: string
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["claim_status"]
+          submission_channel?: string | null
           submitted_at?: string | null
           updated_at?: string
           user_id?: string

@@ -1,13 +1,15 @@
-// OWNER: Dev 2. Real H Company agent integration (ARCHITECTURE.md §4.3, §5).
+// OWNER: Dev 2. Claim submission (ARCHITECTURE.md §4.3, §5).
+// Channel order: brand web form via the H agent → email fallback (Resend) → needs_manual.
 // SDK: `hai-agents` (verified against node_modules/hai-agents/dist/index.d.ts v1.3.2).
 import "server-only";
 import { randomBytes } from "node:crypto";
 import { HaiAgentsClient } from "hai-agents";
 import { getBrandContact } from "@/lib/brands";
 import { transitionClaim } from "@/lib/claims/transition";
+import { emailSendingConfigured, sendComplaintEmail } from "@/lib/email/send";
 import { env, flags } from "@/lib/shared/env";
 import { createAdminClient } from "@/lib/shared/supabase/admin";
-import { AgentAnswerSchema, type ClaimRow } from "@/lib/shared/types";
+import { AgentAnswerSchema, type BrandContact, type ClaimRow } from "@/lib/shared/types";
 import { buildComplaintText } from "./complaint";
 import { buildInstruction } from "./instruction";
 import { decideOutcome } from "./outcome";
@@ -23,20 +25,8 @@ function h() {
 export function inboundAddress(alias: string): string {
   const domain = process.env.INBOUND_DOMAIN;
   if (domain) return `${alias}@${domain}`;
-  if (flags.agentDryRun()) return `${alias}@inbound.invalid`; // dry run never sends the form
+  if (flags.agentDryRun()) return `${alias}@inbound.invalid`; // dry run never sends anything
   throw new Error("INBOUND_DOMAIN is required for real (non dry-run) submissions");
-}
-
-async function loadContext(claim: ClaimRow) {
-  const db = createAdminClient();
-  const [{ data: item, error: e1 }, { data: receipt, error: e2 }, { data: profile, error: e3 }] = await Promise.all([
-    db.from("line_items").select("*").eq("id", claim.line_item_id).single(),
-    db.from("receipts").select("*").eq("id", claim.receipt_id).single(),
-    db.from("profiles").select("*").eq("id", claim.user_id).maybeSingle(),
-  ]);
-  if (e1 || e2 || e3) throw e1 ?? e2 ?? e3;
-  if (!profile) throw new Error("User has no profile (onboarding not completed)");
-  return { item, receipt, profile };
 }
 
 async function loadReceiptFile(imagePath: string) {
@@ -49,27 +39,34 @@ async function loadReceiptFile(imagePath: string) {
   return { name: `ticket-de-caisse.${ext}`, source: bytes.toString("base64"), type: "base64" as const, mediaType };
 }
 
-export type SubmitResult = { status: ClaimRow["status"]; agentViewUrl: string | null; reason?: string };
-
-/** Full submission flow. Caller must have checked canTransition(claim.status, "submitting"). */
-export async function submitClaim(claim: ClaimRow): Promise<SubmitResult> {
-  const { item, receipt, profile } = await loadContext(claim);
-  const dryRun = flags.agentDryRun();
+/** Everything needed to send a claim, whatever the channel. */
+async function buildContext(claim: ClaimRow, contactOverride?: BrandContact) {
+  const db = createAdminClient();
+  const [{ data: item, error: e1 }, { data: receipt, error: e2 }, { data: profile, error: e3 }] = await Promise.all([
+    db.from("line_items").select("*").eq("id", claim.line_item_id).single(),
+    db.from("receipts").select("*").eq("id", claim.receipt_id).single(),
+    db.from("profiles").select("*").eq("id", claim.user_id).maybeSingle(),
+  ]);
+  if (e1 || e2 || e3) throw e1 ?? e2 ?? e3;
+  if (!profile) throw new Error("User has no profile (onboarding not completed)");
 
   const brandName = item.brand_name_guess;
-  const contact = claim.brand_id
-    ? await getBrandContact({ brandId: claim.brand_id })
-    : brandName
-      ? await getBrandContact({ brandName })
-      : null;
+  const contact =
+    contactOverride ??
+    (claim.brand_id
+      ? await getBrandContact({ brandId: claim.brand_id })
+      : brandName
+        ? await getBrandContact({ brandName })
+        : null);
 
   const alias = claim.inbound_alias ?? `claim-${randomBytes(4).toString("hex")}`;
   const file = await loadReceiptFile(receipt.image_path);
+  const displayBrand = contact?.name || brandName;
   const complaintText = buildComplaintText({
     firstName: profile.first_name,
     lastName: profile.last_name,
     productName: item.product_name,
-    brandName: contact?.name || brandName,
+    brandName: displayBrand,
     storeName: receipt.store_name,
     purchasedAt: receipt.purchased_at,
     totalPriceCents: item.total_price_cents,
@@ -77,16 +74,69 @@ export async function submitClaim(claim: ClaimRow): Promise<SubmitResult> {
     issueDescription: claim.issue_description,
     hasReceiptAttachment: Boolean(file),
   });
+  return { item, receipt, profile, contact, alias, file, displayBrand, complaintText };
+}
+type ClaimContext = Awaited<ReturnType<typeof buildContext>>;
+
+/**
+ * Email channel. The claim must currently be 'submitting'; ends in 'submitted' or 'needs_manual'.
+ * In dry run nothing is sent: the claim is marked submitted + dry_run, like the web form.
+ */
+async function submitByEmail(claim: ClaimRow, ctx: ClaimContext, extra: Record<string, unknown> = {}) {
+  const to = ctx.contact!.contactEmail!;
+  const dryRun = flags.agentDryRun();
+
+  if (dryRun) {
+    await transitionClaim(claim.id, "submitted", {
+      patch: { submission_channel: "email", dry_run: true, failure_reason: null },
+      payload: { ...extra, channel: "email", to, dry_run: true },
+    });
+    return "submitted" as const;
+  }
+  if (!emailSendingConfigured()) {
+    const reason = `email_not_configured: send manually to ${to}`;
+    await transitionClaim(claim.id, "needs_manual", { patch: { failure_reason: reason }, payload: { ...extra, channel: "email", to } });
+    return "needs_manual" as const;
+  }
+  try {
+    const { id } = await sendComplaintEmail({
+      to,
+      fromName: `${ctx.profile.first_name} ${ctx.profile.last_name}`,
+      alias: ctx.alias,
+      replyTo: inboundAddress(ctx.alias),
+      subject: `Réclamation produit : ${ctx.item.product_name}`,
+      text: ctx.complaintText,
+      attachment: ctx.file ? { filename: ctx.file.name, base64: ctx.file.source, contentType: ctx.file.mediaType } : null,
+    });
+    await transitionClaim(claim.id, "submitted", {
+      patch: { submission_channel: "email", dry_run: false, failure_reason: null },
+      payload: { ...extra, channel: "email", to, email_id: id },
+    });
+    return "submitted" as const;
+  } catch (err) {
+    const reason = `email_failed: ${err instanceof Error ? err.message : String(err)}`.slice(0, 500);
+    await transitionClaim(claim.id, "agent_failed", { patch: { failure_reason: reason }, payload: { ...extra, channel: "email", to } });
+    return "agent_failed" as const;
+  }
+}
+
+export type SubmitResult = { status: ClaimRow["status"]; agentViewUrl: string | null; reason?: string };
+
+/** Full submission flow. Caller must have checked canTransition(claim.status, "submitting"). */
+export async function submitClaim(claim: ClaimRow): Promise<SubmitResult> {
+  const ctx = await buildContext(claim);
+  const dryRun = flags.agentDryRun();
 
   // Lock the claim first (compare-and-set), so a double click can't start two agents.
   await transitionClaim(claim.id, "submitting", {
     payload: { attempt: claim.attempt + 1, dry_run: dryRun },
     patch: {
       attempt: claim.attempt + 1,
-      inbound_alias: alias,
-      complaint_text: complaintText,
-      brand_id: contact?.brandId || claim.brand_id,
+      inbound_alias: ctx.alias,
+      complaint_text: ctx.complaintText,
+      brand_id: ctx.contact?.brandId || claim.brand_id,
       dry_run: dryRun,
+      submission_channel: null,
       failure_reason: null,
       confirmation_number: null,
       h_session_id: null,
@@ -94,45 +144,49 @@ export async function submitClaim(claim: ClaimRow): Promise<SubmitResult> {
     },
   });
 
-  if (!contact?.contactUrl) {
-    const reason = "no_contact_form: brand unknown or without contact URL";
+  if (!ctx.contact?.contactUrl) {
+    if (ctx.contact?.contactEmail) {
+      const status = await submitByEmail(claim, ctx, { reason: "no_contact_form" });
+      return { status, agentViewUrl: null };
+    }
+    const reason = "no_contact_form: brand unknown, no contact form or email found";
     await transitionClaim(claim.id, "needs_manual", { patch: { failure_reason: reason } });
     return { status: "needs_manual", agentViewUrl: null, reason };
   }
 
   try {
     const instruction = buildInstruction({
-      contactUrl: contact.contactUrl,
-      agentHints: contact.agentHints,
+      contactUrl: ctx.contact.contactUrl,
+      agentHints: ctx.contact.agentHints,
       dryRun,
       customer: {
-        firstName: profile.first_name,
-        lastName: profile.last_name,
-        addressLine1: profile.address_line1,
-        addressLine2: profile.address_line2,
-        postalCode: profile.postal_code,
-        city: profile.city,
-        country: profile.country === "FR" ? "France" : profile.country,
-        phone: profile.phone,
-        email: inboundAddress(alias),
+        firstName: ctx.profile.first_name,
+        lastName: ctx.profile.last_name,
+        addressLine1: ctx.profile.address_line1,
+        addressLine2: ctx.profile.address_line2,
+        postalCode: ctx.profile.postal_code,
+        city: ctx.profile.city,
+        country: ctx.profile.country === "FR" ? "France" : ctx.profile.country,
+        phone: ctx.profile.phone,
+        email: inboundAddress(ctx.alias),
       },
       product: {
-        name: item.product_name,
-        brand: contact.name || brandName,
-        ean: item.ean,
-        purchasedAt: receipt.purchased_at,
-        storeName: receipt.store_name,
-        priceCents: item.total_price_cents,
+        name: ctx.item.product_name,
+        brand: ctx.displayBrand,
+        ean: ctx.item.ean,
+        purchasedAt: ctx.receipt.purchased_at,
+        storeName: ctx.receipt.store_name,
+        priceCents: ctx.item.total_price_cents,
       },
-      complaintText,
-      receiptFileName: file?.name ?? null,
+      complaintText: ctx.complaintText,
+      receiptFileName: ctx.file?.name ?? null,
     });
 
     const session = await h().startSession({
       agent: process.env.AGENT_ID || "h/web-surfer-flash",
-      messages: { type: "user_message", message: instruction, files: file ? [file] : undefined },
+      messages: { type: "user_message", message: instruction, files: ctx.file ? [ctx.file] : undefined },
       answerSchema: AgentAnswerSchema,
-      overrides: { "agent.environments[kind=web].start_url": contact.contactUrl },
+      overrides: { "agent.environments[kind=web].start_url": ctx.contact.contactUrl },
       maxSteps: 60,
       maxTimeS: 600,
       timezone: "Europe/Paris",
@@ -143,20 +197,25 @@ export async function submitClaim(claim: ClaimRow): Promise<SubmitResult> {
 
     await createAdminClient()
       .from("claims")
-      .update({ h_session_id: session.id, h_agent_view_url: agentViewUrl })
+      .update({ h_session_id: session.id, h_agent_view_url: agentViewUrl, submission_channel: "web_form" })
       .eq("id", claim.id);
 
     return { status: "submitting", agentViewUrl };
   } catch (err) {
     const reason = `start_failed: ${err instanceof Error ? err.message : String(err)}`.slice(0, 500);
+    if (ctx.contact.contactEmail) {
+      const status = await submitByEmail(claim, ctx, { reason });
+      return { status, agentViewUrl: null };
+    }
     await transitionClaim(claim.id, "agent_failed", { patch: { failure_reason: reason } });
     return { status: "agent_failed", agentViewUrl: null, reason };
   }
 }
 
 /**
- * Pulls the H session state and applies the outcome if terminal. Idempotent and safe to call
- * from both /sync and the webhook: the compare-and-set in transitionClaim drops duplicates.
+ * Pulls the H session state and applies the outcome if terminal. If the agent was blocked
+ * (captcha, login, no form…) and the brand has a support email, falls back to email.
+ * Idempotent and safe to call from both /sync and the webhook.
  */
 export async function syncClaim(claim: ClaimRow): Promise<ClaimRow["status"]> {
   if (claim.status !== "submitting" || !claim.h_session_id) return claim.status;
@@ -173,6 +232,16 @@ export async function syncClaim(claim: ClaimRow): Promise<ClaimRow["status"]> {
   if (!decision) return claim.status;
 
   try {
+    if (decision.to === "needs_manual" && claim.brand_id) {
+      const contact = await getBrandContact({ brandId: claim.brand_id });
+      if (contact.contactEmail) {
+        // Re-check the status right before sending, so a concurrent sync can't send twice.
+        const { data: fresh } = await createAdminClient().from("claims").select("*").eq("id", claim.id).single();
+        if (fresh?.status !== "submitting") return fresh?.status ?? claim.status;
+        const ctx = await buildContext(fresh, contact);
+        return await submitByEmail(fresh, ctx, { agent_blocked: decision.patch.failure_reason, ...decision.payload });
+      }
+    }
     const updated = await transitionClaim(claim.id, decision.to, { patch: decision.patch, payload: decision.payload });
     return updated.status;
   } catch {

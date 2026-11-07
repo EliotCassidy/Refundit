@@ -52,7 +52,6 @@ Priorities:
 - [ ] P0 Upload page (camera capture) → `/api/receipts` → parsed items list (edit a product name/brand inline = P1).
 - [ ] P0 Brand registry seed (`npm run seed`) + `resolveBrand` + `getBrandContact` (registry only).
 - [ ] P0 Selection page: checkboxes + issue preset chips + optional description → `/api/claims` → redirect to `/claims`.
-- [ ] P1 Linkup lookup in `getBrandContact` for unknown brands (check Linkup's docs first).
 - [ ] P1 Optional damaged-product photo upload.
 
 **Dev 2**
@@ -61,6 +60,8 @@ Priorities:
 - [x] P0 Real `/submit`: build the instruction, attach the receipt file, `answerSchema`, store the session id + agent view URL.
 - [x] P0 `/sync` polling + outcome mapping (ARCHITECTURE §5.3).
 - [x] P0 Claims list + claim detail page (status, complaint text, Agent View link/iframe, Cancel).
+- [x] P1 Linkup lookup in `getBrandContact` (form URL + support email, anti-hallucination check). Needs `LINKUP_API_KEY`.
+- [x] P1 Email fallback (no form, or agent blocked) via Resend. Needs `RESEND_API_KEY` + `RESEND_FROM_DOMAIN` for real sends.
 - [ ] P1 `/api/webhooks/h`: code done (verifyWebhook + idempotent sync). TODO: register the webhook on the deployed Vercel URL and set H_WEBHOOK_SECRET.
 
 ## Phase 3: Integration (Saturday evening). **Milestone: the full path on the deployed URL**

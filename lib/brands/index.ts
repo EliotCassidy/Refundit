@@ -1,14 +1,16 @@
-// OWNER: Dev 1. Brand registry ("cache" of known contact forms). API_CONTRACTS §4.
-// Dev 2 calls getBrandContact() from /api/claims/:id/submit.
+// Brand registry ("cache" of known contact forms/emails). API_CONTRACTS §4.
+// OWNERS: resolveBrand → Dev 1. getBrandContact + Linkup discovery (./discover.ts) → Dev 2.
 import "server-only";
 import { createAdminClient } from "@/lib/shared/supabase/admin";
 import type { BrandContact, BrandRow } from "@/lib/shared/types";
+import { discoverBrandContact } from "./discover";
 
 function toContact(b: BrandRow): BrandContact {
   return {
     brandId: b.id,
     name: b.name,
     contactUrl: b.contact_url,
+    contactEmail: b.contact_email,
     agentHints: b.agent_hints,
     requiresReceiptUpload: b.requires_receipt_upload,
     verified: b.verified,
@@ -28,31 +30,58 @@ export async function resolveBrand(label: string, brandGuess: string | null): Pr
   return match ? { brandId: match.id } : null;
 }
 
+async function findBrand(input: { brandId: string } | { brandName: string }): Promise<BrandRow | null> {
+  const db = createAdminClient();
+  if ("brandId" in input) {
+    const { data, error } = await db.from("brands").select("*").eq("id", input.brandId).maybeSingle();
+    if (error) throw error;
+    return data;
+  }
+  const name = input.brandName.trim();
+  const { data, error } = await db.from("brands").select("*").ilike("name", name).maybeSingle();
+  if (error) throw error;
+  if (data) return data;
+  const { data: byAlias } = await db.from("brands").select("*").contains("aliases", [name.toLowerCase()]).limit(1).maybeSingle();
+  return byAlias;
+}
+
 /**
- * Returns the registry entry for a brand.
- * TODO(dev1, P1): if the brand is unknown or has no contact_url, query Linkup for the brand's
- * French customer-service contact page, upsert a brands row (source='linkup', verified=false),
- * and return it. Check Linkup's official docs for the request/response shape first.
+ * Returns how to reach the brand. Registry first; if the brand is unknown or has neither a
+ * contact_url nor a contact_email and was never looked up, queries Linkup once and caches the
+ * result in `brands` (source='linkup', verified=false). Never throws on Linkup errors.
  */
 export async function getBrandContact(input: { brandId: string } | { brandName: string }): Promise<BrandContact> {
   const db = createAdminClient();
-  const query = db.from("brands").select("*");
-  const { data, error } =
-    "brandId" in input
-      ? await query.eq("id", input.brandId).maybeSingle()
-      : await query.ilike("name", input.brandName).maybeSingle();
-  if (error) throw error;
+  const brand = await findBrand(input);
 
-  if (!data) {
-    // Unknown brand and no Linkup yet → no contact URL → claim goes to needs_manual.
-    return {
-      brandId: "",
-      name: "brandName" in input ? input.brandName : "",
-      contactUrl: null,
-      agentHints: null,
-      requiresReceiptUpload: false,
-      verified: false,
-    };
+  if (brand && (brand.contact_url || brand.contact_email || brand.last_checked_at)) return toContact(brand);
+
+  const name = brand?.name ?? ("brandName" in input ? input.brandName.trim() : "");
+  if (!name) return { brandId: brand?.id ?? "", name, contactUrl: null, contactEmail: null, agentHints: null, requiresReceiptUpload: false, verified: false };
+
+  let found: { contactUrl: string | null; contactEmail: string | null; sources: string[] } | null = null;
+  try {
+    found = await discoverBrandContact(name);
+  } catch (err) {
+    console.error("[linkup]", name, err);
   }
-  return toContact(data);
+  if (!found || !process.env.LINKUP_API_KEY) {
+    // No lookup possible: don't mark as checked, so it is retried once Linkup works.
+    return brand ? toContact(brand) : { brandId: "", name, contactUrl: null, contactEmail: null, agentHints: null, requiresReceiptUpload: false, verified: false };
+  }
+
+  const fields = {
+    contact_url: found.contactUrl,
+    contact_email: found.contactEmail,
+    last_checked_at: new Date().toISOString(),
+  };
+  const { data: saved, error } = brand
+    ? await db.from("brands").update(fields).eq("id", brand.id).select("*").single()
+    : await db
+        .from("brands")
+        .insert({ ...fields, name, aliases: [name.toLowerCase()], source: "linkup", verified: false })
+        .select("*")
+        .single();
+  if (error) throw error;
+  return toContact(saved);
 }

@@ -51,6 +51,11 @@ export default async function ClaimPage({ params }: PageProps<"/claims/[id]">) {
           {claim.brands?.name ? `${claim.brands.name} · ` : ""}
           {ISSUE_LABELS_FR[claim.issue_type]}
         </p>
+        {claim.submission_channel && (
+          <p className="text-sm text-neutral-500">
+            Envoyée via {claim.submission_channel === "email" ? "e-mail au service client" : "le formulaire de contact de la marque"}
+          </p>
+        )}
         {claim.confirmation_number && (
           <p className="text-sm">N° de confirmation : <strong>{claim.confirmation_number}</strong></p>
         )}

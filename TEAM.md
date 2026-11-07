@@ -9,7 +9,7 @@ The rule of thumb: **Dev 1 owns everything up to the "Envoyer les réclamations"
 - `/api/receipts` (upload + parse)
 - `/api/claims` (create drafts + trigger submit)
 - receipt parser and LLM choice (`lib/shared/llm.ts`)
-- brand registry: seed data, `resolveBrand`, `getBrandContact` with Linkup
+- brand registry: seed data, `resolveBrand`
 
 **Also:** repo scaffold, Supabase project + auth, the shared UI kit and app layout/navigation.
 
@@ -20,7 +20,7 @@ The rule of thumb: **Dev 1 owns everything up to the "Envoyer les réclamations"
 app/(auth)/**            app/(app)/onboarding/**   app/(app)/profile/**
 app/(app)/page.tsx       app/(app)/receipts/**
 app/api/receipts/**      app/api/claims/route.ts
-lib/receipts/**          lib/brands/**              supabase/seed/**
+lib/receipts/**          lib/brands/index.ts (resolveBrand)   supabase/seed/**
 components/ui/**         app/layout.tsx, app/(app)/layout.tsx, proxy.ts
 ```
 
@@ -34,12 +34,15 @@ components/ui/**         app/layout.tsx, app/(app)/layout.tsx, proxy.ts
 - Resend inbound webhook, reply classification
 - `AGENT_MOCK` stub
 - the H and Resend spikes
+- brand contact discovery: `getBrandContact` + Linkup (`lib/brands/discover.ts`)
+- email fallback (Resend sending, `lib/email/send.ts`)
 
 **Owns:**
 ```
 app/(app)/claims/**                  app/api/claims/[id]/**
 app/api/webhooks/**                  lib/agent/**                 scripts/agent-spike.ts
 lib/claims/**                        lib/email/**
+lib/brands/discover.ts               lib/brands/index.ts (getBrandContact)
 ```
 
 ## Shared (coordinate before changing)
@@ -54,7 +57,7 @@ supabase/migrations/**   package.json   .env.example   API_CONTRACTS.md
 ## Interfaces between you
 1. **DB schema + enums** (API_CONTRACTS §1–2), written together at kickoff in `0001_init`.
 2. **`POST /api/claims/:id/submit`**: Dev 1 calls it, Dev 2 implements it.
-3. **`getBrandContact()`**: Dev 2 calls it, Dev 1 implements it.
+3. **`resolveBrand()`** (Dev 1) fills `line_items.brand_id`; **`getBrandContact()`** (Dev 2) turns a brand into a form URL or email.
 4. **`lib/shared/llm.ts`**: Dev 1 implements it, both use it.
 5. **Navigation**: Dev 1's layout links to `/claims` and `/claims/[id]`. After submit, Dev 1 redirects to `/claims`.
 

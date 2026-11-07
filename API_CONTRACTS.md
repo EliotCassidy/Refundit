@@ -67,7 +67,8 @@ All tables have `id uuid primary key default gen_random_uuid()` and `created_at 
 | name | text unique not null | display brand, e.g. "Pringles" |
 | manufacturer | text | e.g. "Kellanova" |
 | aliases | text[] default '{}' | lowercase receipt spellings, e.g. `{pringles,pringl}` |
-| contact_url | text | customer-service form URL |
+| contact_url | text | customer-service form URL (→ H agent) |
+| contact_email | text | customer-service email (→ email fallback via Resend) |
 | agent_hints | text | free text for the agent prompt ("choose 'Réclamation produit' in the subject dropdown") |
 | requires_receipt_upload | boolean default false | |
 | captcha_observed | boolean default false | |
@@ -120,6 +121,7 @@ All tables have `id uuid primary key default gen_random_uuid()` and `created_at 
 | h_agent_view_url | text | Dev 2 |
 | attempt | integer default 0 | Dev 2 |
 | dry_run | boolean default false | Dev 2 |
+| submission_channel | text check in ('web_form','email') | Dev 2 (how it was actually sent) |
 | confirmation_number | text | Dev 2 |
 | failure_reason | text | Dev 2 (blocker code or error) |
 | submitted_at, resolved_at, updated_at | timestamptz | Dev 2 |
@@ -213,7 +215,8 @@ export type AgentAnswer = z.infer<typeof AgentAnswerSchema>;
 export type BrandContact = {
   brandId: string;
   name: string;
-  contactUrl: string | null;   // null → claim goes to needs_manual
+  contactUrl: string | null;   // web form → H agent
+  contactEmail: string | null; // fallback: no form, or agent blocked → email via Resend
   agentHints: string | null;
   requiresReceiptUpload: boolean;
   verified: boolean;
@@ -223,9 +226,10 @@ export type BrandContact = {
 ## 4. Cross-owner function contracts
 
 ```ts
-// lib/brands/index.ts (Dev 1)
+// lib/brands/index.ts (resolveBrand: Dev 1 · getBrandContact: Dev 2)
 export async function resolveBrand(label: string, brandGuess: string | null): Promise<{ brandId: string } | null>;
-/** Returns the registry entry; if missing or without a contact_url, runs a Linkup lookup and upserts a brands row. */
+/** (Dev 2) Registry entry; if unknown or without contact_url/contact_email and never checked, runs ONE Linkup lookup
+ *  (lib/brands/discover.ts) and caches it in brands (source='linkup', verified=false, last_checked_at=now). */
 export async function getBrandContact(input: { brandId: string } | { brandName: string }): Promise<BrandContact>;
 
 // lib/shared/llm.ts (Dev 1 creates, both use)

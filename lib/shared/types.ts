@@ -46,6 +46,9 @@ export const CLAIM_STATUS_LABELS_FR: Record<ClaimStatus, string> = {
   cancelled: "Annulée",
 };
 
+export const SUBMISSION_CHANNELS = ["web_form", "email"] as const;
+export type SubmissionChannel = (typeof SUBMISSION_CHANNELS)[number];
+
 // ---- Receipt parser output (Dev 1 produces) ----
 export const ParsedReceiptSchema = z.object({
   store_name: z.string().nullable(),
@@ -84,7 +87,8 @@ export type AgentAnswer = z.infer<typeof AgentAnswerSchema>;
 export type BrandContact = {
   brandId: string;
   name: string;
-  contactUrl: string | null; // null → claim goes to needs_manual
+  contactUrl: string | null; // web form → H agent
+  contactEmail: string | null; // fallback when no form / agent blocked → email via Resend
   agentHints: string | null;
   requiresReceiptUpload: boolean;
   verified: boolean;
