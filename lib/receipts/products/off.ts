@@ -3,7 +3,6 @@
 // - search.openfoodfacts.org/search : q en syntaxe Lucene (ex. brands:"carrefour" ravioli), langs, page_size, fields.
 //   Seul l'index 'off' existe (pas d'OBF).
 // - world.openbeautyfacts.org/cgi/search.pl : search_terms (plein texte), json=1, page_size, fields.
-import { linkupImagesEnabled, webImage } from "./linkup";
 import type { Product } from "@/lib/shared/types";
 import { getJson } from "./net";
 import { isValidEan, type Size } from "./ean";
@@ -104,8 +103,10 @@ export async function productImage(ean: string, source: string): Promise<string 
 export async function withImage<T extends { ean: string | null; image_url: string | null; source: string; name?: string; brand?: string | null; quantity?: string | null }>(p: T): Promise<T> {
   if (p.image_url || !p.ean) return p;
   let image_url = await productImage(p.ean, p.source).catch(() => null);
-  if (!image_url && linkupImagesEnabled() && p.name) {
-    image_url = await webImage({ ean: p.ean, name: p.name, brand: p.brand ?? null, quantity: p.quantity ?? null });
+  if (!image_url && p.name) {
+    // Chargé à la demande : linkup.ts est « server-only », et off.ts sert aussi aux tests sans serveur (npm run test:receipts).
+    const { linkupImagesEnabled, webImage } = await import("./linkup");
+    if (linkupImagesEnabled()) image_url = await webImage({ ean: p.ean, name: p.name, brand: p.brand ?? null, quantity: p.quantity ?? null });
   }
   return image_url ? { ...p, image_url } : p;
 }
