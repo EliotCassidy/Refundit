@@ -14,7 +14,7 @@ export default function ContactPage() {
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-8 px-4 py-10">
       <header className="flex flex-col gap-2">
-        <h1 className="text-3xl font-black">Contactez-nous</h1>
+        <h1 className="font-script text-4xl text-notcoca sm:text-5xl">Contactez-nous</h1>
         <p className="text-neutral-600">
           Une question sur nos boissons ou un problème avec un produit acheté ? Notre service consommateurs est là pour vous aider.
         </p>
@@ -29,10 +29,14 @@ export default function ContactPage() {
         ))}
       </div>
 
-      <section className="rounded-2xl border border-neutral-200 p-5 sm:p-8">
-        <h2 className="mb-1 text-xl font-bold">Formulaire de contact</h2>
-        <p className="mb-6 text-sm text-neutral-500">Les champs marqués d&apos;un * sont obligatoires.</p>
-        <ContactForm />
+      <section className="overflow-hidden rounded-2xl border border-neutral-200">
+        <div className="bg-notcoca px-5 py-4 sm:px-8">
+          <h2 className="font-script text-2xl text-white">Formulaire de contact</h2>
+          <p className="mt-1 text-sm text-white/85">Les champs marqués d&apos;un * sont obligatoires.</p>
+        </div>
+        <div className="p-5 sm:p-8">
+          <ContactForm />
+        </div>
       </section>
     </div>
   );

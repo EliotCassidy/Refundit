@@ -23,7 +23,7 @@ export default async function AdminPage({ searchParams }: PageProps<"/notcoca/ad
         <form method="post" action="/api/notcoca/admin/login" className="flex flex-col gap-3">
           <input name="key" type="password" required placeholder="Clé d'accès" className="rounded-lg border border-neutral-300 px-3 py-2" />
           {error && <p className="text-sm text-red-600">Clé incorrecte.</p>}
-          <button className="rounded-full bg-[#1F3BFF] px-4 py-2 font-semibold text-white">Se connecter</button>
+          <button className="rounded-full bg-notcoca px-4 py-2 font-semibold text-white transition-colors hover:bg-notcoca-dark">Se connecter</button>
         </form>
       </div>
     );

@@ -31,6 +31,10 @@
   /* aliases kept for screens written before the design system */
   --background: var(--surface);
   --foreground: var(--ink);
+
+  /* NotCoca demo brand (fictional site /notcoca) */
+  --notcoca-red: #f40009;
+  --notcoca-red-dark: #c0060d;
 }
 
 /* Light cream theme only (product decision): no automatic dark mode. */
@@ -39,6 +43,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --font-script: var(--font-pacifico);
+  --color-notcoca: var(--notcoca-red);
+  --color-notcoca-dark: var(--notcoca-red-dark);
 
   --color-brand: var(--brand);
   --color-on-brand: var(--on-brand);

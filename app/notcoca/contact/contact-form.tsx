@@ -5,7 +5,7 @@
 import { useState } from "react";
 import { CIVILITIES, DRINKS, FORMATS, PACKAGINGS, PROBLEM_REASON, REASONS, YES_NO } from "@/lib/notcoca/catalog";
 
-const input = "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2.5 focus:border-[#1F3BFF] focus:outline-none";
+const input = "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2.5 focus:border-notcoca focus:outline-none focus:ring-2 focus:ring-notcoca/20";
 const label = "flex flex-col gap-1 text-sm font-medium";
 
 function Select({ name, label: text, options, required = true }: { name: string; label: string; options: readonly string[]; required?: boolean }) {
@@ -67,8 +67,8 @@ export function ContactForm() {
   return (
     <div className="flex flex-col gap-5">
       <ol className="flex gap-2 text-xs font-semibold">
-        <li className={`rounded-full px-3 py-1 ${step === 1 ? "bg-[#1F3BFF] text-white" : "bg-neutral-100"}`}>1. Votre demande</li>
-        <li className={`rounded-full px-3 py-1 ${step === 2 ? "bg-[#1F3BFF] text-white" : "bg-neutral-100"}`}>2. Vos coordonnées</li>
+        <li className={`rounded-full px-3 py-1 ${step === 1 ? "bg-notcoca text-white" : "bg-neutral-100"}`}>1. Votre demande</li>
+        <li className={`rounded-full px-3 py-1 ${step === 2 ? "bg-notcoca text-white" : "bg-neutral-100"}`}>2. Vos coordonnées</li>
       </ol>
 
       {step === 1 && (
@@ -106,7 +106,7 @@ export function ContactForm() {
             <textarea name="message" required minLength={10} rows={6} className={input} />
           </label>
 
-          <button className="self-start rounded-full bg-[#1F3BFF] px-6 py-2.5 font-semibold text-white">Continuer</button>
+          <button className="self-start rounded-full bg-notcoca px-6 py-2.5 font-semibold text-white transition-colors hover:bg-notcoca-dark">Continuer</button>
         </form>
       )}
 
@@ -142,7 +142,7 @@ export function ContactForm() {
             <button type="button" onClick={() => setStep(1)} className="rounded-full border border-neutral-300 px-6 py-2.5 font-semibold">
               Retour
             </button>
-            <button disabled={pending} className="rounded-full bg-[#1F3BFF] px-6 py-2.5 font-semibold text-white disabled:opacity-50">
+            <button disabled={pending} className="rounded-full bg-notcoca px-6 py-2.5 font-semibold text-white transition-colors hover:bg-notcoca-dark disabled:opacity-50">
               {pending ? "Envoi…" : "Envoyer"}
             </button>
           </div>
