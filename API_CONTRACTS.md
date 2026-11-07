@@ -108,7 +108,7 @@ All tables have `id uuid primary key default gen_random_uuid()` and `created_at 
 | confirmed_product | jsonb | `ConfirmedProduct` (§3). **NULL until the user validates.** The only product field the agent may trust |
 
 ### `product_matches` (owner: Dev 1, service role only)
-Shared cache of products confirmed by users: `(store_chain, label_key) → ean`. A label with a manual match is answered at once by `/identify` and pre-filled by the receipt page (`knownCandidates`, §5). The seed adds one row for the demo NotCoca line (fictional EAN `2000000000008`, GS1 prefix 20–29 = in-store use, never a real product).
+Shared cache of products confirmed by users: `(store_chain, label_key) → ean`. A label with a manual match is answered at once by `/identify` and pre-filled by the receipt page (`knownCandidates`, §5): matches from this chain first, then from any chain for the same exact label (chain misread, national brands). The seed adds one row for the demo NotCoca line (fictional EAN `2000000000008`, GS1 prefix 20–29 = in-store use, never a real product).
 | column | type | notes |
 |---|---|---|
 | store_chain | text not null default '' | normalized chain printed on the receipt |
