@@ -120,12 +120,12 @@ One dedicated Gmail account (free, no domain). Each claim gets a **plus address*
 4. If the brand **asks for information** (`waiting_input` with `missing_fields` from the classification), the dashboard asks the user; `/answers` then **replies to the brand's email** (In-Reply-To) instead of refiling the form, and the claim goes back to `submitted`.
 
 ### 4.6 Dashboard (Dev 2)
-The pages read `claims`, `claim_events` and `claim_emails` through the Supabase client with RLS. The claim page shows:
-- the status badge
-- the complaint text
-- an embedded or linked H Agent View (live, then replay)
-- a Cancel button (`DELETE` session → `cancelled`)
-- the email timeline
+`/claims`: counters (En cours / À compléter / Acceptées / Refusées), "Informations demandées" first, then every claim with status, brand, issue and refund. Opening it polls the Gmail inbox (`/api/email/poll`) and `/sync`s claims still `submitting`.
+
+`/claims/[id]`:
+- status, channel (web form / email), confirmation or refund ("Remboursé 7,45 € · Stripe pi_…");
+- **built-in Agent View**: live screenshot + action log while `submitting` (polls every 3 s), step-by-step replay afterwards. Served by owner-only routes `/api/claims/:id/agent` and `/agent/screenshot` that proxy the H session events and screenshots with our H key. **No public H share link**: the screenshots show the customer's personal data typed into the brand form;
+- form for `missing_fields` (resubmits, or answers the brand's email), Cancel (stops the H session) / Retry, complaint text, timeline (status changes + brand emails).
 
 ## 5. H Company agent design
 
@@ -179,10 +179,21 @@ NotCoca is a **fictional** soda brand served by this app at `/notcoca` (public, 
 
 1. `/notcoca/contact`: two-step form (request → customer details) → `POST /api/notcoca/requests` → `notcoca_requests` + ticket `NC-xxxxxx` shown on screen.
 2. `/notcoca/admin` (key `NOTCOCA_ADMIN_KEY`, hashed cookie): list requests, **Rembourser** (refund + compensation) or **Refuser**.
-3. Refund → Stripe **destination charge** in TEST mode (`lib/notcoca/payout.ts`): one PaymentIntent with `pm_card_visa`, `confirm: true`, `transfer_data.destination` = the user's connected account (`profiles.stripe_account_id`, created by `npm run stripe:demo-account`). Non-`sk_test_` keys are refused. The claim gets `refund_cents` + `stripe_payment_id`.
+3. Refund → Stripe **destination charge** in TEST mode (`lib/notcoca/payout.ts`): one PaymentIntent with `pm_card_visa`, `confirm: true`, `transfer_data.destination` = the user's connected account (`profiles.stripe_account_id`). That account is an **Accounts v2 "recipient"** (fees/losses collector = application, Express dashboard, Stripe-hosted onboarding) created by `npm run stripe:demo-account`: in test mode Stripe refused a v1 account with platform-owned losses. Non-`sk_test_` keys are refused. The claim gets `refund_cents` + `stripe_payment_id`.
 4. NotCoca emails the customer like a real brand (Gmail, *without* the Refundit outgoing header) → Refundit's poller classifies it `accepted` → the dashboard shows "Remboursé 7,45 €".
 
 Demo shortcut, said in the pitch: NotCoca and Refundit share the same Stripe test platform, and NotCoca finds the payee from the claim's plus address. A real brand would pay to the IBAN given in its form.
+
+## 5c. Billing (Dev 2) — "Refundit Illimité", €9.99/month (Stripe test mode)
+- Free plan: **1 receipt scan per calendar month** (Europe/Paris). `getScanQuota` (`lib/billing.ts`) is checked by `POST /api/receipts` → `402 scan_limit_reached` (accounts in `SCAN_QUOTA_EXEMPT_EMAILS` are exempt).
+- `/billing` → `POST /api/billing/checkout` (Stripe Checkout, mode subscription; price found by `lookup_key`, created once) → `/api/billing/return` activates from the Checkout session (no webhook needed) → `/billing`. Cancel at period end via `/api/billing/cancel`.
+- `/api/webhooks/stripe` (signed) applies `customer.subscription.created/updated/deleted` to `profiles.subscription_status` / `subscription_period_end`. Verified in production: subscription → webhook → `active` → unlimited; cancel → `canceled` → back to 1/month.
+
+## 5d. Deployment
+- Production: **https://refundit.vercel.app**, Vercel project linked to the GitHub repo (every push to `main` deploys). Env vars mirror `.env.example`.
+- Webhooks registered on production: H (`/api/webhooks/h`, events `session.completed|failed|timed_out|idle`) and Stripe (`/api/webhooks/stripe`, subscription events).
+- `AGENT_MOCK` is ignored when `VERCEL_ENV=production`. `AGENT_DRY_RUN=true` stays on (real brands); NotCoca is always submitted.
+- The H cloud browser can only reach public URLs: NotCoca must be tested on the deployed app, not localhost.
 
 ## 6. LLM usage
 

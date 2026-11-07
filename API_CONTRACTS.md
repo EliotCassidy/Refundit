@@ -308,6 +308,8 @@ Reads (receipt, items, profile) go directly through the Supabase client with RLS
 |---|---|---|---|
 | POST | `/api/claims/:id/submit` | none | `202 { status: "submitting", agentViewUrl }` · `409` if the status doesn't allow it · `200 { status: "needs_manual", reason }` if no contact form |
 | POST | `/api/claims/:id/cancel` | none | `200 { status: "cancelled" }` (deletes the H session if running) |
+| GET | `/api/claims/:id/agent` | none (owner or `x-internal-key`) | `200 { status, steps: [{ at, kind: "screenshot"\|"action"\|"error", text, screenshot (proxy URL), pageUrl }] }` — built-in Agent View |
+| GET | `/api/claims/:id/agent/screenshot?src=…` | none (owner) | the PNG, proxied from H (only URLs of this claim's session) |
 | POST | `/api/claims/:id/answers` | `{ answers: { "<field label>": "<value>" } }` (only `missing_fields` keys are kept) | `200 { status: "waiting_input", remaining: string[] }` while fields are missing · then resubmits: `202 { status: "submitting", agentViewUrl }` · `409` if not `waiting_input` |
 | POST | `/api/claims/:id/sync` | none | `200 { status }`. Polls H if `submitting`; the claim page calls it every 5s |
 | POST | `/api/webhooks/h` | H webhook payload `{type,id,created_at,data:{session_id,status,previous_status}}` | `200` (idempotent on `X-H-Webhook-Delivery`) |

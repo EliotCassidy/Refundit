@@ -2,6 +2,8 @@
 
 Snap a receipt, pick the product that had a problem, and an AI agent files the complaint on the brand's contact form.
 
+**Production:** https://refundit.vercel.app · demo brand NotCoca: https://refundit.vercel.app/notcoca (back-office `/notcoca/admin`).
+
 Start with [CLAUDE.md](CLAUDE.md), then [ARCHITECTURE.md](ARCHITECTURE.md), [API_CONTRACTS.md](API_CONTRACTS.md), [TEAM.md](TEAM.md) and [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
 
 ## Setup (once)

@@ -76,7 +76,7 @@ Priorities:
 - [x] P0 Claims list + claim detail page (status, complaint text, Agent View link/iframe, Cancel).
 - [x] P1 Linkup lookup in `getBrandContact` (form URL + support email, anti-hallucination check). Needs `LINKUP_API_KEY`.
 - [x] P1 Email fallback (no form, or agent blocked) via Gmail SMTP. Needs `GMAIL_USER` + `GMAIL_APP_PASSWORD`.
-- [ ] P1 `/api/webhooks/h`: code done (verifyWebhook + idempotent sync). TODO: register the webhook on the deployed Vercel URL and set H_WEBHOOK_SECRET.
+- [x] P1 `/api/webhooks/h` registered on production (incl. `session.idle`), deliveries succeeding.
 
 ## Phase 3: Integration (Saturday evening). **Milestone: the full path on the deployed URL**
 - [ ] Real receipt → items → select 2 → submit → agent runs (dry run) on demo brands → `submitted`.
@@ -86,7 +86,9 @@ Priorities:
 ## Phase 4: Email loop + UX (Sunday morning)
 **Dev 2**
 - [x] P1 Gmail IMAP polling (`/api/email/poll`, on dashboard open) → `claim_emails` → classify → transition; brand info requests answered by email from the dashboard. Timeline on the claim detail page.
-- [ ] P1 Retry button for `agent_failed` / `needs_manual`.
+- [x] P1 Retry button for `agent_failed` / `needs_manual`; Cancel stops the H session (verified in production).
+- [x] P1 Built-in Agent View (live screenshot + actions, replay), owner-only.
+- [x] P1 Deployed on https://refundit.vercel.app; NotCoca demo brand + Stripe Connect payout + Billing verified in production.
 
 **Dev 1**
 - [ ] P0 Quota check in `/api/receipts` (`getScanQuota` → 402) + link to `/billing` from profile/nav (API_CONTRACTS › Billing)
@@ -96,7 +98,7 @@ Priorities:
 
 ## Phase 5: Demo hardening (Sunday early afternoon). **Code freeze 2h before the deadline**
 - [ ] Demo account with a profile, one receipt already parsed and one claim already `accepted` (real reply if received, otherwise a **clearly labeled** simulated reply).
-- [ ] Record a successful Agent View replay as the backup video.
+- [x] Backup video of a successful NotCoca agent run (`notcoca-agent-h.mp4`, built from the H session screenshots).
 - [ ] Rehearse the demo script below on a phone, 3 times. Measure the agent's duration and cut dead time in the video.
 - [ ] Prepare Q&A answers: honesty safeguards, why computer use and not APIs (brands have no APIs), CAPTCHA/failure handling, privacy.
 

@@ -48,6 +48,7 @@ lib/claims/**                        lib/email/**
 lib/brands/discover.ts               lib/brands/index.ts (getBrandContact)
 app/notcoca/**  app/api/notcoca/**  lib/notcoca/**  lib/stripe.ts  scripts/stripe-connect-demo.ts
 app/(app)/billing/**  app/api/billing/**  app/api/webhooks/stripe  lib/billing.ts
+lib/agent/view.ts  (built-in Agent View)  scripts/agent-spike.ts
 ```
 
 ## Shared (coordinate before changing)
