@@ -20,7 +20,7 @@
 7. The dashboard shows another claim that already received a brand reply and is `accepted`.
 
 ### In scope
-- Onboarding (identity and postal address, IBAN optional).
+- Onboarding (civility, identity and postal address, IBAN optional).
 - Receipt upload from the phone camera, then parsing into line items.
 - Item selection with issue presets plus free text.
 - Brand registry (seeded, verified brands) with Linkup lookup for unknown brands.
@@ -221,7 +221,7 @@ The `brands` table is the "cache" of known contact forms and support emails.
 ## 8. Security and privacy (hackathon level)
 - Supabase RLS: users can read and write only their own `profiles`, `receipts`, `line_items` and `claims` (draft inserts). `claim_events` and `claim_emails` are read-only for users. Server writes use the service role.
 - The H webhook signature is verified (HMAC). Reject anything unsigned. The Gmail app password stays server-side.
-- Profile data is sent to H inside the agent instruction. That's acceptable for the hackathon and is disclosed at onboarding. IBAN is only included if a form requires it (P2).
+- Profile data is sent to H inside the agent instruction. That's acceptable for the hackathon and is disclosed at onboarding. The civility is sent; the IBAN is not (stored for payouts, shown masked in the UI).
 - The storage bucket `receipts` is private. Server code reads it to base64-encode files for H.
 
 ## 9. Environment variables

@@ -93,6 +93,7 @@ Priorities:
 **Dev 1**
 - [x] P0 Quota check in `/api/receipts` (`getScanQuota` → 402) + link to `/billing` from profile/nav (API_CONTRACTS › Billing)
 - [x] P1 Home dashboard summary (counts per status), empty states, loading states, errors in French.
+- [x] P1 UI redesign (shared): cream + Aurora + glass, account menu (no sidebar), dashboard hero + activity search/sort, onboarding wizard (civility, IBAN), profile settings, claim chat + Agent View lightbox, subscription page.
 - [ ] P2 Gladia voice input for the "other" issue.
 - [ ] P2 Inline correction of parsed items.
 
