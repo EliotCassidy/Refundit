@@ -80,8 +80,8 @@ It's one Next.js app with no separate backend, no queue and no worker. The long-
 6. Parsing is synchronous inside the request (`maxDuration = 120`: extraction + one retry). The client shows a spinner. Vercel caps request bodies at 4.5 MB, so the page downsizes the photo before upload.
 
 ### 4.2 Selection → claims (Dev 1 → Dev 2)
-1. The user ticks items and picks an `issue_type` for each, plus an optional description and an optional photo of the damaged product.
-   For each ticked item the page calls `POST /api/receipts/:id/identify` (one item per call, in parallel): Open Food Facts / Open Beauty Facts candidates ranked against the receipt label and price. The user picks the right product, or "je ne trouve pas mon produit" → `/confirm` fills `line_items.confirmed_product` (API_CONTRACTS §2, §5).
+1. The page shows one card per product (photo of the 1st candidate, name, price) and calls `POST /api/receipts/:id/identify` for every line item on load (one item per call, in parallel): Open Food Facts / Open Beauty Facts candidates ranked against the receipt label and price.
+   The user answers "Oui" to "Ce produit a-t-il un problème ?" on the products that had a problem (red "Non" by default, green "Oui" opens the sub-menu) and picks an `issue_type` for each, plus an optional description and an optional photo of the damaged product; "Ce n'est pas le bon produit" opens the product choice. The user confirms the product (auto-validated when `confident`), or "je ne trouve pas mon produit" → `/confirm` fills `line_items.confirmed_product` (API_CONTRACTS §2, §5).
 2. The client sends `POST /api/claims` (Dev 1). The server inserts one `claims` row per item with `status='draft'`.
 3. The server then calls `POST /api/claims/{id}/submit` for each claim (Dev 2's endpoint; server-to-server, or the client fires them after creation).
 4. **This handoff is the integration seam.** Dev 1 never touches a claim after `draft`.
