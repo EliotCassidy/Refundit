@@ -39,6 +39,12 @@ async function loadReceiptFile(imagePath: string) {
   return { name: `ticket-de-caisse.${ext}`, source: bytes.toString("base64"), type: "base64" as const, mediaType };
 }
 
+function userAnswers(claim: ClaimRow): Record<string, string> {
+  const raw = claim.user_answers;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  return Object.fromEntries(Object.entries(raw).filter((e): e is [string, string] => typeof e[1] === "string"));
+}
+
 /** Everything needed to send a claim, whatever the channel. */
 async function buildContext(claim: ClaimRow, contactOverride?: BrandContact) {
   const db = createAdminClient();
@@ -83,6 +89,7 @@ async function buildContext(claim: ClaimRow, contactOverride?: BrandContact) {
     issueType: claim.issue_type,
     issueDescription: claim.issue_description,
     hasReceiptAttachment: Boolean(file),
+    extraDetails: userAnswers(claim),
   });
   return { item, receipt, profile, contact, alias, file, product, displayBrand, complaintText };
 }
@@ -147,6 +154,7 @@ export async function submitClaim(claim: ClaimRow): Promise<SubmitResult> {
       brand_id: ctx.contact?.brandId || claim.brand_id,
       dry_run: dryRun,
       submission_channel: null,
+      missing_fields: [],
       failure_reason: null,
       confirmation_number: null,
       h_session_id: null,
@@ -190,6 +198,7 @@ export async function submitClaim(claim: ClaimRow): Promise<SubmitResult> {
         priceCents: ctx.item.total_price_cents,
       },
       complaintText: ctx.complaintText,
+      userAnswers: userAnswers(claim),
       receiptFileName: ctx.file?.name ?? null,
     });
 

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ClaimStatus } from "@/lib/shared/types";
 
-const CANCELLABLE: ClaimStatus[] = ["draft", "submitting", "needs_manual"];
+const CANCELLABLE: ClaimStatus[] = ["draft", "submitting", "needs_manual", "waiting_input"];
 const RETRYABLE: ClaimStatus[] = ["draft", "agent_failed", "needs_manual"];
 
 export function ClaimActions({ claimId, status }: { claimId: string; status: ClaimStatus }) {

@@ -48,6 +48,12 @@ export function decideOutcome(s: SessionSnapshot, claimDryRun: boolean): Outcome
     // Already sent: we can't undo it, but guessed fields are recorded in the event payload.
     return { to: "submitted", patch: { confirmation_number: a.confirmation_number, failure_reason: null, dry_run: false }, payload };
   }
+  // Data the brand requires and we don't have (DLC, batch number, "still have the product?"…):
+  // ask the user on the dashboard, then resubmit with the answers.
+  const toAsk = [...new Set([...a.missing_fields, ...a.guessed_fields])];
+  if (!a.submitted && toAsk.length > 0) {
+    return { to: "waiting_input", patch: { missing_fields: toAsk, failure_reason: null }, payload };
+  }
   if (a.blocker) {
     return { to: "needs_manual", patch: { failure_reason: `${a.blocker}: ${a.notes}`.slice(0, 500) }, payload };
   }
@@ -56,7 +62,6 @@ export function decideOutcome(s: SessionSnapshot, claimDryRun: boolean): Outcome
     const problems = [
       !a.customer_email_entered && "customer email not entered",
       !a.submit_button_found && "final submit button not found",
-      a.guessed_fields.length > 0 && `guessed fields: ${a.guessed_fields.join(", ")}`,
     ].filter(Boolean);
     if (problems.length) {
       return { to: "needs_manual", patch: { failure_reason: `form_incomplete: ${problems.join("; ")}`.slice(0, 500) }, payload };

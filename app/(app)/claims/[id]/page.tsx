@@ -7,6 +7,7 @@ import { CLAIM_STATUS_LABELS_FR, ISSUE_LABELS_FR } from "@/lib/shared/types";
 import { AutoRefresh } from "../auto-refresh";
 import { StatusBadge } from "../status-badge";
 import { ClaimActions } from "./claim-actions";
+import { MissingInfoForm } from "./missing-info-form";
 
 const fmt = (iso: string) =>
   new Date(iso).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Paris" });
@@ -73,6 +74,14 @@ export default async function ClaimPage({ params }: PageProps<"/claims/[id]">) {
         >
           {claim.status === "submitting" ? "Regarder l'agent en direct" : "Revoir l'agent (replay)"}
         </a>
+      )}
+
+      {claim.status === "waiting_input" && claim.missing_fields.length > 0 && (
+        <MissingInfoForm
+          claimId={claim.id}
+          fields={claim.missing_fields}
+          answers={(claim.user_answers ?? {}) as Record<string, string>}
+        />
       )}
 
       <ClaimActions claimId={claim.id} status={claim.status} />

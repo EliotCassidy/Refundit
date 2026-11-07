@@ -71,6 +71,7 @@ const instruction = buildInstruction({
   },
   product: { identified: true, name: values.product ?? "Produit test", brand, ean: null, purchasedAt: new Date().toISOString(), storeName: "Carrefour Market", priceCents: 289 },
   complaintText,
+  userAnswers: {},
   receiptFileName: receiptFile?.name ?? null,
 });
 

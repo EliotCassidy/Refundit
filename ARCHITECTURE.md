@@ -166,7 +166,8 @@ The email given to brands is **always the claim's inbound address**, never the u
 |---|---|---|
 | `completed` | `submitted: true` | `submitted` |
 | `completed` | `submitted: false`, notes `dry_run_ready` | `submitted` + `dry_run=true` (UI badge "Test") |
-| `completed` | `blocker` ∈ captcha, login_required, no_contact_form, missing_info, upload_failed | `needs_manual` |
+| `completed` / `idle` | `missing_fields` or `guessed_fields` non-empty (DLC, batch number, "still have the product?"…) | `waiting_input`: the dashboard asks the user, `/answers` resubmits with `user_answers` |
+| `completed` | `blocker` ∈ captcha, login_required, no_contact_form, upload_failed (or form_incomplete) | `needs_manual`, or **email fallback** if the brand has a `contact_email` |
 | `failed` / `timed_out` / answer validation error | n/a | `agent_failed` (UI offers Retry) |
 | `interrupted` after user cancel | n/a | `cancelled` |
 

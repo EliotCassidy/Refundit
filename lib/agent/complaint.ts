@@ -15,6 +15,7 @@ export type ComplaintFacts = {
   issueType: IssueType;
   issueDescription: string | null;
   hasReceiptAttachment: boolean; // kept for callers; the text no longer depends on it
+  extraDetails?: Record<string, string>; // user's answers to fields the brand asked for
 };
 
 const ISSUE_SENTENCES: Record<IssueType, string> = {
@@ -56,6 +57,8 @@ export function buildComplaintText(f: ComplaintFacts): string {
   ];
   const description = f.issueDescription?.trim();
   if (description) lines.push(`Précisions : ${description}`);
+  const extras = Object.entries(f.extraDetails ?? {});
+  if (extras.length) lines.push("", ...extras.map(([k, v]) => `${k} : ${v}`));
   lines.push(
     "",
     // Neutral on purpose: many forms have no upload field, so "en pièce jointe" could be false.

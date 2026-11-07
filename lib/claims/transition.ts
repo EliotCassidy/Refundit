@@ -7,11 +7,11 @@ import type { Json, TablesUpdate } from "@/lib/shared/database.types";
 
 export const ALLOWED_TRANSITIONS: Record<ClaimStatus, readonly ClaimStatus[]> = {
   draft: ["submitting", "cancelled"],
-  submitting: ["submitted", "needs_manual", "agent_failed", "cancelled"],
+  submitting: ["submitted", "waiting_input", "needs_manual", "agent_failed", "cancelled"],
   agent_failed: ["submitting"],
   needs_manual: ["submitting", "cancelled"],
   submitted: ["waiting_input", "accepted", "refused"],
-  waiting_input: ["submitted", "accepted", "refused"],
+  waiting_input: ["submitting", "submitted", "accepted", "refused", "cancelled"],
   accepted: [],
   refused: [],
   cancelled: [],

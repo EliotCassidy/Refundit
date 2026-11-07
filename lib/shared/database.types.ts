@@ -198,12 +198,14 @@ export type Database = {
           issue_photo_path: string | null
           issue_type: Database["public"]["Enums"]["issue_type"]
           line_item_id: string
+          missing_fields: string[]
           receipt_id: string
           resolved_at: string | null
           status: Database["public"]["Enums"]["claim_status"]
           submission_channel: string | null
           submitted_at: string | null
           updated_at: string
+          user_answers: Json
           user_id: string
         }
         Insert: {
@@ -222,12 +224,14 @@ export type Database = {
           issue_photo_path?: string | null
           issue_type: Database["public"]["Enums"]["issue_type"]
           line_item_id: string
+          missing_fields?: string[]
           receipt_id: string
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["claim_status"]
           submission_channel?: string | null
           submitted_at?: string | null
           updated_at?: string
+          user_answers?: Json
           user_id: string
         }
         Update: {
@@ -246,12 +250,14 @@ export type Database = {
           issue_photo_path?: string | null
           issue_type?: Database["public"]["Enums"]["issue_type"]
           line_item_id?: string
+          missing_fields?: string[]
           receipt_id?: string
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["claim_status"]
           submission_channel?: string | null
           submitted_at?: string | null
           updated_at?: string
+          user_answers?: Json
           user_id?: string
         }
         Relationships: [

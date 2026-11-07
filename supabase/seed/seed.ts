@@ -37,7 +37,16 @@ const BRANDS: TablesInsert<"brands">[] = [
   { name: "Coca-Cola", manufacturer: "The Coca-Cola Company", aliases: ["coca-cola", "coca cola", "coca"], source: "seed",
     contact_url: "https://www.coca-cola.com/fr/fr/about-us/contact-us", contact_email: null, verified: true,
     last_checked_at: "2026-11-07T12:00:00Z", agent_hints: null },
-  // TODO(dev1): add the other demo brands after the spike, with verified contact_url + agent_hints.
+  // Spike 2026-11-07: form reached + customer email entered; REQUIRES best-before month/year and batch
+  // number → waiting_input (asked on the dashboard). Email found by Linkup.
+  { name: "Bonne Maman", manufacturer: "Andros", aliases: ["bonne maman", "bne maman", "bmaman"], source: "seed",
+    contact_url: "https://www.bonne-maman.com/blog/nous-contacter/", contact_email: "service.consommateur@bonne-maman.com",
+    verified: false, last_checked_at: "2026-11-07T12:00:00Z", agent_hints: null },
+  // Verified 2026-11-07 (flash, dry run): full Mondelez form incl. split address, email, real "Envoyer"
+  // button found, no guessed field; 120 s. Optional receipt upload failed on the site (404).
+  { name: "Lu", manufacturer: "Mondelez", aliases: ["lu "], source: "seed",
+    contact_url: "https://contactus.mdlzapps.com/Lulechampdespossibles/contact/fr-FR/", contact_email: null,
+    verified: true, last_checked_at: "2026-11-07T12:00:00Z", agent_hints: null },
 ];
 
 async function main() {
@@ -82,6 +91,8 @@ async function main() {
       brand_id: brandId("Evian"), brand_name_guess: "Evian", quantity: 1, unit_price_cents: 323, total_price_cents: 323 },
     { position: 3, raw_label: "COCA COLA 1.75L", product_name: "Coca-Cola Original 1,75 L",
       brand_id: brandId("Coca-Cola"), brand_name_guess: "Coca-Cola", quantity: 1, unit_price_cents: 245, total_price_cents: 245 },
+    { position: 4, raw_label: "BONNE MAMAN CONF FRAISE 370G", product_name: "BONNE MAMAN CONF FRAISE 370G",
+      brand_id: brandId("Bonne Maman"), brand_name_guess: null, quantity: 1, unit_price_cents: 329, total_price_cents: 329 },
   ];
   const { data: existing } = await db.from("line_items").select("raw_label").eq("receipt_id", receipt.id);
   const missing = DEMO_ITEMS.filter((i) => !existing?.some((e) => e.raw_label === i.raw_label));

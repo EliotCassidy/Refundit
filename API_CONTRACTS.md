@@ -21,7 +21,7 @@ create type claim_status as enum (
   'draft',          -- created by Dev 1, not yet sent
   'submitting',     -- H agent session running
   'submitted',      -- form sent (or dry run done), waiting for a brand reply
-  'waiting_input',  -- brand asked for more information
+  'waiting_input',  -- information requested from the user (brand form required it, or brand replied asking)
   'accepted',       -- brand promised a refund or voucher
   'refused',        -- brand declined
   'agent_failed',   -- technical failure, can be retried
@@ -36,11 +36,11 @@ create type email_classification as enum ('acknowledgement','accepted','refused'
 ### Allowed status transitions (enforced in `lib/claims/transition.ts`)
 ```
 draft         → submitting | cancelled
-submitting    → submitted | needs_manual | agent_failed | cancelled
+submitting    → submitted | waiting_input | needs_manual | agent_failed | cancelled
 agent_failed  → submitting                       (retry)
 needs_manual  → submitting | cancelled           (retry after brand fix)
 submitted     → waiting_input | accepted | refused
-waiting_input → submitted | accepted | refused
+waiting_input → submitting | submitted | accepted | refused | cancelled   (submitting = resubmit with the user's answers)
 ```
 Every transition inserts a `claim_events` row.
 
@@ -136,6 +136,8 @@ Shared cache of products confirmed by users: `(store_chain, label_key) → ean`.
 | attempt | integer default 0 | Dev 2 |
 | dry_run | boolean default false | Dev 2 |
 | submission_channel | text check in ('web_form','email') | Dev 2 (how it was actually sent) |
+| missing_fields | text[] not null default '{}' | Dev 2: labels (as on the brand form) to ask the user while `waiting_input` |
+| user_answers | jsonb not null default '{}' | Dev 2 (via `/answers`): `{ "<field label>": "<value>" }`, passed to the agent and the email |
 | confirmation_number | text | Dev 2 |
 | failure_reason | text | Dev 2 (blocker code or error) |
 | submitted_at, resolved_at, updated_at | timestamptz | Dev 2 |
@@ -242,9 +244,11 @@ export const AgentAnswerSchema = z.object({
   customer_email_entered: z.boolean(),          // self-check: customer email typed into the form
   submit_button_found: z.boolean(),             // self-check: the real "send" button was found
   guessed_fields: z.array(z.string()),          // fields filled WITHOUT provided data (must be empty)
+  missing_fields: z.array(z.string()),          // REQUIRED fields we have no data for (exact form labels)
   notes: z.string(),                            // short explanation / 'dry_run_ready'
 });
-// Dry run counts as success only if customer_email_entered && submit_button_found && guessed_fields is empty,
+// missing_fields ∪ guessed_fields non-empty → waiting_input (the dashboard asks the user, then resubmits).
+// Dry run counts as success only if customer_email_entered && submit_button_found,
 // otherwise the claim goes to needs_manual "form_incomplete: …" (spike finding: the agent sometimes stopped
 // on step 1 of a multi-step form, or picked arbitrary dropdown values).
 export type AgentAnswer = z.infer<typeof AgentAnswerSchema>;
@@ -301,6 +305,7 @@ Reads (receipt, items, profile) go directly through the Supabase client with RLS
 |---|---|---|---|
 | POST | `/api/claims/:id/submit` | none | `202 { status: "submitting", agentViewUrl }` · `409` if the status doesn't allow it · `200 { status: "needs_manual", reason }` if no contact form |
 | POST | `/api/claims/:id/cancel` | none | `200 { status: "cancelled" }` (deletes the H session if running) |
+| POST | `/api/claims/:id/answers` | `{ answers: { "<field label>": "<value>" } }` (only `missing_fields` keys are kept) | `200 { status: "waiting_input", remaining: string[] }` while fields are missing · then resubmits: `202 { status: "submitting", agentViewUrl }` · `409` if not `waiting_input` |
 | POST | `/api/claims/:id/sync` | none | `200 { status }`. Polls H if `submitting`; the claim page calls it every 5s |
 | POST | `/api/webhooks/h` | H webhook payload `{type,id,created_at,data:{session_id,status,previous_status}}` | `200` (idempotent on `X-H-Webhook-Delivery`) |
 | POST | `/api/webhooks/resend` | Resend `email.received` event (Svix-signed) | `200` |

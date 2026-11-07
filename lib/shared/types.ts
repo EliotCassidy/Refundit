@@ -122,6 +122,7 @@ export const AgentAnswerSchema = z.object({
   customer_email_entered: z.boolean(), // the customer's email was typed into the form
   submit_button_found: z.boolean(), // the button that actually SENDS the request was found
   guessed_fields: z.array(z.string()), // fields filled with a value NOT provided (must be empty)
+  missing_fields: z.array(z.string()), // labels (as on the form) of REQUIRED fields we have no data for
   notes: z.string(),
 });
 export type AgentAnswer = z.infer<typeof AgentAnswerSchema>;
@@ -152,5 +153,11 @@ export const CreateClaimsBodySchema = z.object({
     .min(1),
 });
 export type CreateClaimsBody = z.infer<typeof CreateClaimsBodySchema>;
+
+// POST /api/claims/:id/answers: the user's answers to claims.missing_fields (Dev 2).
+export const ClaimAnswersBodySchema = z.object({
+  answers: z.record(z.string(), z.string().trim().min(1).max(500)),
+});
+export type ClaimAnswersBody = z.infer<typeof ClaimAnswersBodySchema>;
 
 export type ApiError = { error: { code: string; message: string } };
