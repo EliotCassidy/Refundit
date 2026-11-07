@@ -34,7 +34,7 @@ export function ClaimActions({ claimId, status }: { claimId: string; status: Cla
           <button
             onClick={() => call("submit")}
             disabled={pending !== null}
-            className="flex-1 rounded-xl border border-neutral-300 px-4 py-2 font-medium disabled:opacity-50"
+            className="flex-1 rounded-xl border border-neutral-500/30 px-4 py-2 font-medium disabled:opacity-50"
           >
             {pending === "submit" ? "Envoi…" : status === "draft" ? "Envoyer" : "Réessayer"}
           </button>

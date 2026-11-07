@@ -28,16 +28,16 @@ export function BillingButtons({ subscribed }: { subscribed: boolean }) {
         <button
           onClick={() => confirm("Résilier à la fin de la période en cours ?") && call("/api/billing/cancel")}
           disabled={pending}
-          className="self-start text-sm text-neutral-600 underline disabled:opacity-50"
+          className="self-start text-sm text-neutral-500 underline disabled:opacity-50"
         >
           Résilier l&apos;abonnement
         </button>
       ) : (
-        <button onClick={() => call("/api/billing/checkout")} disabled={pending} className="rounded-xl bg-black px-4 py-3 font-medium text-white disabled:opacity-50">
+        <button onClick={() => call("/api/billing/checkout")} disabled={pending} className="rounded-xl bg-foreground px-4 py-3 font-medium text-background disabled:opacity-50">
           {pending ? "Redirection…" : "S'abonner"}
         </button>
       )}
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
     </div>
   );
 }

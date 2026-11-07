@@ -59,16 +59,16 @@ export default async function ClaimPage({ params }: PageProps<"/claims/[id]">) {
           </p>
         )}
         {claim.refund_cents != null && (
-          <p className="rounded-lg bg-green-50 p-2 text-sm text-green-900">
+          <p className="rounded-lg bg-green-500/10 p-2 text-sm text-green-800 dark:text-green-400">
             Remboursement reçu : <strong>{(claim.refund_cents / 100).toLocaleString("fr-FR", { style: "currency", currency: "EUR" })}</strong>
-            {claim.stripe_payment_id && <span className="text-green-800/70"> · Stripe {claim.stripe_payment_id}</span>}
+            {claim.stripe_payment_id && <span className="text-green-800/70 dark:text-green-400/70"> · Stripe {claim.stripe_payment_id}</span>}
           </p>
         )}
         {claim.confirmation_number && (
           <p className="text-sm">N° de confirmation : <strong>{claim.confirmation_number}</strong></p>
         )}
         {claim.failure_reason && ["needs_manual", "agent_failed"].includes(claim.status) && (
-          <p className="rounded-lg bg-amber-50 p-2 text-sm text-amber-900">{claim.failure_reason}</p>
+          <p className="rounded-lg bg-amber-500/10 p-2 text-sm text-amber-800 dark:text-amber-400">{claim.failure_reason}</p>
         )}
       </header>
 
@@ -89,7 +89,7 @@ export default async function ClaimPage({ params }: PageProps<"/claims/[id]">) {
       {claim.complaint_text && (
         <section className="flex flex-col gap-2">
           <h2 className="font-medium">Message envoyé à la marque</h2>
-          <pre className="whitespace-pre-wrap rounded-xl bg-neutral-50 p-3 font-sans text-sm text-neutral-800">
+          <pre className="whitespace-pre-wrap rounded-xl bg-neutral-500/10 p-3 font-sans text-sm text-neutral-800 dark:text-neutral-300">
             {claim.complaint_text}
           </pre>
         </section>
@@ -97,14 +97,14 @@ export default async function ClaimPage({ params }: PageProps<"/claims/[id]">) {
 
       <section className="flex flex-col gap-2">
         <h2 className="font-medium">Historique</h2>
-        <ol className="flex flex-col gap-3 border-l border-neutral-200 pl-4">
+        <ol className="flex flex-col gap-3 border-l border-neutral-500/30 pl-4">
           <li className="text-sm">
             <span className="text-neutral-500">{fmt(claim.created_at)}</span> · Réclamation créée
           </li>
           {timeline.map((t) => (
             <li key={t.key} className="text-sm">
               <span className="text-neutral-500">{fmt(t.at)}</span> · {t.title}
-              {t.body && <p className="mt-1 whitespace-pre-wrap rounded-lg bg-neutral-50 p-2">{t.body}</p>}
+              {t.body && <p className="mt-1 whitespace-pre-wrap rounded-lg bg-neutral-500/10 p-2">{t.body}</p>}
             </li>
           ))}
         </ol>

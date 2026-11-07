@@ -31,12 +31,12 @@ export function LoginForm({ next }: { next: string }) {
   return (
     <form action={onSubmit} className="mt-8 flex flex-col gap-3">
       <input name="email" type="email" required placeholder="Email" autoComplete="email"
-        className="rounded-lg border border-neutral-300 px-3 py-2" />
+        className="rounded-lg border border-neutral-500/30 px-3 py-2" />
       <input name="password" type="password" required minLength={6} placeholder="Mot de passe"
         autoComplete={mode === "signin" ? "current-password" : "new-password"}
-        className="rounded-lg border border-neutral-300 px-3 py-2" />
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      <button disabled={pending} className="rounded-lg bg-black px-3 py-2 font-medium text-white disabled:opacity-50">
+        className="rounded-lg border border-neutral-500/30 px-3 py-2" />
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      <button disabled={pending} className="rounded-lg bg-foreground px-3 py-2 font-medium text-background disabled:opacity-50">
         {mode === "signin" ? "Se connecter" : "Créer un compte"}
       </button>
       <button type="button" onClick={() => setMode(mode === "signin" ? "signup" : "signin")}

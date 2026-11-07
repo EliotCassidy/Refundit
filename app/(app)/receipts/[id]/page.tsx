@@ -25,7 +25,7 @@ export default async function ReceiptPage({ params }: PageProps<"/receipts/[id]"
     return (
       <div className="flex flex-col gap-4">
         <h1 className="text-xl font-semibold">Ticket</h1>
-        <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
+        <p className="rounded-xl bg-red-500/10 p-3 text-sm text-red-600">
           {receipt.status === "failed" ? "Ce ticket n'a pas pu être lu." : "Lecture en cours…"}
         </p>
         <Link href="/receipts/new" className="rounded-xl bg-foreground px-4 py-3 text-center font-medium text-background">
@@ -51,7 +51,7 @@ export default async function ReceiptPage({ params }: PageProps<"/receipts/[id]"
       </div>
 
       {x.needs_review && (
-        <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400">
           Certains montants n&apos;ont pas pu être vérifiés (ticket coupé ou peu lisible). Vérifiez la liste avant de continuer.
         </div>
       )}
