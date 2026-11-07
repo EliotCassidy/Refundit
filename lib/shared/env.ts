@@ -8,7 +8,8 @@ export function env(name: string): string {
 }
 
 export const flags = {
-  agentMock: () => process.env.AGENT_MOCK === "true",
+  // Never simulate the agent in production (Vercel sets VERCEL_ENV), whatever AGENT_MOCK says.
+  agentMock: () => process.env.AGENT_MOCK === "true" && process.env.VERCEL_ENV !== "production",
   // Default to dry run unless explicitly disabled.
   agentDryRun: () => process.env.AGENT_DRY_RUN !== "false",
 };
