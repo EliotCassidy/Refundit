@@ -1,7 +1,7 @@
 "use client";
 // OWNER: Dev 2. Agent View as one list row: thumbnail + last action + live dot (+ Stop below).
 // "Voir en grand" opens a lightbox (full screenshot, replay slider, action log).
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { Bot, ChevronLeft, ChevronRight, X } from "lucide-react";
@@ -106,19 +106,24 @@ export function AgentView({ claimId, live, actions }: { claimId: string; live: b
 function Lightbox({ shots, log, live, onClose }: { shots: Step[]; log: Step[]; live: boolean; onClose: () => void }) {
   // Jury demo: notes and fun facts sit in a right-hand column, so the agent's screen moves left on large screens.
   const demo = useDemoRaw() !== null;
+  // Demo: the jury can't close the agent's screen while it works (the tour closes it at the next step).
+  const locked = demo && live;
+  const close = useCallback(() => {
+    if (!locked) onClose();
+  }, [locked, onClose]);
   const [index, setIndex] = useState<number | null>(null); // null = follow latest
   const current = index ?? shots.length - 1;
   const shot = shots[Math.max(0, Math.min(current, shots.length - 1))];
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") close();
       if (e.key === "ArrowLeft") setIndex((i) => Math.max(0, (i ?? shots.length - 1) - 1));
       if (e.key === "ArrowRight") setIndex((i) => Math.min(shots.length - 1, (i ?? shots.length - 1) + 1));
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [onClose, shots.length]);
+  }, [close, shots.length]);
 
   return (
     <motion.div
@@ -126,7 +131,7 @@ function Lightbox({ shots, log, live, onClose }: { shots: Step[]; log: Step[]; l
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      onClick={onClose}
+      onClick={close}
       role="dialog"
       aria-modal="true"
       aria-label="Écran de l'agent"
@@ -142,7 +147,9 @@ function Lightbox({ shots, log, live, onClose }: { shots: Step[]; log: Step[]; l
         <div className="flex items-center gap-3 border-b border-line px-4 py-3">
           <span className="mono min-w-0 flex-1 truncate rounded-full bg-sunken px-3 py-1.5 text-xs text-muted">{shot?.pageUrl ?? "—"}</span>
           {live && <span className="rounded-full bg-danger px-2 py-0.5 text-[11px] font-bold text-white">EN DIRECT</span>}
-          <button type="button" onClick={onClose} aria-label="Fermer" className="grid size-9 shrink-0 place-items-center rounded-full bg-ink text-surface shadow-md transition hover:scale-105"><X className="size-4" strokeWidth={2.5} aria-hidden /></button>
+          {!locked && (
+            <button type="button" onClick={close} aria-label="Fermer" className="grid size-9 shrink-0 place-items-center rounded-full bg-ink text-surface shadow-md transition hover:scale-105"><X className="size-4" strokeWidth={2.5} aria-hidden /></button>
+          )}
         </div>
         <div className="min-h-0 flex-1 overflow-auto bg-sunken">
           {!shot?.screenshot && (
