@@ -71,7 +71,7 @@ export function ProfileForm({ values, email, maskedIban, unlimited }: { values: 
 
   async function signOut() {
     setSigningOut(true);
-    await createClient().auth.signOut();
+    await createClient().auth.signOut({ scope: "local" });
     router.replace("/login");
     router.refresh();
   }

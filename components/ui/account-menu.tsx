@@ -26,7 +26,7 @@ export function AccountMenu({ firstName, email, unlimited }: { firstName: string
   }, [open]);
 
   async function signOut() {
-    await createClient().auth.signOut();
+    await createClient().auth.signOut({ scope: "local" });
     router.replace("/login");
     router.refresh();
   }
