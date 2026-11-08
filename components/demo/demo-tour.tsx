@@ -204,10 +204,18 @@ export function DemoTour() {
         return;
       }
 
-      // 4) Back on the dashboard: open the live claim.
+      // 4) Back on the dashboard: spotlight the folder of the claim just sent (whatever its status). If the list
+      //    doesn't show it yet, refresh the page until it does (no time limit).
       if (step === "claim-list" && pathname === "/") {
-        const el = await waitFor(() => document.querySelector("[data-demo-live]"), 30_000);
-        if (!el) return;
+        const id = getDemo()?.claimId;
+        const find = () =>
+          (id ? document.querySelector(`[data-claim-ids~="${id}"]`) : null) ?? document.querySelector("[data-demo-live]");
+        let el = await waitFor(find, 4000);
+        while (!el && !cancelled) {
+          router.refresh();
+          el = await waitFor(find, 4000);
+        }
+        if (!el || cancelled) return;
         spot({
           element: el,
           disableActiveInteraction: false,

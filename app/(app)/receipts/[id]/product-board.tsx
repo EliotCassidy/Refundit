@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { group } from "@/components/ui/list";
-import { useDemoRaw } from "@/components/demo/demo-state";
+import { patchDemo, useDemoRaw } from "@/components/demo/demo-state";
 import { StoreBanner } from "@/components/ui/store-logo";
 import { findStore } from "@/lib/stores";
 
@@ -198,6 +198,8 @@ export function ProductBoard({ receiptId, items, ticket }: { receiptId: string; 
       setSending(false);
       return setError(body?.error?.message ?? "Envoi impossible. Réessayez.");
     }
+    // Jury demo: remember the claim just sent, so the tour spotlights THIS folder on the dashboard.
+    if (Array.isArray(body?.claimIds) && body.claimIds[0]) patchDemo({ claimId: body.claimIds[0] });
     router.push("/");
   }
 

@@ -222,6 +222,7 @@ function FolderCard({ folder: f, index, open, onToggle }: { folder: Folder; inde
       transition={{ duration: 0.35, delay: Math.min(index, 8) * 0.04, ease: [0.22, 1, 0.36, 1] }}
       className="relative isolate"
       data-demo-live={f.claims.some((c) => ["submitting", "waiting_input"].includes(c.status)) ? "" : undefined}
+      data-claim-ids={f.claims.map((c) => c.id).join(" ")}
     >
       {/* Folder tab */}
       <span aria-hidden className="absolute -top-2.5 left-5 h-4 w-20 rounded-t-[10px] border border-b-0 border-white/80 bg-white/75 backdrop-blur-xl">
