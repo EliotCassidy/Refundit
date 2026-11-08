@@ -330,8 +330,8 @@ function Welcome({ onStart }: { onStart: () => void }) {
   ];
   return (
     <div className="flex flex-col">
-      <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ ease }} className="inline-flex w-fit items-center rounded-full border border-white/80 bg-white/70 py-1.5 pl-1.5 pr-3 shadow-sm">
-        <Logo className="scale-[0.85] origin-left" />
+      <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ ease }} className="inline-flex w-fit items-center rounded-full border border-white/80 bg-white/70 px-3.5 py-2 shadow-sm">
+        <Logo className="h-4" />
       </motion.div>
 
       <motion.h1

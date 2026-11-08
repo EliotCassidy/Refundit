@@ -2,16 +2,11 @@
 import { Lock } from "lucide-react";
 import type { ReactNode } from "react";
 
-export function Logo({ className = "" }: { className?: string }) {
+/** "Refund✓it" wordmark (public/logo-refundit.svg, viewBox cropped to the drawing). `className` sets the height. */
+export function Logo({ className = "h-5" }: { className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-2 font-bold tracking-tight text-ink ${className}`}>
-      <span className="grid size-7 place-items-center rounded-full bg-brand text-on-brand" aria-hidden>
-        <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M5 12.5l4.5 4.5L19 7.5" />
-        </svg>
-      </span>
-      <span className="text-[17px]">Refundit</span>
-    </span>
+    // eslint-disable-next-line @next/next/no-img-element -- static SVG wordmark, no optimizer needed
+    <img src="/logo-refundit.svg" alt="Refundit" width={111} height={20} className={`block w-auto ${className}`} />
   );
 }
 
