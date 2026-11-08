@@ -6,18 +6,11 @@ import styles from "./notcoca.module.css";
 /** Titres : capitales condensées (police chargée dans layout.tsx). */
 export const DISPLAY = "[font-family:var(--font-nc-display)] uppercase tracking-tight";
 
-export function NotCocaLogo({ className = "", light = false }: { className?: string; light?: boolean }) {
-  const fill = light ? "#fff" : "var(--notcoca-red)";
+/** Round NotCoca logo (public/notcoca/logo.png). `className` sets the size; `light` adds a white ring for red backgrounds. */
+export function NotCocaLogo({ className = "size-11", light = false }: { className?: string; light?: boolean }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 ${className}`}>
-      <svg viewBox="0 0 32 32" className="h-7 w-7 shrink-0" aria-hidden>
-        <path style={{ fill }} d="M16 3c-2.4 4.6-6.4 6.8-6.4 11.8 0 5.4 2.9 9 6.4 9s6.4-3.6 6.4-9C22.4 9.8 18.4 7.6 16 3z" />
-        <circle cx="10.6" cy="25.2" r="2.5" style={{ fill }} />
-        <circle cx="18.4" cy="24" r="3.4" style={{ fill }} />
-        <circle cx="22.4" cy="26.6" r="1.6" style={{ fill }} />
-      </svg>
-      <span className={`font-script text-[26px] leading-none ${light ? "text-white" : "text-notcoca"}`}>NotCoca</span>
-    </span>
+    // eslint-disable-next-line @next/next/no-img-element -- static brand logo, no optimizer needed
+    <img src="/notcoca/logo.png" alt="NotCoca" width={44} height={44} className={`block shrink-0 rounded-full ${light ? "ring-2 ring-white" : ""} ${className}`} />
   );
 }
 
@@ -28,7 +21,6 @@ export type Flavor = {
   body: string; // couleur de la canette
   edge: string; // bords (effet cylindre)
   ribbon: string; // vague sur la canette
-  mark: string; // logo sur la canette
   ink: string; // petits textes sur la canette
   card: string; // fond de la carte produit (classes Tailwind)
 };
@@ -36,19 +28,19 @@ export type Flavor = {
 export const FLAVORS: Record<string, Flavor> = {
   "NotCoca Original": {
     id: "original", label: "Original", tagline: "Le goût franc des fines bulles",
-    body: "#f40009", edge: "#a00006", ribbon: "#ffffff", mark: "#ffffff", ink: "#ffffff", card: "bg-notcoca text-white",
+    body: "#f40009", edge: "#a00006", ribbon: "#ffffff", ink: "#ffffff", card: "bg-notcoca text-white",
   },
   "NotCoca Zéro": {
     id: "zero", label: "Zéro sucres", tagline: "Zéro sucres, tout le pétillant",
-    body: "#1f1f22", edge: "#000000", ribbon: "#f40009", mark: "#ffffff", ink: "#ffffff", card: "bg-neutral-900 text-white",
+    body: "#1f1f22", edge: "#000000", ribbon: "#f40009", ink: "#ffffff", card: "bg-neutral-900 text-white",
   },
   "NotCoca Cherry": {
     id: "cherry", label: "Cherry", tagline: "Une pointe de cerise",
-    body: "#a3123c", edge: "#5c0820", ribbon: "#ffffff", mark: "#ffffff", ink: "#ffffff", card: "bg-[#a3123c] text-white",
+    body: "#a3123c", edge: "#5c0820", ribbon: "#ffffff", ink: "#ffffff", card: "bg-[#a3123c] text-white",
   },
   "NotCoca Citron": {
     id: "citron", label: "Citron", tagline: "Un zeste de citron jaune",
-    body: "#ffd23f", edge: "#c99700", ribbon: "#f40009", mark: "#f40009", ink: "#1f1f22", card: "bg-[#ffd23f] text-neutral-900",
+    body: "#ffd23f", edge: "#c99700", ribbon: "#f40009", ink: "#1f1f22", card: "bg-[#ffd23f] text-neutral-900",
   },
 };
 
@@ -92,9 +84,9 @@ export function Can({ flavor: f, className = "", style }: { flavor: Flavor; clas
         ))}
       </g>
       <path d="M16 208 H104 L98 222 Q60 231 22 222 Z" fill={`url(#${id}-metal)`} />
-      <text x="60" y="92" textAnchor="middle" fontSize="25" fill={f.mark} transform="rotate(-9 60 92)" style={{ fontFamily: "var(--font-pacifico), cursive" }}>
-        NotCoca
-      </text>
+      {/* Round logo with a thin white ring. Same spot in the catalog photos (public/notcoca/cans/*.png). */}
+      <circle cx="60" cy="80" r="26.2" fill="#fff" />
+      <image href="/notcoca/logo.png" x="35" y="55" width="50" height="50" />
       <text x="60" y="117" textAnchor="middle" fontSize="10" fontWeight="700" letterSpacing="2.5" fill={f.ink} style={{ fontFamily: "var(--font-nc-display), sans-serif" }}>
         {f.label.toUpperCase()}
       </text>

@@ -60,7 +60,7 @@ export default function NotCocaLayout({ children }: { children: React.ReactNode 
         <Wave className="absolute inset-x-0 -top-[47px] h-12 w-full text-notcoca" />
         <div className="mx-auto grid max-w-6xl grid-cols-2 gap-x-6 gap-y-8 px-4 pb-10 pt-10 sm:grid-cols-4">
           <div className="col-span-2 flex flex-col gap-3 sm:col-span-1">
-            <NotCocaLogo light />
+            <NotCocaLogo light className="size-16" />
             <p className="text-sm text-white/85">Des bulles franches, un goût net.</p>
             <Link href="/notcoca/contact" className="w-fit rounded-full bg-white px-4 py-2 text-sm font-bold text-notcoca transition hover:-translate-y-0.5">
               Service consommateurs
