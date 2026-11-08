@@ -6,7 +6,7 @@ Snap a supermarket receipt, tick the product that had a problem, and a computer-
 - **Demo brand:** NotCoca, a fictional brand site at [/notcoca](https://refundit.vercel.app/notcoca), with its back-office at `/notcoca/admin`.
 
 <p align="center">
-  <img src="docs/screenshot.png" width="320" alt="Refundit: the H agent filing a complaint on the brand's form, seen live from the claim page">
+  <img src="docs/screendemo.png" alt="Refundit dashboard in demo mode: refunded balance, a pending claim, and the guided tour announcing the NotCoca refund">
 </p>
 
 ## Problem
