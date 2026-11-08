@@ -9,9 +9,15 @@ const jetbrains = JetBrains_Mono({ variable: "--font-jetbrains", subsets: ["lati
 // NotCoca demo brand logo (font-script, /notcoca only)
 const script = Pacifico({ weight: "400", variable: "--font-pacifico", subsets: ["latin"] });
 
+const DESCRIPTION = "Un produit défectueux ? Refundit envoie la réclamation à la marque pour vous.";
+
+// Link previews (LinkedIn, X, Slack...): the image is app/opengraph-image.png; metadataBase makes its URL absolute.
 export const metadata: Metadata = {
+  metadataBase: new URL("https://refundit.vercel.app"),
   title: "Refundit",
-  description: "Un produit défectueux ? Refundit envoie la réclamation à la marque pour vous.",
+  description: DESCRIPTION,
+  openGraph: { title: "Refundit", description: DESCRIPTION, siteName: "Refundit", locale: "fr_FR", type: "website" },
+  twitter: { card: "summary_large_image", title: "Refundit", description: DESCRIPTION },
 };
 
 export const viewport: Viewport = {
