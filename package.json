@@ -13,7 +13,7 @@
     "db:push": "supabase db push --remote",
     "spike": "tsx scripts/agent-spike.ts",
     "eval:extract": "tsx --env-file=.env.local --conditions=react-server lib/receipts/eval/extract.ts",
-    "test:receipts": "tsx lib/receipts/eval/cases.ts",
+    "test:receipts": "tsx --conditions=react-server lib/receipts/eval/cases.ts",
     "stripe:demo-account": "tsx scripts/stripe-connect-demo.ts",
     "eval:identify": "tsx --env-file=.env.local --conditions=react-server lib/receipts/eval/identify.ts",
     "demo": "tsx --env-file=.env.local --conditions=react-server scripts/demo-account.ts"
